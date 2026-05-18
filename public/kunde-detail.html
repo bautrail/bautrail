@@ -45,11 +45,11 @@
     <!-- BUTTON -->
     <div class="button-row">
       <button onclick="goToProjektAnlegen()" class="login-btn">
-        Projekt hinzuf&uuml;gen
+        Projekt hinzufuegen
       </button>
 
       <button onclick="deleteCustomer()" class="delete-btn" style="margin-top:0;">
-        Kunde l&ouml;schen
+        Kunde loeschen
       </button>
     </div>
 
@@ -81,13 +81,13 @@
 
   <!-- NAV -->
   <nav class="bottom-nav">
-    <a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+    <a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
 
     <a href="kunden.html" class="active"><span>&#128101;</span><small>Kunden</small></a>
 
     <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
 
-    <a href="profil.html"><span>&#128100;</span><small>Profil</small></a>
+    <a href="profil.html"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
   </nav>
 
 </div>
@@ -181,7 +181,7 @@ async function syncAll() {
 
   for (let p of createQ) {
 
-    // ?? nur offline projekte
+    // nur offline projekte
     if (
       !String(p.id).startsWith("offline_")
     ) {
@@ -303,7 +303,7 @@ async function syncAll() {
     );
   }
 
-  // ?? nur synchronisierte entfernen
+  // nur synchronisierte entfernen
   createQ = createQ.filter(p => {
 
     return !syncedIds.includes(p.id);
@@ -373,7 +373,7 @@ async function syncAll() {
 // =======================
 async function loadCustomer() {
 
-  // ?? OFFLINE
+  // OFFLINE
   if (!navigator.onLine) {
 
     const cached =
@@ -390,7 +390,7 @@ async function loadCustomer() {
     }
   }
 
-  // ?? ONLINE
+  // ONLINE
   const { data, error } = await db
     .from("customers")
     .select("*")
@@ -403,7 +403,7 @@ async function loadCustomer() {
     return;
   }
 
-  // ?? CACHE
+  // CACHE
   localStorage.setItem(
     "customer_" + kundeId,
     JSON.stringify(data)
@@ -636,12 +636,12 @@ async function deleteCustomer() {
 
   const typed =
     prompt(
-      "Zum Löschen bitte BESTÄTIGEN eingeben."
+      "Zum Loeschen bitte BESTAeTIGEN eingeben."
     );
 
   if (
     typed !== "BESTAETIGEN" &&
-    typed !== "BESTÄTIGEN"
+    typed !== "BESTAeTIGEN"
   ) {
     alert("Kunde wurde nicht geloescht.");
     return;
@@ -764,7 +764,7 @@ async function loadProjects() {
       ...cached
     ];
 
-    // ?? doppelte entfernen
+    // doppelte entfernen
     data = data.filter(
       (project, index, self) => {
 
@@ -776,7 +776,7 @@ async function loadProjects() {
       }
     );
 
-    // ?? gel&ouml;schte ausblenden
+    // geloeschte ausblenden
     data = data.filter(
       p =>
         !deleted.includes(p.id)
@@ -818,7 +818,7 @@ async function loadProjects() {
 
   data = dbData || [];
 
-  // ?? offline projekte behalten
+  // offline projekte behalten
   const offline =
     getCreateQueue()
     .filter(
@@ -840,7 +840,7 @@ async function loadProjects() {
     }
   });
 
-  // ?? doppelte entfernen
+  // doppelte entfernen
   data = data.filter(
     (project, index, self) => {
 
@@ -852,7 +852,7 @@ async function loadProjects() {
     }
   );
 
-  // ?? CACHE
+  // CACHE
   localStorage.setItem(
     "projects_" + kundeId,
     JSON.stringify(data)
@@ -868,7 +868,7 @@ async function loadProjects() {
 // =======================
 async function deleteProject(id) {
 
-  // ?? OFFLINE
+  // OFFLINE
   if (!navigator.onLine) {
 
     let q =
@@ -936,7 +936,7 @@ async function deleteProject(id) {
     .delete()
     .eq("project_id", id);
 
-  // ?? ONLINE
+  // ONLINE
   await db
     .from("projects")
     .delete()

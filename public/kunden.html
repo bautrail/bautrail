@@ -23,7 +23,7 @@
       <h1 class="app-name">Kunden</h1>
     </header>
 
-    <!-- ?? Suche -->
+    <!-- Suche -->
     <div class="task-card">
       <input 
         id="searchInput" 
@@ -63,19 +63,19 @@
       </div>
     </div>
 
-    <!-- ?? Liste -->
+    <!-- Liste -->
     <div id="customerList"></div>
 
   </div>
 
   <nav class="bottom-nav">
-    <a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+    <a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
 
     <a href="kunden.html" class="active"><span>&#128101;</span><small>Kunden</small></a>
 
     <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
 
-    <a href="profil.html"><span>&#128100;</span><small>Profil</small></a>
+    <a href="profil.html"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
   </nav>
 
 </div>
@@ -90,7 +90,7 @@
 
 let allCustomers = [];
 
-// ?? START
+// START
 loadCustomers();
 
 
@@ -99,7 +99,7 @@ async function loadCustomers() {
 
   let data = [];
 
-  // ?? OFFLINE
+  // OFFLINE
   if (!navigator.onLine) {
     console.log("Offline -> lade gespeicherte Kunden");
 
@@ -110,7 +110,7 @@ async function loadCustomers() {
     return;
   }
 
-  // ?? ONLINE
+  // ONLINE
   const { data: dbData, error } =
     await window.BaudokuCompanyContext.selectScoped("customers");
 
@@ -125,7 +125,7 @@ async function loadCustomers() {
 
   console.log("Online Daten:", data);
 
-  // ?? speichern
+  // speichern
   localStorage.setItem("customers", JSON.stringify(data));
 
   allCustomers = data;

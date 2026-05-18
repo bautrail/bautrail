@@ -129,7 +129,7 @@ textarea{
     <!-- KUNDE -->
 <div class="task-card">
 
-  <h3>👥 Kunde hinzufügen</h3>
+  <h3>👥 Kunde hinzufuegen</h3>
 
   <div class="input-row">
 
@@ -156,7 +156,7 @@ textarea{
     class="plan-box"
   ></div>
 
-  <!-- AUSGEWÄHLTE -->
+  <!-- AUSGEWAeHLTE -->
   <div
     id="kundenList"
     class="plan-box"
@@ -169,7 +169,7 @@ textarea{
  <!-- PROJEKT -->
 <div class="task-card">
 
-  <h3>📦 Projekt hinzufügen</h3>
+  <h3>📦 Projekt hinzufuegen</h3>
 
   <div
     class="input-row"
@@ -200,7 +200,7 @@ textarea{
     class="plan-box"
   ></div>
 
-  <!-- AUSGEWÄHLTE -->
+  <!-- AUSGEWAeHLTE -->
   <div
     id="projektList"
     class="plan-box"
@@ -237,7 +237,7 @@ textarea{
     <button class="planning-tab-btn" onclick="setPlanningTab('week', event)">🗓️ Diese Woche</button>
   </div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
-    <small id="planningCount" style="opacity:0.7;">0 Einträge</small>
+    <small id="planningCount" style="opacity:0.7;">0 Eintraege</small>
   </div>
   <div id="planningList" style="margin-top:10px;"></div>
 </div>
@@ -245,7 +245,7 @@ textarea{
 <!-- NAV -->
 <nav class="bottom-nav">
 
-  <a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+  <a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
 
   <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
 
@@ -383,7 +383,7 @@ function filterKunden() {
 
 
 // =======================
-// KUNDE HINZUFÜGEN
+// KUNDE HINZUFUeGEN
 // =======================
 
 function addKunde(name, kundeId) {
@@ -453,7 +453,7 @@ function loadKunden() {
 }
 
 // =======================
-// KUNDE LÖSCHEN
+// KUNDE LOeSCHEN
 // =======================
 
 function deleteKunde(index) {
@@ -558,7 +558,7 @@ function filterProjekte() {
 
 
 // =======================
-// PROJEKT HINZUFÜGEN
+// PROJEKT HINZUFUeGEN
 // =======================
 
 function addProjekt(name, projektId) {
@@ -629,7 +629,7 @@ function loadProjekte() {
 
 
 // =======================
-// PROJEKT LÖSCHEN
+// PROJEKT LOeSCHEN
 // =======================
 
 function deleteProjekt(index) {
@@ -734,7 +734,7 @@ function createNewProjekt() {
   if(!kunden.length){
 
     alert(
-      "Erst Kunde auswählen"
+      "Erst Kunde auswaehlen"
     );
 
     return;
@@ -772,7 +772,7 @@ function renderPlanningTab() {
       ? planningTomorrowItems
       : planningWeekItems;
 
-  count.textContent = items.length + " Einträge";
+  count.textContent = items.length + " Eintraege";
 
   if (!items.length) {
     list.innerHTML = "<p style='opacity:0.7;'>Nichts offen.</p>";

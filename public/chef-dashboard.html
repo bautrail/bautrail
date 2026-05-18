@@ -22,7 +22,7 @@
     </header>
 
     <div class="task-card">
-      <h3>Firmenuebersicht</h3>
+      <h3>&#127970; Firmenuebersicht</h3>
       <p id="roleInfo" style="opacity:0.8;margin-top:8px;">Lade Daten...</p>
       <div class="button-row" style="margin-top:10px;">
         <button class="login-btn" style="margin-bottom:0;" onclick="window.location.href='firma-einstellungen.html'">Firma einstellen</button>
@@ -31,7 +31,7 @@
     </div>
 
     <div class="task-card">
-      <h3>Einladungscode erstellen</h3>
+      <h3>&#9993;&#65039; Einladungscode erstellen</h3>
       <div class="button-row" style="margin-top:8px;">
         <select id="inviteRole" class="compact-input">
           <option value="buero">Buero</option>
@@ -42,14 +42,20 @@
       <p id="inviteResult" style="margin-top:10px;font-weight:700;"></p>
       <p id="inviteStatus" style="font-size:12px;opacity:0.75;"></p>
     </div>
+    <div class="task-card">
+      <h3>&#128230; Kundendaten Download</h3>
+      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Erstellt einen ZIP-Ordner mit Kunden, Projekten, Auftraegen und Stundennachweisen deiner Firma.</p>
+      <button class="login-btn" style="margin-top:10px;margin-bottom:0;" onclick="downloadCustomerDataArchive()">Kundendaten herunterladen</button>
+      <p id="customerExportStatus" style="font-size:12px;opacity:0.8;min-height:18px;margin-top:8px;">&nbsp;</p>
+    </div>
 
     <div class="task-card">
-      <h3>Mitarbeiterliste</h3>
+      <h3>&#128101; Mitarbeiterliste</h3>
       <div id="memberList" style="margin-top:10px;"></div>
     </div>
 
     <div class="task-card">
-      <h3>Kilometeruebersicht</h3>
+      <h3>&#128663; Kilometeruebersicht</h3>
       <div class="button-row" style="margin-top:8px;">
         <input id="mileageMonth" type="month" class="compact-input">
         <button class="login-btn" style="margin-bottom:0;" onclick="loadMileageOverview()">Aktualisieren</button>
@@ -58,13 +64,14 @@
     </div>
 
     <div class="task-card">
-      <h3>Offene Stundenzettel</h3>
+      <h3>&#128221; Offene Stundenzettel</h3>
       <div id="timesheetList" style="margin-top:10px;"></div>
     </div>
   </div>
 </div>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="supabase.js"></script>
 <script src="auth-context.js"></script>
 <script>
@@ -130,6 +137,132 @@ function formatKm(value) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 1
   }) + " km";
+}
+
+
+function setCustomerExportStatus(text, ok) {
+  const el = document.getElementById("customerExportStatus");
+  if (!el) return;
+  el.textContent = text || "\u00A0";
+  el.style.color = ok ? "#6bd86b" : "#ff6b3d";
+}
+
+function safeFileName(value) {
+  return String(value || "").trim().toLowerCase()
+    .replace(/[ae]/g, "ae").replace(/[oe]/g, "oe").replace(/[ue]/g, "ue").replace(/[ss]/g, "ss")
+    .replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "ohne-name";
+}
+
+function csvEscape(value) {
+  const text = value === null || value === undefined ? "" : String(value);
+  return '"' + text.replace(/"/g, '""') + '"';
+}
+
+function toCsv(items) {
+  if (!items || !items.length) return "";
+  const keys = Array.from(items.reduce((set, item) => {
+    Object.keys(item || {}).forEach(key => set.add(key));
+    return set;
+  }, new Set()));
+  const lines = [keys.map(csvEscape).join(";")];
+  items.forEach(item => {
+    lines.push(keys.map(key => csvEscape(typeof item[key] === "object" ? JSON.stringify(item[key]) : item[key])).join(";"));
+  });
+  return lines.join("\r\n");
+}
+
+function customerLabel(customer) {
+  return customer.firma || [customer.vorname, customer.nachname].filter(Boolean).join(" ") || customer.email || "Kunde";
+}
+
+function sameCustomerName(a, b) {
+  return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+}
+
+async function fetchCompanyRows(table) {
+  const { data, error } = await db.from(table).select("*").eq("company_id", authContext.company_id);
+  if (error) {
+    console.log(error);
+    return [];
+  }
+  return data || [];
+}
+
+function downloadBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function downloadCustomerDataArchive() {
+  if (!authContext || !authContext.company_id) return;
+  if (!window.JSZip) {
+    setCustomerExportStatus("ZIP-Modul konnte nicht geladen werden.", false);
+    return;
+  }
+
+  setCustomerExportStatus("Kundendaten werden gesammelt...", true);
+  const [customers, projects, orders, reports, documents, images] = await Promise.all([
+    fetchCompanyRows("customers"),
+    fetchCompanyRows("projects"),
+    fetchCompanyRows("auftraege"),
+    fetchCompanyRows("stundennachweise"),
+    fetchCompanyRows("project_documents"),
+    fetchCompanyRows("project_images")
+  ]);
+
+  const zip = new JSZip();
+  const root = zip.folder("bautrail-kundendaten");
+  const generatedAt = new Date().toISOString();
+
+  root.file("README.txt", [
+    "bautrail Kundendaten Export",
+    "Erstellt am: " + generatedAt,
+    "Firma: " + (company && company.name ? company.name : authContext.company_id),
+    "",
+    "Dieser ZIP-Ordner enthaelt CSV- und JSON-Dateien fuer Kunden, Projekte, Auftraege und Stundennachweise.",
+    "Dokumente und Bilder werden als Metadaten mit Datei-URLs exportiert."
+  ].join("\r\n"));
+
+  const allFolder = root.folder("00_gesamt");
+  allFolder.file("kunden.csv", toCsv(customers));
+  allFolder.file("projekte.csv", toCsv(projects));
+  allFolder.file("auftraege.csv", toCsv(orders));
+  allFolder.file("stundennachweise.csv", toCsv(reports));
+  allFolder.file("dokumente.csv", toCsv(documents));
+  allFolder.file("bilder.csv", toCsv(images));
+  allFolder.file("alles.json", JSON.stringify({ generatedAt, company, customers, projects, orders, reports, documents, images }, null, 2));
+
+  const customerRoot = root.folder("kunden");
+  customers.forEach((customer, index) => {
+    const label = customerLabel(customer);
+    const folder = customerRoot.folder(String(index + 1).padStart(3, "0") + "-" + safeFileName(label));
+    const customerName = customerLabel(customer);
+    const customerProjects = projects.filter(project => String(project.customer_id || "") === String(customer.id || "") || sameCustomerName(project.customer, customerName));
+    const projectIds = new Set(customerProjects.map(project => String(project.id || "")));
+    const customerOrders = orders.filter(order => String(order.customer_id || "") === String(customer.id || "") || sameCustomerName(order.customer, customerName));
+    const customerReports = reports.filter(report => String(report.customer_id || "") === String(customer.id || "") || sameCustomerName(report.customer, customerName));
+    const customerDocuments = documents.filter(doc => projectIds.has(String(doc.project_id || "")));
+    const customerImages = images.filter(image => projectIds.has(String(image.project_id || "")));
+
+    folder.file("kunde.json", JSON.stringify(customer, null, 2));
+    folder.file("projekte.csv", toCsv(customerProjects));
+    folder.file("auftraege.csv", toCsv(customerOrders));
+    folder.file("stundennachweise.csv", toCsv(customerReports));
+    folder.file("dokumente.csv", toCsv(customerDocuments));
+    folder.file("bilder.csv", toCsv(customerImages));
+    folder.file("daten.json", JSON.stringify({ customer, projects: customerProjects, orders: customerOrders, reports: customerReports, documents: customerDocuments, images: customerImages }, null, 2));
+  });
+
+  const blob = await zip.generateAsync({ type: "blob" });
+  const date = new Date().toISOString().slice(0, 10);
+  downloadBlob(blob, "bautrail-kundendaten-" + date + ".zip");
+  setCustomerExportStatus("Download erstellt: " + customers.length + " Kunden exportiert.", true);
 }
 
 async function loadCompany() {
@@ -232,14 +365,41 @@ async function loadMembers() {
             <button class="login-btn" style="width:auto;margin:0;padding:8px 10px;background:#444;" onclick="saveMemberJobType('${member.id}')">Speichern</button>
           </div>
         </div>
-        <button class="login-btn" style="width:auto;margin:0;padding:10px 12px;background:${member.active ? "#444" : "#ff6b3d"};" onclick="toggleMember('${member.id}', ${member.active ? "false" : "true"})">
-          ${member.active ? "Deaktivieren" : "Aktivieren"}
-        </button>
+        <div style="display:flex;flex-direction:column;gap:8px;min-width:116px;">
+          <button class="login-btn" style="width:auto;margin:0;padding:10px 12px;background:${member.active ? "#444" : "#ff6b3d"};" onclick="toggleMember('${member.id}', ${member.active ? "false" : "true"})">
+            ${member.active ? "Deaktivieren" : "Aktivieren"}
+          </button>
+          <button class="delete-btn" style="width:auto;margin:0;padding:10px 12px;" onclick="deleteMemberAccount('${member.user_id}')">Loeschen</button>
+        </div>
       </div>
     `;
     list.appendChild(card);
   });
 }
+
+
+window.deleteMemberAccount = async function(userId) {
+  if (!userId) return;
+  if (String(userId) === String(authContext.user_id)) {
+    alert("Deinen eigenen Account loeschst du in den Einstellungen.");
+    return;
+  }
+  const member = (membersCache || []).find(item => String(item.user_id) === String(userId));
+  const label = member ? (member.name || member.email || "diesem Mitarbeiter") : "diesem Mitarbeiter";
+  const ok = confirm("Account von " + label + " dauerhaft loeschen?");
+  if (!ok) return;
+  const typed = prompt("Bitte LOESCHEN eingeben, um den Account zu loeschen:");
+  if (String(typed || "").trim().toUpperCase() !== "LOESCHEN") return;
+
+  const { error } = await db.rpc("delete_company_member_account", { p_user_id: userId });
+  if (error) {
+    console.log(error);
+    alert("Account konnte nicht geloescht werden: " + (error.message || "Fehler"));
+    return;
+  }
+  await loadMembers();
+  await loadMileageOverview();
+};
 
 window.toggleMember = async function(memberId, targetActive) {
   const { error } = await db

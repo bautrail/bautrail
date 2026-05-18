@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Profil - bautrail</title>
+  <title>Einstellungen - bautrail</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#ff6b3d">
@@ -16,42 +16,48 @@
 <div class="app-wrapper">
   <div class="app-content">
     <header class="app-header">
-      <h1 class="app-name">Profil</h1>
-      <p class="company-name">Einstellungen und Rolle</p>
+      <h1 class="app-name">Einstellungen</h1>
+      <p class="company-name">Konto, Firma und Benachrichtigungen</p>
       <p id="headerRoleBadge" style="display:inline-block;margin-top:8px;padding:6px 10px;border-radius:999px;background:#2b2b2b;color:#fff;font-size:12px;">Rolle: -</p>
     </header>
 
     <div class="task-card" id="companySettingsCard" style="display:none;">
-      <h3>Firma Einstellungen</h3>
+      <h3>&#127970; Firma Einstellungen</h3>
       <p style="font-size:12px;opacity:0.75;margin-top:8px;">Firmendaten zentral verwalten</p>
       <button class="login-btn" style="margin-top:8px;" onclick="window.location.href='firma-einstellungen.html'">Oeffnen</button>
     </div>
 
     <div class="task-card">
-      <h3>Wecker Einstellungen</h3>
+      <h3>&#9200; Wecker Einstellungen</h3>
       <p style="font-size:12px;opacity:0.75;margin-top:8px;">Zeiten fuer Benachrichtigungen einstellen</p>
       <button class="login-btn" style="margin-top:8px;" onclick="window.location.href='wecker-einstellungen.html'">Oeffnen</button>
     </div>
 
     <div class="task-card">
-      <h3>System Rolle</h3>
+      <h3>&#128273; System Rolle</h3>
       <p style="font-size:12px;opacity:0.75;margin-top:8px;">Rolle waehlen und Einladungscode nutzen</p>
       <button class="login-btn" style="margin-top:8px;" onclick="window.location.href='system-rolle.html'">Oeffnen</button>
     </div>
 
     <div class="task-card">
-      <h3>Dein Name</h3>
+      <h3>&#9997;&#65039; Dein Name</h3>
       <input id="profileNameInput" class="compact-input" placeholder="Dein Name" style="margin-top:8px;">
       <button class="login-btn" style="margin-top:8px;" onclick="saveProfileName()">Namen speichern</button>
       <p id="nameStatus" style="font-size:12px;opacity:0.8;min-height:18px;">&nbsp;</p>
     </div>
+    <div class="task-card">
+      <h3>&#128465;&#65039; Account loeschen</h3>
+      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Dein Login und deine Firmenzuordnung werden dauerhaft geloescht. Der letzte Chef einer Firma kann nicht geloescht werden.</p>
+      <button class="delete-btn" style="margin-top:10px;" onclick="deleteOwnAccount()">Meinen Account loeschen</button>
+      <p id="deleteAccountStatus" style="font-size:12px;opacity:0.8;min-height:18px;">&nbsp;</p>
+    </div>
   </div>
 
   <nav class="bottom-nav">
-    <a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+    <a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
     <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
     <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
-    <a href="profil.html" class="active"><span>&#128100;</span><small>Profil</small></a>
+    <a href="profil.html" class="active"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
   </nav>
 </div>
 
@@ -66,6 +72,43 @@ function setNameStatus(text, ok) {
   const el = document.getElementById("nameStatus");
   el.textContent = text || "\u00A0";
   el.style.color = ok ? "#4caf50" : "#ff3b3b";
+}
+
+
+function setDeleteAccountStatus(text, ok) {
+  const el = document.getElementById("deleteAccountStatus");
+  if (!el) return;
+  el.textContent = text || "\u00A0";
+  el.style.color = ok ? "#4caf50" : "#ff3b3b";
+}
+
+async function deleteOwnAccount() {
+  if (!authContext || !authContext.user_id) {
+    setDeleteAccountStatus("Keine Session gefunden.", false);
+    return;
+  }
+
+  const firstOk = confirm("Account wirklich dauerhaft loeschen? Du wirst danach abgemeldet.");
+  if (!firstOk) return;
+
+  const typed = prompt("Bitte LOESCHEN eingeben, um den Account zu loeschen:");
+  if (String(typed || "").trim().toUpperCase() !== "LOESCHEN") {
+    setDeleteAccountStatus("Loeschung abgebrochen.", false);
+    return;
+  }
+
+  setDeleteAccountStatus("Account wird geloescht...", true);
+  const { error } = await db.rpc("delete_current_user_account");
+
+  if (error) {
+    console.log(error);
+    setDeleteAccountStatus("Account konnte nicht geloescht werden: " + (error.message || "Fehler"), false);
+    return;
+  }
+
+  await db.auth.signOut();
+  localStorage.clear();
+  window.location.href = "login.html";
 }
 
 async function loadProfileName() {

@@ -9,7 +9,7 @@ form.addEventListener("submit", async (e) => {
   const password = document.getElementById("password").value;
 
   if (!email || !password) {
-    alert("Bitte alle Felder ausfüllen!");
+    alert("Bitte alle Felder ausfuellen!");
     return;
   }
 

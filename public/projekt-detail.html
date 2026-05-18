@@ -228,8 +228,8 @@
       <h3>Ablage</h3>
       <input type="file" id="imageInput" multiple accept="image/*" style="display:none">
       <input type="file" id="documentInput" multiple style="display:none">
-      <button onclick="openImagePicker()" class="login-btn">Bilder ausw&auml;hlen</button>
-      <button onclick="openDocumentPicker()" class="login-btn" style="background:#444;">Dokumente ausw&auml;hlen</button>
+      <button onclick="openImagePicker()" class="login-btn">Bilder auswaehlen</button>
+      <button onclick="openDocumentPicker()" class="login-btn" style="background:#444;">Dokumente auswaehlen</button>
       <p id="documentStatus" style="font-size:12px;opacity:0.7;margin:0;"></p>
     </div>
 
@@ -253,10 +253,10 @@
   </div>
 
   <nav class="bottom-nav">
-    <a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+    <a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
     <a href="kunden.html" class="active"><span>&#128101;</span><small>Kunden</small></a>
     <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
-    <a href="profil.html"><span>&#128100;</span><small>Profil</small></a>
+    <a href="profil.html"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
   </nav>
 </div>
 
@@ -500,7 +500,7 @@ document.addEventListener("DOMContentLoaded", function() {
   // =====================================================
   async function loadProjekt() {
 
-    // ?? OFFLINE
+    // OFFLINE
     if (!navigator.onLine) {
 
       const cached =
@@ -545,7 +545,7 @@ document.addEventListener("DOMContentLoaded", function() {
       return;
     }
 
-    // ?? ONLINE
+    // ONLINE
     const { data, error } = await db
   .from("projects")
   .select("*")
@@ -554,7 +554,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 if (error || !data) {
 
-  // ?? fallback cache
+  // fallback cache
   const cached =
     JSON.parse(
       localStorage.getItem(
@@ -1207,7 +1207,7 @@ if (window.BaudokuAutoTextareas) {
 
       saveCreateQueue(createQueue);
 
-      // ?? OFFLINE
+      // OFFLINE
       if (!navigator.onLine) {
 
         let queue =
@@ -1238,7 +1238,7 @@ if (window.BaudokuAutoTextareas) {
         return;
       }
 
-      // ?? ONLINE
+      // ONLINE
       const { error } = await db
         .from("projects")
         .update({
@@ -1346,16 +1346,16 @@ const oldCache =
 
 if (oldCache) {
 
-  // ?? neue id setzen
+  // neue id setzen
   oldCache.id = newId;
 
-  // ?? neuen cache speichern
+  // neuen cache speichern
   localStorage.setItem(
     "project_" + newId,
     JSON.stringify(oldCache)
   );
 
-  // ?? alten l&ouml;schen
+  // alten loeschen
   localStorage.removeItem(
     "project_" + p.id
   );
@@ -1656,7 +1656,7 @@ if (oldCache) {
       list.appendChild(div);
     }
 
-    // ?? OFFLINE
+    // OFFLINE
     if (!navigator.onLine) {
 
       const visiblePendingUploads =
@@ -1685,7 +1685,7 @@ if (oldCache) {
       return;
     }
 
-    // ?? ONLINE
+    // ONLINE
     const { data } = await db
       .from("project_images")
       .select("*")
@@ -1767,7 +1767,7 @@ if (oldCache) {
 
     for (let file of this.files) {
 
-      // ?? OFFLINE
+      // OFFLINE
       if (!navigator.onLine) {
 
         const reader =
@@ -1788,7 +1788,7 @@ img.onload = function() {
   const ctx =
     canvas.getContext("2d");
 
-  // ?? kleiner machen
+  // kleiner machen
   const maxWidth = 1000;
 
   const scale =
@@ -1807,7 +1807,7 @@ img.onload = function() {
     canvas.height
   );
 
-  // ?? komprimieren
+  // komprimieren
   const compressed =
     canvas.toDataURL(
       "image/jpeg",
@@ -1849,7 +1849,7 @@ img.src = e.target.result;
         continue;
       }
 
-      // ?? ONLINE
+      // ONLINE
       const fileName =
         makeImageFileName(projektId);
 
