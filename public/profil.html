@@ -24,19 +24,19 @@
     <div class="task-card" id="companySettingsCard" style="display:none;">
       <h3>&#127970; Firma Einstellungen</h3>
       <p style="font-size:12px;opacity:0.75;margin-top:8px;">Firmendaten zentral verwalten</p>
-      <button class="login-btn" style="margin-top:8px;" onclick="window.location.href='firma-einstellungen.html'">Oeffnen</button>
+      <button class="login-btn" style="margin-top:8px;" onclick="window.location.href='firma-einstellungen.html'">Öffnen</button>
     </div>
 
     <div class="task-card">
       <h3>&#9200; Wecker Einstellungen</h3>
-      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Zeiten fuer Benachrichtigungen einstellen</p>
-      <button class="login-btn" style="margin-top:8px;" onclick="window.location.href='wecker-einstellungen.html'">Oeffnen</button>
+      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Zeiten für Benachrichtigungen einstellen</p>
+      <button class="login-btn" style="margin-top:8px;" onclick="window.location.href='wecker-einstellungen.html'">Öffnen</button>
     </div>
 
     <div class="task-card">
       <h3>&#128273; System Rolle</h3>
-      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Rolle waehlen und Einladungscode nutzen</p>
-      <button class="login-btn" style="margin-top:8px;" onclick="window.location.href='system-rolle.html'">Oeffnen</button>
+      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Rolle wählen und Einladungscode nutzen</p>
+      <button class="login-btn" style="margin-top:8px;" onclick="window.location.href='system-rolle.html'">Öffnen</button>
     </div>
 
     <div class="task-card">
@@ -46,15 +46,15 @@
       <p id="nameStatus" style="font-size:12px;opacity:0.8;min-height:18px;">&nbsp;</p>
     </div>
     <div class="task-card">
-      <h3>&#128465;&#65039; Account loeschen</h3>
-      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Dein Login und deine Firmenzuordnung werden dauerhaft geloescht. Der letzte Chef einer Firma kann nicht geloescht werden.</p>
-      <button class="delete-btn" style="margin-top:10px;" onclick="deleteOwnAccount()">Meinen Account loeschen</button>
+      <h3>&#128465;&#65039; Account löschen</h3>
+      <p id="deleteAccountHint" style="font-size:12px;opacity:0.75;margin-top:8px;">Dein Login und deine Firmenzuordnung werden dauerhaft gelöscht.</p>
+      <button class="delete-btn" style="margin-top:10px;" onclick="deleteOwnAccount()">Meinen Account löschen</button>
       <p id="deleteAccountStatus" style="font-size:12px;opacity:0.8;min-height:18px;">&nbsp;</p>
     </div>
   </div>
 
   <nav class="bottom-nav">
-    <a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
+    <a href="index.html"><span>&#127968;</span><small>Übersicht</small></a>
     <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
     <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
     <a href="profil.html" class="active"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
@@ -62,11 +62,14 @@
 </div>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="supabase.js"></script>
 <script src="auth-context.js"></script>
+<script src="company-export.js"></script>
 <script>
 let authContext = null;
 let memberRowId = null;
+let companyForDelete = null;
 
 function setNameStatus(text, ok) {
   const el = document.getElementById("nameStatus");
@@ -88,27 +91,76 @@ async function deleteOwnAccount() {
     return;
   }
 
-  const firstOk = confirm("Account wirklich dauerhaft loeschen? Du wirst danach abgemeldet.");
+  const isChef = String(authContext.role || "").toLowerCase() === "chef";
+
+  if (isChef && window.BautrailCompanyExport) {
+    const wantsBackup = confirm("Vor dem L?schen eine vollst?ndige Sicherung als ZIP herunterladen?");
+    if (wantsBackup) {
+      try {
+        await window.BautrailCompanyExport.downloadFullArchive(authContext, {
+          company: companyForDelete,
+          setStatus: setDeleteAccountStatus
+        });
+      } catch (err) {
+        console.log(err);
+        const keepGoing = confirm("Die Sicherung konnte nicht erstellt werden. Trotzdem mit dem L?schen fortfahren?");
+        if (!keepGoing) {
+          setDeleteAccountStatus("L?schung abgebrochen.", false);
+          return;
+        }
+      }
+    }
+  }
+
+  const companyName = companyForDelete && companyForDelete.name ? String(companyForDelete.name).trim() : "";
+  const confirmMessage = isChef
+    ? "Account wirklich dauerhaft l?schen? Als Chef l?schst du damit auch die komplette Firma mit allen Kunden, Projekten, Auftr?gen, Nachweisen, Dateien und Mitarbeiter-Accounts."
+    : "Account wirklich dauerhaft l?schen? Du wirst danach abgemeldet.";
+
+  const firstOk = confirm(confirmMessage);
   if (!firstOk) return;
 
-  const typed = prompt("Bitte LOESCHEN eingeben, um den Account zu loeschen:");
-  if (String(typed || "").trim().toUpperCase() !== "LOESCHEN") {
-    setDeleteAccountStatus("Loeschung abgebrochen.", false);
+  if (isChef && companyName) {
+    const typedCompany = prompt("Bitte den Firmennamen eingeben, um die Firmenl\u00f6schung zu best\u00e4tigen:\n" + companyName);
+    if (String(typedCompany || "").trim() !== companyName) {
+      setDeleteAccountStatus("Firmennamen-Best?tigung stimmt nicht. L?schung abgebrochen.", false);
+      return;
+    }
+  }
+
+  const requiredText = isChef ? "FIRMA LOESCHEN" : "LOESCHEN";
+  const typed = prompt("Bitte " + requiredText + " eingeben, um den Vorgang zu best?tigen:");
+  if (String(typed || "").trim().toUpperCase() !== requiredText) {
+    setDeleteAccountStatus("L?schung abgebrochen.", false);
     return;
   }
 
-  setDeleteAccountStatus("Account wird geloescht...", true);
+  setDeleteAccountStatus(isChef ? "Firma und Account werden gel?scht..." : "Account wird gel?scht...", true);
   const { error } = await db.rpc("delete_current_user_account");
 
   if (error) {
     console.log(error);
-    setDeleteAccountStatus("Account konnte nicht geloescht werden: " + (error.message || "Fehler"), false);
+    setDeleteAccountStatus("Account konnte nicht gel?scht werden: " + (error.message || "Fehler"), false);
     return;
   }
 
   await db.auth.signOut();
   localStorage.clear();
   window.location.href = "login.html";
+}
+
+async function loadCompanyForDelete() {
+  if (!authContext || !authContext.company_id) return;
+  const { data, error } = await db
+    .from("companies")
+    .select("id, name")
+    .eq("id", authContext.company_id)
+    .maybeSingle();
+  if (error) {
+    console.log(error);
+    return;
+  }
+  companyForDelete = data || null;
 }
 
 async function loadProfileName() {
@@ -172,6 +224,12 @@ async function saveProfileName() {
   const role = ctx && ctx.role ? ctx.role : "-";
   document.getElementById("headerRoleBadge").textContent = "Rolle: " + role;
   document.getElementById("companySettingsCard").style.display = role === "chef" ? "block" : "none";
+  const deleteHint = document.getElementById("deleteAccountHint");
+  if (deleteHint) {
+    deleteHint.textContent = role === "chef"
+      ? "Als Chef löschst du hier die komplette Firma mit allen Kunden, Projekten, Aufträgen, Nachweisen, Dateien und Mitarbeiter-Accounts dauerhaft."
+      : "Dein Login und deine Firmenzuordnung werden dauerhaft gelöscht.";
+  }
   await loadProfileName();
 })();
 </script>

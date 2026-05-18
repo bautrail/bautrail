@@ -22,11 +22,11 @@
     </header>
 
     <div class="task-card">
-      <h3>&#127970; Firmenuebersicht</h3>
+      <h3>&#127970; Firmenübersicht</h3>
       <p id="roleInfo" style="opacity:0.8;margin-top:8px;">Lade Daten...</p>
       <div class="button-row" style="margin-top:10px;">
         <button class="login-btn" style="margin-bottom:0;" onclick="window.location.href='firma-einstellungen.html'">Firma einstellen</button>
-        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="window.location.href='index.html'">Zur Uebersicht</button>
+        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="window.location.href='index.html'">Zur Übersicht</button>
       </div>
     </div>
 
@@ -34,7 +34,7 @@
       <h3>&#9993;&#65039; Einladungscode erstellen</h3>
       <div class="button-row" style="margin-top:8px;">
         <select id="inviteRole" class="compact-input">
-          <option value="buero">Buero</option>
+          <option value="buero">Büro</option>
           <option value="angestellter">Angestellter</option>
         </select>
         <button class="login-btn" style="margin-bottom:0;" onclick="createInvite()">Code erstellen</button>
@@ -44,9 +44,22 @@
     </div>
     <div class="task-card">
       <h3>&#128230; Kundendaten Download</h3>
-      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Erstellt einen ZIP-Ordner mit Kunden, Projekten, Auftraegen und Stundennachweisen deiner Firma.</p>
+      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Erstellt einen ZIP-Ordner mit Kunden, Projekten, Aufträgen und Stundennachweisen deiner Firma.</p>
       <button class="login-btn" style="margin-top:10px;margin-bottom:0;" onclick="downloadCustomerDataArchive()">Kundendaten herunterladen</button>
       <p id="customerExportStatus" style="font-size:12px;opacity:0.8;min-height:18px;margin-top:8px;">&nbsp;</p>
+    </div>
+
+
+    <div class="task-card">
+      <h3>&#128202; Exporte & Abrechnung</h3>
+      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Monats?bersicht f?r Stunden, Kilometer, Auftr?ge und Kundendaten.</p>
+      <div class="button-row" style="margin-top:8px;">
+        <input id="adminExportMonth" type="month" class="compact-input">
+        <button class="login-btn" style="margin-bottom:0;" onclick="downloadMonthlyBillingArchive()">Monats-ZIP</button>
+        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="downloadMonthlyBillingPdf()">Monats-PDF</button>
+      </div>
+      <button class="login-btn" style="margin-top:8px;margin-bottom:0;background:#444;" onclick="downloadFullCompanyArchive()">Komplettes Firmenbackup</button>
+      <p id="adminExportStatus" style="font-size:12px;opacity:0.8;min-height:18px;margin-top:8px;">&nbsp;</p>
     </div>
 
     <div class="task-card">
@@ -55,7 +68,7 @@
     </div>
 
     <div class="task-card">
-      <h3>&#128663; Kilometeruebersicht</h3>
+      <h3>&#128663; Kilometerübersicht</h3>
       <div class="button-row" style="margin-top:8px;">
         <input id="mileageMonth" type="month" class="compact-input">
         <button class="login-btn" style="margin-bottom:0;" onclick="loadMileageOverview()">Aktualisieren</button>
@@ -67,17 +80,68 @@
       <h3>&#128221; Offene Stundenzettel</h3>
       <div id="timesheetList" style="margin-top:10px;"></div>
     </div>
+
+    <div class="task-card">
+      <h3>&#9888;&#65039; Fehlende Einträge heute</h3>
+      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Zeigt Mitarbeiter, bei denen heute noch Stundennachweis oder Arbeitszeit fehlt.</p>
+      <button class="login-btn" style="margin-top:8px;margin-bottom:0;" onclick="loadMissingToday()">Aktualisieren</button>
+      <div id="missingTodayList" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="task-card">
+      <h3>&#128450;&#65039; Stundennachweis-Archiv</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+        <input id="archiveMonth" type="month" class="compact-input">
+        <select id="archiveMember" class="compact-input"><option value="">Alle Mitarbeiter</option></select>
+        <select id="archiveCustomer" class="compact-input"><option value="">Alle Kunden</option></select>
+        <select id="archiveProject" class="compact-input"><option value="">Alle Projekte</option></select>
+        <select id="archiveStatus" class="compact-input">
+          <option value="">Alle Status</option>
+          <option value="offen">Offen</option>
+          <option value="geprueft">Geprüft</option>
+          <option value="abgelehnt">Abgelehnt</option>
+          <option value="abgerechnet">Abgerechnet</option>
+        </select>
+        <button class="login-btn" style="margin:0;" onclick="loadReportArchive()">Suchen</button>
+      </div>
+      <div id="archiveSummary" style="margin-top:10px;"></div>
+      <div id="reportArchiveList" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="task-card">
+      <h3>&#128188; Rechnungs-Vorbereitung</h3>
+      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Sammelt geprüfte Nachweise eines Kunden für den gewählten Monat.</p>
+      <div class="button-row" style="margin-top:8px;">
+        <select id="billingCustomer" class="compact-input"><option value="">Kunde wählen</option></select>
+        <button class="login-btn" style="margin-bottom:0;" onclick="prepareCustomerBilling()">Vorbereiten</button>
+        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="openBillingCustomerFile()">Kundenakte</button>
+      </div>
+      <div id="billingPreview" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="task-card">
+      <h3>&#128200; Mitarbeiter-Auswertung</h3>
+      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Stunden, Kilometer, Nachweise und Projekte pro Mitarbeiter im Monat.</p>
+      <button class="login-btn" style="margin-top:8px;margin-bottom:0;" onclick="loadEmployeeAnalysis()">Auswertung laden</button>
+      <div id="employeeAnalysis" style="margin-top:10px;"></div>
+    </div>
   </div>
 </div>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="supabase.js"></script>
 <script src="auth-context.js"></script>
+<script src="company-export.js"></script>
+<script src="chef-report-tools.js"></script>
 <script>
 let authContext = null;
 let company = null;
 let membersCache = [];
+let customersCache = [];
+let projectsCache = [];
+let reportArchiveCache = [];
 
 function randomInviteCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -147,9 +211,55 @@ function setCustomerExportStatus(text, ok) {
   el.style.color = ok ? "#6bd86b" : "#ff6b3d";
 }
 
+function setAdminExportStatus(text, ok) {
+  const el = document.getElementById("adminExportStatus");
+  if (!el) return;
+  el.textContent = text || "\u00A0";
+  el.style.color = ok ? "#6bd86b" : "#ff6b3d";
+}
+
+function adminExportOptions() {
+  return {
+    company,
+    setStatus: setAdminExportStatus
+  };
+}
+
+window.downloadFullCompanyArchive = async function() {
+  if (!authContext || !authContext.company_id || !window.BautrailCompanyExport) return;
+  try {
+    await window.BautrailCompanyExport.downloadFullArchive(authContext, adminExportOptions());
+  } catch (err) {
+    console.log(err);
+    setAdminExportStatus(err.message || "Export konnte nicht erstellt werden.", false);
+  }
+};
+
+window.downloadMonthlyBillingArchive = async function() {
+  if (!authContext || !authContext.company_id || !window.BautrailCompanyExport) return;
+  const input = document.getElementById("adminExportMonth");
+  try {
+    await window.BautrailCompanyExport.downloadMonthlyArchive(authContext, input ? input.value : "", adminExportOptions());
+  } catch (err) {
+    console.log(err);
+    setAdminExportStatus(err.message || "Monats-ZIP konnte nicht erstellt werden.", false);
+  }
+};
+
+window.downloadMonthlyBillingPdf = async function() {
+  if (!authContext || !authContext.company_id || !window.BautrailCompanyExport) return;
+  const input = document.getElementById("adminExportMonth");
+  try {
+    await window.BautrailCompanyExport.downloadMonthlyPdf(authContext, input ? input.value : "", adminExportOptions());
+  } catch (err) {
+    console.log(err);
+    setAdminExportStatus(err.message || "Monats-PDF konnte nicht erstellt werden.", false);
+  }
+};
+
 function safeFileName(value) {
   return String(value || "").trim().toLowerCase()
-    .replace(/[ae]/g, "ae").replace(/[oe]/g, "oe").replace(/[ue]/g, "ue").replace(/[ss]/g, "ss")
+    .replace(/[ä]/g, "ae").replace(/[ö]/g, "oe").replace(/[ü]/g, "ue").replace(/[ß]/g, "ss")
     .replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "ohne-name";
 }
 
@@ -225,7 +335,7 @@ async function downloadCustomerDataArchive() {
     "Erstellt am: " + generatedAt,
     "Firma: " + (company && company.name ? company.name : authContext.company_id),
     "",
-    "Dieser ZIP-Ordner enthaelt CSV- und JSON-Dateien fuer Kunden, Projekte, Auftraege und Stundennachweise.",
+    "Dieser ZIP-Ordner enthält CSV- und JSON-Dateien für Kunden, Projekte, Aufträge und Stundennachweise.",
     "Dokumente und Bilder werden als Metadaten mit Datei-URLs exportiert."
   ].join("\r\n"));
 
@@ -355,9 +465,15 @@ async function loadMembers() {
         <div>
           <strong>${member.name || member.email || "Mitarbeiter"}</strong><br>
           <small>${member.role} | ${member.active ? "aktiv" : "deaktiviert"} | ${member.job_type || "ohne Typ"}</small>
-          <div style="margin-top:8px;display:flex;gap:8px;">
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="role_${member.id}" class="compact-input" style="min-height:38px;padding:8px 10px;">
+              <option value="chef" ${member.role === "chef" ? "selected" : ""}>Chef</option>
+              <option value="buero" ${member.role === "buero" ? "selected" : ""}>Büro</option>
+              <option value="angestellter" ${member.role === "angestellter" ? "selected" : ""}>Mitarbeiter</option>
+            </select>
+            <button class="login-btn" style="width:auto;margin:0;padding:8px 10px;background:#444;" onclick="saveMemberRole('${member.id}')">Rolle speichern</button>
             <select id="jobtype_${member.id}" class="compact-input" style="min-height:38px;padding:8px 10px;">
-              <option value="">Typ waehlen</option>
+              <option value="">Typ wählen</option>
               <option value="Meister" ${member.job_type === "Meister" ? "selected" : ""}>Meister</option>
               <option value="Monteur" ${member.job_type === "Monteur" ? "selected" : ""}>Monteur</option>
               <option value="Helfer" ${member.job_type === "Helfer" ? "selected" : ""}>Helfer</option>
@@ -369,7 +485,7 @@ async function loadMembers() {
           <button class="login-btn" style="width:auto;margin:0;padding:10px 12px;background:${member.active ? "#444" : "#ff6b3d"};" onclick="toggleMember('${member.id}', ${member.active ? "false" : "true"})">
             ${member.active ? "Deaktivieren" : "Aktivieren"}
           </button>
-          <button class="delete-btn" style="width:auto;margin:0;padding:10px 12px;" onclick="deleteMemberAccount('${member.user_id}')">Loeschen</button>
+          <button class="delete-btn" style="width:auto;margin:0;padding:10px 12px;" onclick="deleteMemberAccount('${member.user_id}')">Löschen</button>
         </div>
       </div>
     `;
@@ -386,35 +502,56 @@ window.deleteMemberAccount = async function(userId) {
   }
   const member = (membersCache || []).find(item => String(item.user_id) === String(userId));
   const label = member ? (member.name || member.email || "diesem Mitarbeiter") : "diesem Mitarbeiter";
-  const ok = confirm("Account von " + label + " dauerhaft loeschen?");
+  const ok = confirm("Account von " + label + " dauerhaft löschen?");
   if (!ok) return;
-  const typed = prompt("Bitte LOESCHEN eingeben, um den Account zu loeschen:");
+  const typed = prompt("Bitte LOESCHEN eingeben, um den Account zu löschen:");
   if (String(typed || "").trim().toUpperCase() !== "LOESCHEN") return;
 
   const { error } = await db.rpc("delete_company_member_account", { p_user_id: userId });
   if (error) {
     console.log(error);
-    alert("Account konnte nicht geloescht werden: " + (error.message || "Fehler"));
+    alert("Account konnte nicht gelöscht werden: " + (error.message || "Fehler"));
     return;
   }
   await loadMembers();
+  if (window.loadArchiveFilterOptions) await window.loadArchiveFilterOptions();
+  await loadMileageOverview();
+};
+
+window.saveMemberRole = async function(memberId) {
+  const select = document.getElementById("role_" + memberId);
+  const role = select ? select.value : "angestellter";
+
+  const { error } = await db.rpc("set_company_member_role", {
+    p_member_id: memberId,
+    p_role: role
+  });
+
+  if (error) {
+    console.log(error);
+    alert("Rolle konnte nicht gespeichert werden: " + (error.message || "Fehler"));
+    return;
+  }
+
+  await loadMembers();
+  if (window.loadArchiveFilterOptions) await window.loadArchiveFilterOptions();
   await loadMileageOverview();
 };
 
 window.toggleMember = async function(memberId, targetActive) {
-  const { error } = await db
-    .from("company_members")
-    .update({ active: targetActive })
-    .eq("id", memberId)
-    .eq("company_id", authContext.company_id);
+  const { error } = await db.rpc("set_company_member_active", {
+    p_member_id: memberId,
+    p_active: targetActive
+  });
 
   if (error) {
     console.log(error);
-    alert("Status konnte nicht geaendert werden.");
+    alert("Status konnte nicht geändert werden: " + (error.message || "Fehler"));
     return;
   }
 
   await loadMembers();
+  if (window.loadArchiveFilterOptions) await window.loadArchiveFilterOptions();
   await loadMileageOverview();
 };
 
@@ -435,6 +572,7 @@ window.saveMemberJobType = async function(memberId) {
   }
 
   await loadMembers();
+  if (window.loadArchiveFilterOptions) await window.loadArchiveFilterOptions();
   await loadMileageOverview();
 };
 
@@ -623,10 +761,18 @@ window.reviewTimesheet = async function(timesheetId, status) {
     window.location.href = window.BaudokuAuthContext.dashboardPathForRole(authContext.role);
     return;
   }
+  const exportMonth = document.getElementById("adminExportMonth");
+  if (exportMonth && window.BautrailCompanyExport) exportMonth.value = window.BautrailCompanyExport.defaultMonth();
+  const archiveMonth = document.getElementById("archiveMonth");
+  if (archiveMonth) archiveMonth.value = defaultMonthValue();
   await loadCompany();
   await loadMembers();
+  await window.loadArchiveFilterOptions();
   await loadMileageOverview();
   await loadOpenTimesheets();
+  await window.loadMissingToday();
+  await window.loadReportArchive();
+  await window.loadEmployeeAnalysis();
 })();
 </script>
 <script src="pwa.js"></script>

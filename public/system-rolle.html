@@ -25,7 +25,7 @@
       <p id="currentRoleText" style="font-size:12px;opacity:0.75;">Lade Rolle...</p>
       <select id="roleSelect" class="compact-input" style="margin-top:8px;">
         <option value="chef">Chef</option>
-        <option value="buero">Buero</option>
+        <option value="buero">Büro</option>
         <option value="angestellter">Mitarbeiter</option>
       </select>
       <button class="login-btn" style="margin-top:8px;" onclick="saveRole()">Rolle speichern</button>
@@ -131,7 +131,7 @@ async function joinCompanyByInvite() {
     const msg =
       (data && data[0] && data[0].message)
       || (error && error.message)
-      || "Einladungscode ungueltig.";
+      || "Einladungscode ungültig.";
     status.textContent = msg;
     status.style.color = "#ff3b3b";
     return;

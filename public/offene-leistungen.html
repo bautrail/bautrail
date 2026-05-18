@@ -22,7 +22,7 @@
     </header>
 
     <div class="task-card">
-      <strong>Uebersicht</strong>
+      <strong>Übersicht</strong>
       <p id="summary" style="margin-top:8px;opacity:0.8;">Wird geladen...</p>
     </div>
 
@@ -30,7 +30,7 @@
   </div>
 
   <nav class="bottom-nav">
-    <a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
+    <a href="index.html"><span>&#127968;</span><small>Übersicht</small></a>
     <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
     <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
     <a href="profil.html"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
@@ -80,7 +80,7 @@ async function loadOpenServices() {
       <small>${item.arbeitsdatum || "-"} | ${item.project || "-"}</small>
       <p style="margin-top:8px;opacity:0.85;">Stunden: ${item.stunden || 0} | Satz: ${euro(item.stundensatz)} | Netto: ${euro(item.netto_summe)}</p>
       <div class="button-row">
-        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="openSheet('${item.id}')">Oeffnen</button>
+        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="openSheet('${item.id}')">Öffnen</button>
         <button class="login-btn" style="margin-bottom:0;" onclick="markInvoiced('${item.id}')">Als abgerechnet markieren</button>
       </div>
     `;

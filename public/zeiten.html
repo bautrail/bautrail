@@ -65,7 +65,7 @@
   </div>
 
   <nav class="bottom-nav">
-    <a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
+    <a href="index.html"><span>&#127968;</span><small>Übersicht</small></a>
     <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
     <a href="zeiten.html" class="active"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
     <a href="profil.html"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
@@ -185,7 +185,7 @@ async function saveDayTimes() {
   }
 
   if (!payload.length) {
-    setStatus("Keine gueltigen Zeitbloecke gefunden.", false);
+    setStatus("Keine gültigen Zeitbloecke gefunden.", false);
     return;
   }
 
@@ -321,7 +321,7 @@ window.downloadMonthlyExport = async function() {
   const rows = allTimesCache.filter(item => toMonthKeyFromIso(item.start_time) === monthKey);
 
   if (!rows.length) {
-    setStatus("Keine Eintraege fuer den ausgewaehlten Monat.", false);
+    setStatus("Keine Einträge für den ausgewählten Monat.", false);
     return;
   }
 
@@ -372,7 +372,7 @@ window.downloadMonthlyExport = async function() {
 
 window.downloadMonthlyExportPdf = async function() {
   if (!window.jspdf || !window.jspdf.jsPDF) {
-    setStatus("PDF-Modul nicht verfuegbar.", false);
+    setStatus("PDF-Modul nicht verfügbar.", false);
     return;
   }
   if (!allTimesCache.length) {
@@ -385,7 +385,7 @@ window.downloadMonthlyExportPdf = async function() {
     .sort((a, b) => (a.start_time < b.start_time ? -1 : 1));
 
   if (!rows.length) {
-    setStatus("Keine Eintraege fuer den ausgewaehlten Monat.", false);
+    setStatus("Keine Einträge für den ausgewählten Monat.", false);
     return;
   }
 

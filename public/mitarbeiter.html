@@ -38,7 +38,7 @@
   </div>
 
   <nav class="bottom-nav">
-    <a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
+    <a href="index.html"><span>&#127968;</span><small>Übersicht</small></a>
     <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
     <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
     <a href="profil.html"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
@@ -86,7 +86,7 @@ async function loadEmployees() {
       <p style="margin-top:8px;opacity:0.8;">Stundensatz: ${Number(item.hourly_rate || 0).toFixed(2)} EUR</p>
       <div class="button-row">
         <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="editEmployee('${item.id}')">Bearbeiten</button>
-        <button class="delete-btn" style="margin-top:0;" onclick="deleteEmployee('${item.id}')">Loeschen</button>
+        <button class="delete-btn" style="margin-top:0;" onclick="deleteEmployee('${item.id}')">Löschen</button>
       </div>
     `;
     list.appendChild(card);
@@ -104,16 +104,16 @@ window.editEmployee = function(id) {
 };
 
 window.deleteEmployee = async function(id) {
-  const typed = prompt("Zum Loeschen bitte BESTAETIGEN eingeben.");
+  const typed = prompt("Zum Löschen bitte BESTAETIGEN eingeben.");
   if (typed !== "BESTAETIGEN") return;
 
   const { error } = await db.from("employees").delete().eq("id", id);
   if (error) {
     console.log(error);
-    setStatus("Loeschen fehlgeschlagen.", false);
+    setStatus("Löschen fehlgeschlagen.", false);
     return;
   }
-  setStatus("Mitarbeiter geloescht.", true);
+  setStatus("Mitarbeiter gelöscht.", true);
   await loadEmployees();
 };
 

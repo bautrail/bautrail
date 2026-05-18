@@ -579,7 +579,7 @@ onclick="finishJob()"
 class="delete-btn"
 onclick="deleteJob()"
 >
-🗑 Loeschen
+🗑 Löschen
 </button>
 
 </div>
@@ -608,7 +608,7 @@ onclick="deleteJob()"
 
 <div class="info-box">
 
-  <small>Faelligkeit</small>
+  <small>Fälligkeit</small>
 
   <div
     id="faelligkeit"
@@ -670,7 +670,7 @@ onclick="deleteJob()"
     <input
       type="text"
       id="materialInput"
-      placeholder="Material hinzufuegen..."
+      placeholder="Material hinzufügen..."
       class="search-input"
     >
 
@@ -759,7 +759,7 @@ onclick="deleteJob()"
     id="deleteAudioBtn"
     onclick="deleteAudio()"
   >
-    🗑 Sprachtext loeschen
+    🗑 Sprachtext löschen
   </button>
 
 </div>
@@ -845,13 +845,13 @@ onclick="deleteJob()"
 <!-- NAV -->
 <nav class="bottom-nav">
 
-<a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
+<a href="index.html"><span>&#127968;</span><small>Übersicht</small></a>
 
 <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
 
 <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
 
-<a href="auftraege.html" class="active"><span>&#128203;</span><small>Auftraege</small></a>
+<a href="auftraege.html" class="active"><span>&#128203;</span><small>Aufträge</small></a>
 
 </nav>
 
@@ -860,6 +860,7 @@ onclick="deleteJob()"
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
+<script src="auth-context.js"></script>
 <script src="project-documents.js"></script>
 <script src="work-presets.js"></script>
 <script src="auto-textareas.js"></script>
@@ -1150,7 +1151,7 @@ async function deleteJob(){
 
   const confirmDelete =
     confirm(
-      "Auftrag wirklich loeschen?"
+      "Auftrag wirklich löschen?"
     );
 
   if(!confirmDelete) return;
@@ -1550,7 +1551,7 @@ async function deleteAudio(){
 
     if(error){
       console.log(error);
-      alert("Sprachaufnahme konnte nicht geloescht werden.");
+      alert("Sprachaufnahme konnte nicht gelöscht werden.");
       return;
     }
   }

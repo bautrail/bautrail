@@ -78,12 +78,18 @@
         "company.settings",
         "company.invites",
         "team.manage",
+        "team.roles",
+        "team.delete",
+        "company.delete",
+        "exports.full",
+        "exports.billing",
         "customers.manage",
         "projects.manage",
         "orders.manage",
         "planning.manage",
         "timesheets.approve",
         "timesheets.read_all",
+        "exports.billing",
         "media.manage"
       ],
       buero: [

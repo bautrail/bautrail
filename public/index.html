@@ -48,7 +48,7 @@
 </div>
 
 <div class="task-card" onclick="openAuftraege()" style="cursor:pointer;">
-  <h3>&#128203; Auftraege</h3>
+  <h3>&#128203; Aufträge</h3>
 </div>
 
 <div class="task-card" onclick="openFahrzeugMaterial()" style="cursor:pointer;">
@@ -64,7 +64,7 @@
 </div>
 
 <div class="task-card" onclick="openMitarbeiter()" style="cursor:pointer;">
-  <h3>&#128101; Mitarbeiter Uebersicht</h3>
+  <h3>&#128101; Mitarbeiter Übersicht</h3>
 </div>
 
 <div class="task-card" onclick="openOffeneLeistungen()" style="cursor:pointer;">
@@ -85,7 +85,7 @@
 
   <!-- NAV -->
   <nav class="bottom-nav">
-    <a href="index.html" class="active"><span>&#127968;</span><small>Uebersicht</small></a>
+    <a href="index.html" class="active"><span>&#127968;</span><small>Übersicht</small></a>
 
     <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
 
@@ -223,7 +223,7 @@ async function runGlobalSearch() {
   if (!value) return;
 
   if (!navigator.onLine) {
-    list.innerHTML = "<p style='opacity:0.7;'>Globale Suche ist offline nicht verfuegbar.</p>";
+    list.innerHTML = "<p style='opacity:0.7;'>Globale Suche ist offline nicht verfügbar.</p>";
     return;
   }
 
@@ -236,7 +236,7 @@ async function runGlobalSearch() {
 
   if (error) {
     console.log(error);
-    list.innerHTML = "<p style='opacity:0.7;'>Suche aktuell nicht verfuegbar.</p>";
+    list.innerHTML = "<p style='opacity:0.7;'>Suche aktuell nicht verfügbar.</p>";
     return;
   }
 
@@ -317,7 +317,7 @@ async function applyRoleOverviewVisibility() {
   if (ctx.role === "angestellter") {
     Array.from(document.querySelectorAll(".task-card h3")).forEach(h3 => {
       const txt = String(h3.textContent || "").toLowerCase();
-      if (txt.includes("mitarbeiter uebersicht") || txt.includes("offene leistungen")) {
+      if (txt.includes("mitarbeiter übersicht") || txt.includes("offene leistungen")) {
         const card = h3.closest(".task-card");
         if (card) card.style.display = "none";
       }

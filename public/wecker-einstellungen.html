@@ -26,8 +26,16 @@
       <input id="vehicleTime" type="time" class="compact-input" style="margin-top:6px;">
       <label style="display:block;font-size:12px;opacity:0.75;margin-top:10px;">Material bestellen</label>
       <input id="orderTime" type="time" class="compact-input" style="margin-top:6px;">
-      <label style="display:block;font-size:12px;opacity:0.75;margin-top:10px;">Kundenmaterial fuer morgen</label>
+      <label style="display:block;font-size:12px;opacity:0.75;margin-top:10px;">Kundenmaterial für morgen</label>
       <input id="customerMaterialTime" type="time" class="compact-input" style="margin-top:6px;">
+      <label style="display:flex;gap:8px;align-items:center;font-size:12px;opacity:0.9;margin-top:12px;">
+        <input id="dailyReportEnabled" type="checkbox" checked> Stundennachweis-Erinnerung aktiv
+      </label>
+      <input id="dailyReportTime" type="time" class="compact-input" style="margin-top:6px;">
+      <label style="display:flex;gap:8px;align-items:center;font-size:12px;opacity:0.9;margin-top:12px;">
+        <input id="timesheetEnabled" type="checkbox" checked> Arbeitszeit-Erinnerung aktiv
+      </label>
+      <input id="timesheetTime" type="time" class="compact-input" style="margin-top:6px;">
       <button class="login-btn" style="margin-top:10px;" onclick="saveAlarmSettings()">Speichern</button>
       <button class="login-btn" style="background:#444;margin-top:0;" onclick="enableNotifications()">Benachrichtigungen erlauben</button>
       <p id="alarmStatus" style="font-size:12px;opacity:0.9;min-height:18px;">&nbsp;</p>
@@ -57,7 +65,7 @@ async function loadAlarmSettings() {
   if (!authContext || !authContext.company_id) return;
   const { data, error } = await db
     .from("companies")
-    .select("vehicle_time, order_time, customer_material_time")
+    .select("vehicle_time, order_time, customer_material_time, daily_report_time, timesheet_time, daily_report_reminder_enabled, timesheet_reminder_enabled")
     .eq("id", authContext.company_id)
     .maybeSingle();
 
@@ -70,6 +78,10 @@ async function loadAlarmSettings() {
   document.getElementById("vehicleTime").value = data.vehicle_time || "06:30";
   document.getElementById("orderTime").value = data.order_time || "16:30";
   document.getElementById("customerMaterialTime").value = data.customer_material_time || "18:00";
+  document.getElementById("dailyReportTime").value = data.daily_report_time || "17:30";
+  document.getElementById("timesheetTime").value = data.timesheet_time || "17:45";
+  document.getElementById("dailyReportEnabled").checked = data.daily_report_reminder_enabled !== false;
+  document.getElementById("timesheetEnabled").checked = data.timesheet_reminder_enabled !== false;
 }
 
 async function saveAlarmSettings() {
@@ -80,7 +92,11 @@ async function saveAlarmSettings() {
   const payload = {
     vehicle_time: document.getElementById("vehicleTime").value || "06:30",
     order_time: document.getElementById("orderTime").value || "16:30",
-    customer_material_time: document.getElementById("customerMaterialTime").value || "18:00"
+    customer_material_time: document.getElementById("customerMaterialTime").value || "18:00",
+    daily_report_time: document.getElementById("dailyReportTime").value || "17:30",
+    timesheet_time: document.getElementById("timesheetTime").value || "17:45",
+    daily_report_reminder_enabled: document.getElementById("dailyReportEnabled").checked,
+    timesheet_reminder_enabled: document.getElementById("timesheetEnabled").checked
   };
 
   const { error } = await db
@@ -92,6 +108,17 @@ async function saveAlarmSettings() {
     console.log(error);
     setStatus("Speichern fehlgeschlagen: " + (error.message || "Unbekannter Fehler"), false);
     return;
+  }
+  if (window.BaudokuNotifications) {
+    window.BaudokuNotifications.saveSettings({
+      vehicleTime: payload.vehicle_time,
+      orderTime: payload.order_time,
+      customerMaterialTime: payload.customer_material_time,
+      dailyReportTime: payload.daily_report_time,
+      timesheetTime: payload.timesheet_time,
+      dailyReportReminderEnabled: payload.daily_report_reminder_enabled,
+      timesheetReminderEnabled: payload.timesheet_reminder_enabled
+    });
   }
   setStatus("Gespeichert", true);
 }

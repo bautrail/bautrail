@@ -91,7 +91,7 @@ async function finalizePendingSetupIfNeeded(sessionUser) {
     const result = Array.isArray(data) ? data[0] : null;
     if (error || !result || !result.ok) {
       console.log(error || result);
-      return { ok: false, message: (result && result.message) || "Einladungscode ungueltig oder nicht mehr aktiv." };
+      return { ok: false, message: (result && result.message) || "Einladungscode ungültig oder nicht mehr aktiv." };
     }
     clearPendingSetup();
     return { ok: true };

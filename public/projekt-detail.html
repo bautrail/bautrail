@@ -228,8 +228,8 @@
       <h3>Ablage</h3>
       <input type="file" id="imageInput" multiple accept="image/*" style="display:none">
       <input type="file" id="documentInput" multiple style="display:none">
-      <button onclick="openImagePicker()" class="login-btn">Bilder auswaehlen</button>
-      <button onclick="openDocumentPicker()" class="login-btn" style="background:#444;">Dokumente auswaehlen</button>
+      <button onclick="openImagePicker()" class="login-btn">Bilder auswählen</button>
+      <button onclick="openDocumentPicker()" class="login-btn" style="background:#444;">Dokumente auswählen</button>
       <p id="documentStatus" style="font-size:12px;opacity:0.7;margin:0;"></p>
     </div>
 
@@ -253,7 +253,7 @@
   </div>
 
   <nav class="bottom-nav">
-    <a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
+    <a href="index.html"><span>&#127968;</span><small>Übersicht</small></a>
     <a href="kunden.html" class="active"><span>&#128101;</span><small>Kunden</small></a>
     <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
     <a href="profil.html"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
@@ -265,7 +265,7 @@
   <button onclick="closeImage(event)" aria-label="Bild schliessen" style="position:absolute;top:20px;right:20px;font-size:28px;background:none;border:none;color:white;">&times;</button>
   <button onclick="prevImage(event)" aria-label="Vorheriges Bild" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:32px;background:none;border:none;color:white;">&#10094;</button>
   <button onclick="nextImage(event)" aria-label="Naechstes Bild" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:32px;background:none;border:none;color:white;">&#10095;</button>
-  <button onclick="deleteCurrentImage(event)" aria-label="Bild loeschen" style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);font-size:16px;background:#ff6b35;border:none;color:white;padding:12px 18px;border-radius:12px;font-weight:700;">Bild loeschen</button>
+  <button onclick="deleteCurrentImage(event)" aria-label="Bild löschen" style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);font-size:16px;background:#ff6b35;border:none;color:white;padding:12px 18px;border-radius:12px;font-weight:700;">Bild löschen</button>
   <img id="overlayImg" style="max-width:90%;border-radius:10px;">
 </div>
 
@@ -273,6 +273,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="supabase.js"></script>
+<script src="auth-context.js"></script>
 <script src="project-documents.js"></script>
 <script src="auto-textareas.js"></script>
 <script src="notifications.js"></script>
@@ -461,7 +462,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (!navigator.onLine) {
       setOfflineStatus("Offline - Aenderungen werden synchronisiert", "orange");
       if (documentStatus) {
-        documentStatus.textContent = "Offline - Uploads werden spaeter uebertragen";
+        documentStatus.textContent = "Offline - Uploads werden später übertragen";
         documentStatus.style.color = "orange";
       }
       return;
@@ -754,7 +755,7 @@ if (window.BaudokuAutoTextareas) {
     if (error) {
       console.log(error);
       list.innerHTML =
-        "<p style='opacity:0.7;'>Verlauf aktuell nicht verfuegbar.</p>";
+        "<p style='opacity:0.7;'>Verlauf aktuell nicht verfügbar.</p>";
       return;
     }
 
@@ -1102,7 +1103,7 @@ if (window.BaudokuAutoTextareas) {
     addLine("Projekt", project.name || "-");
     addLine("Ort", project.ort || "-");
     addLine("Datum", project.datum || "-");
-    addLine("Faelligkeit", project.faelligkeit || "-");
+    addLine("Fälligkeit", project.faelligkeit || "-");
     addLine("Beschreibung", project.beschreibung || "-");
     addLine("Material", project.material || "-");
 
@@ -1355,7 +1356,7 @@ if (oldCache) {
     JSON.stringify(oldCache)
   );
 
-  // alten loeschen
+  // alten löschen
   localStorage.removeItem(
     "project_" + p.id
   );
@@ -1632,7 +1633,7 @@ if (oldCache) {
         "document-action-btn";
 
       deleteButton.textContent =
-        "Loeschen";
+        "Löschen";
 
       deleteButton.style.marginTop =
         "8px";
@@ -1749,7 +1750,7 @@ if (oldCache) {
 
     if (error) {
       console.log(error);
-      setOfflineStatus("Bild konnte nicht geloescht werden", "red");
+      setOfflineStatus("Bild konnte nicht gelöscht werden", "red");
       return;
     }
 

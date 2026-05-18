@@ -129,7 +129,7 @@ textarea{
     <!-- KUNDE -->
 <div class="task-card">
 
-  <h3>👥 Kunde hinzufuegen</h3>
+  <h3>👥 Kunde hinzufügen</h3>
 
   <div class="input-row">
 
@@ -169,7 +169,7 @@ textarea{
  <!-- PROJEKT -->
 <div class="task-card">
 
-  <h3>📦 Projekt hinzufuegen</h3>
+  <h3>📦 Projekt hinzufügen</h3>
 
   <div
     class="input-row"
@@ -237,7 +237,7 @@ textarea{
     <button class="planning-tab-btn" onclick="setPlanningTab('week', event)">🗓️ Diese Woche</button>
   </div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
-    <small id="planningCount" style="opacity:0.7;">0 Eintraege</small>
+    <small id="planningCount" style="opacity:0.7;">0 Einträge</small>
   </div>
   <div id="planningList" style="margin-top:10px;"></div>
 </div>
@@ -245,7 +245,7 @@ textarea{
 <!-- NAV -->
 <nav class="bottom-nav">
 
-  <a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
+  <a href="index.html"><span>&#127968;</span><small>Übersicht</small></a>
 
   <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
 
@@ -734,7 +734,7 @@ function createNewProjekt() {
   if(!kunden.length){
 
     alert(
-      "Erst Kunde auswaehlen"
+      "Erst Kunde auswählen"
     );
 
     return;
@@ -772,7 +772,7 @@ function renderPlanningTab() {
       ? planningTomorrowItems
       : planningWeekItems;
 
-  count.textContent = items.length + " Eintraege";
+  count.textContent = items.length + " Einträge";
 
   if (!items.length) {
     list.innerHTML = "<p style='opacity:0.7;'>Nichts offen.</p>";
@@ -896,7 +896,7 @@ async function initRolePlanningNew() {
   if (isManager) {
     wrapper.innerHTML = `
       <h3>Mitarbeiter Planung</h3>
-      <small style="opacity:0.7;">Mitarbeiter auswaehlen und Kunde/Projekt zuweisen</small>
+      <small style="opacity:0.7;">Mitarbeiter auswählen und Kunde/Projekt zuweisen</small>
       <select id="planEmployee" class="compact-input" style="margin-top:10px;"></select>
       <select id="planCustomer" class="compact-input" style="margin-top:8px;"></select>
       <select id="planProject" class="compact-input" style="margin-top:8px;"></select>
@@ -915,7 +915,7 @@ async function initRolePlanningNew() {
   const listCard = document.createElement("div");
   listCard.className = "task-card";
   listCard.innerHTML = `
-    <h3>${isManager ? "Zugewiesene Planungen" : "Meine Eintraege"}</h3>
+    <h3>${isManager ? "Zugewiesene Planungen" : "Meine Einträge"}</h3>
     <div id="planningAssignedList" style="margin-top:10px;"></div>
   `;
 
@@ -975,11 +975,11 @@ function fillPlanningSelects() {
   if (!employeeSel || !customerSel || !projectSel) return;
 
   employeeSel.innerHTML =
-    "<option value=''>Mitarbeiter waehlen</option>" +
+    "<option value=''>Mitarbeiter wählen</option>" +
     planningData.members.map(m => `<option value="${m.user_id}">${m.name || m.email || "Mitarbeiter"}</option>`).join("");
 
   customerSel.innerHTML =
-    "<option value=''>Kunde waehlen</option>" +
+    "<option value=''>Kunde wählen</option>" +
     planningData.customers.map(c => {
       const label = c.firma || [c.vorname, c.nachname].filter(Boolean).join(" ") || "Kunde";
       return `<option value="${c.id}">${label}</option>`;
@@ -990,12 +990,12 @@ function fillPlanningSelects() {
     let list = planningData.projects.filter(p => String(p.customer_id) === String(id));
     if (!list.length) list = planningData.projects;
     projectSel.innerHTML =
-      "<option value=''>Projekt waehlen</option>" +
+      "<option value=''>Projekt wählen</option>" +
       list.map(p => `<option value="${p.id}">${p.name || "Projekt"}</option>`).join("");
   });
 
   projectSel.innerHTML =
-    "<option value=''>Projekt waehlen</option>" +
+    "<option value=''>Projekt wählen</option>" +
     planningData.projects.map(p => `<option value="${p.id}">${p.name || "Projekt"}</option>`).join("");
 
   const d = document.getElementById("planDate");
@@ -1012,7 +1012,7 @@ window.assignPlanEntry = async function() {
 
   if (!assigned_to || !customer_id || !project_id || !date) {
     if (status) {
-      status.textContent = "Bitte Mitarbeiter, Kunde, Projekt und Datum auswaehlen.";
+      status.textContent = "Bitte Mitarbeiter, Kunde, Projekt und Datum auswählen.";
       status.style.color = "#ff6b3d";
     }
     return;
@@ -1067,7 +1067,7 @@ async function loadAssignedListNew(ctx, isManager) {
 
   const memberMap = new Map((planningData.members || []).map(m => [String(m.user_id), m.name || m.email || "Mitarbeiter"]));
   if (!(data || []).length) {
-    host.innerHTML = "<p style='opacity:0.7;'>Keine Eintraege vorhanden.</p>";
+    host.innerHTML = "<p style='opacity:0.7;'>Keine Einträge vorhanden.</p>";
     return;
   }
 
@@ -1080,7 +1080,7 @@ async function loadAssignedListNew(ctx, isManager) {
       ? `
         <div class="button-row" style="margin-top:8px;">
           <button class="login-btn" style="margin:0;background:#444;" onclick="editPlanEntry('${item.id}')">Bearbeiten</button>
-          <button class="delete-btn" style="margin:0;" onclick="deletePlanEntry('${item.id}')">Loeschen</button>
+          <button class="delete-btn" style="margin:0;" onclick="deletePlanEntry('${item.id}')">Löschen</button>
         </div>
       `
       : "";
@@ -1140,7 +1140,7 @@ window.editPlanEntry = async function(id) {
 
 window.deletePlanEntry = async function(id) {
   if (!planningCtx) return;
-  const ok = confirm("Planungseintrag wirklich loeschen?");
+  const ok = confirm("Planungseintrag wirklich löschen?");
   if (!ok) return;
 
   const { error } = await db
@@ -1153,7 +1153,7 @@ window.deletePlanEntry = async function(id) {
     console.log(error);
     const status = document.getElementById("planStatus");
     if (status) {
-      status.textContent = "Loeschen fehlgeschlagen.";
+      status.textContent = "Löschen fehlgeschlagen.";
       status.style.color = "#ff6b3d";
     }
     return;
@@ -1161,7 +1161,7 @@ window.deletePlanEntry = async function(id) {
 
   const status = document.getElementById("planStatus");
   if (status) {
-    status.textContent = "Eintrag geloescht.";
+    status.textContent = "Eintrag gelöscht.";
     status.style.color = "#9be15d";
   }
   await loadAssignedListNew(planningCtx, true);

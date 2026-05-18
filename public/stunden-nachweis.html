@@ -271,7 +271,7 @@
           </tr>
           <tr>
             <td colspan="2">
-              <textarea id="taetigkeitInput" class="compact-input compact-textarea" placeholder="Ausgefuehrte Arbeiten"></textarea>
+              <textarea id="taetigkeitInput" class="compact-input compact-textarea" placeholder="Ausgeführte Arbeiten"></textarea>
             </td>
           </tr>
           <tr>
@@ -317,7 +317,7 @@
           <small style="opacity:0.7;">Kundenunterschrift</small>
           <canvas id="signaturePad"></canvas>
           <div class="button-row" style="margin-top:10px;">
-            <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="clearSignature()">Unterschrift loeschen</button>
+            <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="clearSignature()">Unterschrift löschen</button>
             <button class="login-btn" style="margin-bottom:0;" onclick="saveStundennachweis()">Nachweis speichern</button>
           </div>
         </div>
@@ -339,7 +339,7 @@
   </div>
 
   <nav class="bottom-nav">
-    <a href="index.html" class="active"><span>&#127968;</span><small>Uebersicht</small></a>
+    <a href="index.html" class="active"><span>&#127968;</span><small>Übersicht</small></a>
     <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
     <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
     <a href="profil.html"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
@@ -701,14 +701,14 @@ async function loadOptions() {
   const projectSelect = document.getElementById("projectSelect");
 
   customerSelect.innerHTML =
-    "<option value=''>Kunde waehlen</option>" +
+    "<option value=''>Kunde wählen</option>" +
     customers.map(customer => {
       const label = customer.firma || [customer.vorname, customer.nachname].filter(Boolean).join(" ");
       return `<option value="${customer.id}">${label || "Kunde"}</option>`;
     }).join("");
 
   projectSelect.innerHTML =
-    "<option value=''>Projekt waehlen</option>" +
+    "<option value=''>Projekt wählen</option>" +
     projects.map(project => `<option value="${project.id}">${project.name || "Projekt"}</option>`).join("");
 
   if (!projects.length) {
@@ -764,7 +764,7 @@ async function createCustomerInline() {
 async function createProjectInline() {
   const customer = selectedCustomer();
   if (!customer) {
-    status("Bitte zuerst einen Kunden waehlen.", "#ff6b3b");
+    status("Bitte zuerst einen Kunden wählen.", "#ff6b3b");
     return;
   }
 
@@ -828,7 +828,7 @@ function fillProjectsForCustomer() {
   }
 
   projectSelect.innerHTML =
-    "<option value=''>Projekt waehlen</option>" +
+    "<option value=''>Projekt wählen</option>" +
     filtered.map(project => `<option value="${project.id}">${project.name || "Projekt"}</option>`).join("");
 
   if (initialProjectId) {
@@ -895,7 +895,7 @@ async function saveStundennachweis() {
   if (!payload.customer) missing.push("Kunde");
   if (!payload.objekt) missing.push("Objekt");
   if (!payload.arbeitsdatum) missing.push("Datum");
-  if (!payload.taetigkeit) missing.push("Taetigkeit");
+  if (!payload.taetigkeit) missing.push("Tätigkeit");
 
   if (missing.length) {
     status("Fehlt: " + missing.join(", "), "#ff6b3b");
@@ -946,7 +946,7 @@ async function saveStundennachweis() {
 
 async function createPdfBlob(report) {
   if (!window.jspdf || !window.jspdf.jsPDF) {
-    throw new Error("PDF-Modul nicht verfuegbar.");
+    throw new Error("PDF-Modul nicht verfügbar.");
   }
 
   const company = report.firma_daten || getCompanyData();
@@ -1037,10 +1037,10 @@ async function createPdfBlob(report) {
 
   // Arbeitsfeld bewusst kompakter
   const taetigkeitHeight = 32;
-  sectionLabel("Ausgefuehrte Arbeiten", 126);
+  sectionLabel("Ausgeführte Arbeiten", 126);
   drawFieldBox(15, 131, 180, taetigkeitHeight, "Leistungsbeschreibung", report.taetigkeit || "-");
 
-  // Material/Personal nur je nach Materialmenge vergroessern
+  // Material/Personal nur je nach Materialmenge vergrößern
   const materialBaseHeight = 42;
   const materialExtra = Math.max(0, materialLinesCount - 2) * 5;
   const materialHeight = Math.min(82, materialBaseHeight + materialExtra);
@@ -1052,12 +1052,12 @@ async function createPdfBlob(report) {
   drawFieldBox(108, materialBoxY, 87, materialHeight, "Personal", report.personal || "-");
 
   const bestaetigungY = materialBoxY + materialHeight + 8;
-  sectionLabel("Bestaetigung", bestaetigungY);
+  sectionLabel("Bestätigung", bestaetigungY);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9);
   pdf.text(
     pdf.splitTextToSize(
-      "Hiermit bestaetigt der Auftraggeber die oben aufgefuehrten Leistungen, Zeiten und Nebenkosten.",
+      "Hiermit bestätigt der Auftraggeber die oben aufgeführten Leistungen, Zeiten und Nebenkosten.",
       180
     ),
     15,
@@ -1144,7 +1144,7 @@ async function sendReportEmail(report) {
     status("E-Mail wurde versendet.", "#9be15d");
   } catch (error) {
     console.log(error);
-    status("E-Mail noch nicht verfuegbar. PDF kann bereits geladen werden.", "orange");
+    status("E-Mail noch nicht verfügbar. PDF kann bereits geladen werden.", "orange");
   }
 }
 
@@ -1167,7 +1167,7 @@ function renderReports(items) {
     const deletedInfo =
       report.deleted_at
         ? `<div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:#3a1f1f;color:#ffb3a2;font-size:12px;">
-             Dieser Nachweis wurde geloescht am ${new Date(report.deleted_at).toLocaleString("de-DE")}.
+             Dieser Nachweis wurde gelöscht am ${new Date(report.deleted_at).toLocaleString("de-DE")}.
              ${report.delete_reason ? "<br>Grund: " + report.delete_reason : ""}
            </div>`
         : "";
@@ -1190,7 +1190,7 @@ function renderReports(items) {
             <span class="meta-chip">${report.stunden || 0} Std.</span>
             <span class="meta-chip">${formatKilometers(report.gefahrene_kilometer)}</span>
             <span class="meta-chip">${reportNumber(report)}</span>
-            ${report.deleted_at ? `<span class="meta-chip" style="background:#5a2b2b;color:#ffd5ca;">Geloescht</span>` : ""}
+            ${report.deleted_at ? `<span class="meta-chip" style="background:#5a2b2b;color:#ffd5ca;">Gelöscht</span>` : ""}
           </div>
         </div>
       </div>
@@ -1216,7 +1216,7 @@ function canDeleteReport(report) {
   if (report.created_by) {
     return String(report.created_by) === String(authContextSN.user_id);
   }
-  // Fallback fuer Alt-Daten ohne created_by (nach Migration nicht mehr noetig)
+  // Fallback für Alt-Daten ohne created_by (nach Migration nicht mehr nötig)
   return true;
 }
 
@@ -1224,19 +1224,19 @@ window.deleteOwnReport = async function(id) {
   const report = reportCache.find(item => String(item.id) === String(id));
   if (!report) return;
   if (!canDeleteReport(report)) {
-    status("Loeschen nur fuer eigene Nachweise innerhalb von 24 Stunden moeglich.", "#ff6b3b");
+    status("Löschen nur für eigene Nachweise innerhalb von 24 Stunden moeglich.", "#ff6b3b");
     return;
   }
-  const ok = confirm("Nachweis wirklich loeschen? Der Chef sieht weiterhin, dass er geloescht wurde.");
+  const ok = confirm("Nachweis wirklich löschen? Der Chef sieht weiterhin, dass er gelöscht wurde.");
   if (!ok) return;
 
-  const reason = prompt("Grund fuer Loeschung (optional):") || "";
+  const reason = prompt("Grund für Löschung (optional):") || "";
   const { error } = await db
     .from("stundennachweise")
     .update({
       deleted_at: new Date().toISOString(),
       deleted_by: authContextSN.user_id,
-      delete_reason: reason.trim() || "Vom Monteur innerhalb 24h geloescht"
+      delete_reason: reason.trim() || "Vom Monteur innerhalb 24h gelöscht"
     })
     .eq("id", id)
     .eq("company_id", authContextSN.company_id)
@@ -1244,11 +1244,11 @@ window.deleteOwnReport = async function(id) {
 
   if (error) {
     console.log(error);
-    status("Loeschen fehlgeschlagen.", "#ff6b3b");
+    status("Löschen fehlgeschlagen.", "#ff6b3b");
     return;
   }
 
-  status("Nachweis als geloescht markiert. Chef sieht den Hinweis.", "#9be15d");
+  status("Nachweis als gelöscht markiert. Chef sieht den Hinweis.", "#9be15d");
   await loadReports();
 };
 

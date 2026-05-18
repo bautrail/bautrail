@@ -24,7 +24,7 @@
 
     <div class="task-card">
       <p style="opacity:0.75;line-height:1.4;">
-        Hier liegen geloeschte Kunden und Projekte. Wiederherstellen holt die zugehoerigen Daten zurueck.
+        Hier liegen gelöschte Kunden und Projekte. Wiederherstellen holt die zugehoerigen Daten zurück.
       </p>
     </div>
 
@@ -32,7 +32,7 @@
   </div>
 
   <nav class="bottom-nav">
-    <a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
+    <a href="index.html"><span>&#127968;</span><small>Übersicht</small></a>
     <a href="kunden.html" class="active"><span>&#128101;</span><small>Kunden</small></a>
     <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
     <a href="profil.html"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
@@ -111,7 +111,7 @@ async function restoreItem(item) {
 async function deleteForever(id) {
 
   const typed =
-    prompt("Zum endgueltigen Loeschen bitte BESTAETIGEN eingeben.");
+    prompt("Zum endgültigen Löschen bitte BESTAETIGEN eingeben.");
 
   if (typed !== "BESTAETIGEN") {
     return;
@@ -165,7 +165,7 @@ async function loadTrash() {
       </div>
       <div class="button-row" style="margin-top:12px;">
         <button class="login-btn" style="margin-bottom:0;${expired ? "background:#555;" : ""}" ${expired ? "disabled" : ""} onclick="restoreItemById('${item.id}')">Wiederherstellen</button>
-        <button class="delete-btn" style="margin-top:0;" onclick="deleteForever('${item.id}')">Endgueltig loeschen</button>
+        <button class="delete-btn" style="margin-top:0;" onclick="deleteForever('${item.id}')">Endgültig löschen</button>
       </div>
     `;
 

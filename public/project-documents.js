@@ -180,7 +180,7 @@
 
     dbPromise = new Promise((resolve, reject) => {
       if (!window.indexedDB) {
-        reject(new Error("IndexedDB ist nicht verfuegbar"));
+        reject(new Error("IndexedDB ist nicht verfügbar"));
         return;
       }
 
@@ -920,7 +920,7 @@
     }
 
     if (target) {
-      target.document.body.textContent = "Dieses Dokument ist noch nicht verfuegbar.";
+      target.document.body.textContent = "Dieses Dokument ist noch nicht verfügbar.";
     }
   }
 

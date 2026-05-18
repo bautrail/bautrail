@@ -45,11 +45,11 @@
     <!-- BUTTON -->
     <div class="button-row">
       <button onclick="goToProjektAnlegen()" class="login-btn">
-        Projekt hinzufuegen
+        Projekt hinzufügen
       </button>
 
       <button onclick="deleteCustomer()" class="delete-btn" style="margin-top:0;">
-        Kunde loeschen
+        Kunde löschen
       </button>
     </div>
 
@@ -81,7 +81,7 @@
 
   <!-- NAV -->
   <nav class="bottom-nav">
-    <a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
+    <a href="index.html"><span>&#127968;</span><small>Übersicht</small></a>
 
     <a href="kunden.html" class="active"><span>&#128101;</span><small>Kunden</small></a>
 
@@ -94,6 +94,7 @@
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
+<script src="auth-context.js"></script>
 <script src="project-documents.js"></script>
 <script src="auto-textareas.js"></script>
 <script src="trash-utils.js"></script>
@@ -636,14 +637,14 @@ async function deleteCustomer() {
 
   const typed =
     prompt(
-      "Zum Loeschen bitte BESTAeTIGEN eingeben."
+      "Zum Löschen bitte BESTAeTIGEN eingeben."
     );
 
   if (
     typed !== "BESTAETIGEN" &&
     typed !== "BESTAeTIGEN"
   ) {
-    alert("Kunde wurde nicht geloescht.");
+    alert("Kunde wurde nicht gelöscht.");
     return;
   }
 
@@ -776,7 +777,7 @@ async function loadProjects() {
       }
     );
 
-    // geloeschte ausblenden
+    // gelöschte ausblenden
     data = data.filter(
       p =>
         !deleted.includes(p.id)
@@ -879,7 +880,7 @@ async function deleteProject(id) {
     saveDeleteQueue(q);
 
     alert(
-      "Offline geloescht"
+      "Offline gelöscht"
     );
 
     loadProjects();
@@ -970,7 +971,7 @@ function renderProjects(projects) {
 
     const offlineLabel =
       pendingDelete
-        ? "Wird geloescht"
+        ? "Wird gelöscht"
         : isOfflineOnly
           ? "Nur lokal"
           : pendingUpdates
@@ -1040,7 +1041,7 @@ function renderAkteStats(stats) {
 
   const items = [
     { label: "Projekte", value: stats.projects },
-    { label: "Auftraege", value: stats.jobs },
+    { label: "Aufträge", value: stats.jobs },
     { label: "Dateien", value: stats.documents },
     { label: "Bilder", value: stats.images }
   ];

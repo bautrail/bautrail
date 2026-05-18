@@ -23,14 +23,14 @@
 
     <div class="task-card">
       <input id="materialInput" class="compact-input">
-      <button id="addMaterialBtn" class="login-btn" style="margin-top:10px;">Hinzufuegen</button>
+      <button id="addMaterialBtn" class="login-btn" style="margin-top:10px;">Hinzufügen</button>
     </div>
 
     <div id="materialList"></div>
   </div>
 
   <nav class="bottom-nav">
-    <a href="index.html" class="active"><span>&#127968;</span><small>Uebersicht</small></a>
+    <a href="index.html" class="active"><span>&#127968;</span><small>Übersicht</small></a>
     <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
     <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
     <a href="profil.html"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
@@ -39,12 +39,13 @@
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
+<script src="auth-context.js"></script>
 <script src="notifications.js"></script>
 <script>
 window.MaterialPageConfig = {
   title: "Fahrzeug Material ersetzen",
   subtitle: "Material, das morgen ins Auto muss",
-  placeholder: "Material fuers Auto eintragen...",
+  placeholder: "Material fürs Auto eintragen...",
   storageKey: window.BaudokuNotifications.VEHICLE_KEY
 };
 </script>

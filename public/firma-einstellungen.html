@@ -256,8 +256,8 @@ async function loadDocuments() {
       <strong>${item.title || "Dokument"}</strong><br>
       <small>${item.file_type || ""}</small>
       <div class="button-row" style="margin-top:8px;">
-        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="openDoc('${item.file_url || ""}')">Oeffnen</button>
-        <button class="delete-btn" style="margin:0;" onclick="deleteDoc('${item.id}')">Loeschen</button>
+        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="openDoc('${item.file_url || ""}')">Öffnen</button>
+        <button class="delete-btn" style="margin:0;" onclick="deleteDoc('${item.id}')">Löschen</button>
       </div>
     `;
     list.appendChild(row);
@@ -270,7 +270,7 @@ window.openDoc = function(url) {
 };
 
 window.deleteDoc = async function(id) {
-  const typed = prompt("Zum Loeschen bitte BESTAETIGEN eingeben.");
+  const typed = prompt("Zum Löschen bitte BESTAETIGEN eingeben.");
   if (typed !== "BESTAETIGEN") return;
 
   const { error } = await db
@@ -281,11 +281,11 @@ window.deleteDoc = async function(id) {
 
   if (error) {
     console.log(error);
-    setStatus("docStatus", "Loeschen fehlgeschlagen.", false);
+    setStatus("docStatus", "Löschen fehlgeschlagen.", false);
     return;
   }
 
-  setStatus("docStatus", "Dokument geloescht.", true);
+  setStatus("docStatus", "Dokument gelöscht.", true);
   await loadDocuments();
 };
 
@@ -293,7 +293,7 @@ async function uploadDocument() {
   const input = document.getElementById("docInput");
   const file = input.files && input.files[0];
   if (!file) {
-    setStatus("docStatus", "Bitte zuerst eine Datei auswaehlen.", false);
+    setStatus("docStatus", "Bitte zuerst eine Datei auswählen.", false);
     return;
   }
 
