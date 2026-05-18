@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mitarbeiter Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <h1 class="app-name">Mitarbeiter Dashboard</h1>
+      <p class="company-name">Meine Aufgaben</p>
+    </header>
+
+    <div class="task-card">
+      <h3>Willkommen</h3>
+      <p id="roleInfo" style="opacity:0.8;">Lade Daten...</p>
+      <button class="login-btn" onclick="window.location.href='index.html'">Zur Uebersicht</button>
+    </div>
+  </div>
+</div>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script>
+(async function() {
+  const ctx = await window.BaudokuAuthContext.loadAuthContext();
+  if (!ctx) {
+    window.location.href = "login.html";
+    return;
+  }
+  if (!window.BaudokuAuthContext.requireRole(ctx, ["angestellter", "chef", "buero"])) {
+    window.location.href = window.BaudokuAuthContext.dashboardPathForRole(ctx.role);
+    return;
+  }
+  document.getElementById("roleInfo").textContent =
+    "Angemeldet als " + (ctx.name || ctx.email || "Mitarbeiter") + ".";
+})();
+</script>
+<script src="pwa.js"></script>
+</body>
+</html>

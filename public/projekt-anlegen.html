@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projekt anlegen</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+
+<body>
+
+<div class="app-wrapper">
+  <div class="app-content">
+
+    <header class="app-header">
+      <h1 class="app-name">Neues Projekt</h1>
+      <p class="company-name">Projekt hinzufügen</p>
+    </header>
+
+    <div class="task-card">
+
+      <input id="name" placeholder="Projektname" style="width:100%;padding:12px;margin-bottom:10px;border-radius:10px;border:none;">
+      <input id="ort" placeholder="Ort" style="width:100%;padding:12px;margin-bottom:10px;border-radius:10px;border:none;">
+      <input id="datum" placeholder="Datum" style="width:100%;padding:12px;margin-bottom:10px;border-radius:10px;border:none;">
+      <input id="faelligkeit" type="date" style="width:100%;padding:12px;margin-bottom:10px;border-radius:10px;border:none;">
+      <textarea id="material" placeholder="Material" style="width:100%;padding:12px;margin-bottom:10px;border-radius:10px;border:none;min-height:54px;"></textarea>
+      <textarea id="beschreibung" placeholder="Beschreibung" style="width:100%;padding:12px;margin-bottom:10px;border-radius:10px;border:none;min-height:54px;"></textarea>
+
+      <button onclick="saveProjekt()" style="
+        width:100%;
+        padding:14px;
+        border:none;
+        border-radius:12px;
+        background:#ff6b3d;
+        color:white;
+        font-size:16px;
+        font-weight:bold;
+        cursor:pointer;
+      ">
+        Speichern
+      </button>
+
+      <p id="msg" style="text-align:center;margin-top:10px;"></p>
+
+    </div>
+
+  </div>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script src="company-context.js"></script>
+<script src="auto-textareas.js"></script>
+
+<script>
+
+const kundeId =
+  new URLSearchParams(window.location.search)
+  .get("id");
+
+// =======================
+// CREATE QUEUE
+// =======================
+function getCreateQueue() {
+
+  return JSON.parse(
+    localStorage.getItem("createQueue")
+  ) || [];
+}
+
+function saveCreateQueue(q) {
+
+  localStorage.setItem(
+    "createQueue",
+    JSON.stringify(q)
+  );
+}
+
+function valueOf(id) {
+
+  const element =
+    document.getElementById(id);
+
+  return element
+    ? element.value.trim()
+    : "";
+}
+
+async function loadCustomerName() {
+
+  const cached =
+    JSON.parse(
+      localStorage.getItem(
+        "customer_" + kundeId
+      ) || "null"
+    );
+
+  if (cached) {
+    return cached.firma ||
+      (
+        cached.vorname &&
+        cached.nachname
+          ? cached.vorname + " " + cached.nachname
+          : ""
+      );
+  }
+
+  if (!navigator.onLine) {
+    return "";
+  }
+
+  const { data, error } =
+    await db
+    .from("customers")
+    .select("*")
+    .eq("id", kundeId)
+    .single();
+
+  if (error || !data) {
+    console.log(error);
+    return "";
+  }
+
+  localStorage.setItem(
+    "customer_" + kundeId,
+    JSON.stringify(data)
+  );
+
+  return data.firma ||
+    (
+      data.vorname &&
+      data.nachname
+        ? data.vorname + " " + data.nachname
+        : ""
+    );
+}
+
+
+// =======================
+// SAVE PROJEKT
+// =======================
+async function saveProjekt() {
+
+  
+
+  const name = valueOf("name");
+
+  const ort = valueOf("ort");
+
+  const datum = valueOf("datum");
+
+  const material = valueOf("material");
+
+  const faelligkeit =
+    valueOf("faelligkeit") || null;
+
+  const beschreibung =
+    valueOf("beschreibung");
+
+  const msg =
+    document.getElementById("msg");
+
+  msg.textContent = "";
+
+  // ===== VALIDATION =====
+  if (!name) {
+
+    msg.textContent =
+      "Projektname fehlt!";
+
+    return;
+  }
+
+  // =======================
+  // 📴 OFFLINE
+  // =======================
+  if (!navigator.onLine) {
+
+    const offlineId =
+      "offline_" + Date.now();
+
+    // ===== PROJEKT =====
+    const customerName =
+      await loadCustomerName();
+
+const projekt = {
+
+  id: offlineId,
+
+  customer_id: kundeId,
+
+  customer:
+    customerName,
+
+  name: name,
+
+  ort: ort,
+
+  datum: datum,
+
+  material:
+    material,
+
+  faelligkeit:
+    faelligkeit,
+
+  beschreibung:
+    beschreibung,
+
+};
+    // ===== CREATE QUEUE =====
+    let createQueue =
+      getCreateQueue();
+
+    createQueue.push(projekt);
+
+    saveCreateQueue(createQueue);
+
+    // ===== EINZEL CACHE =====
+    localStorage.setItem(
+      "project_" + offlineId,
+      JSON.stringify(projekt)
+    );
+
+    // ===== KUNDEN CACHE =====
+    let projects =
+      JSON.parse(
+        localStorage.getItem(
+          "projects_" + kundeId
+        )
+      ) || [];
+
+    projects.unshift(projekt);
+
+    localStorage.setItem(
+      "projects_" + kundeId,
+      JSON.stringify(projects)
+    );
+
+    alert(
+      "Projekt offline gespeichert 📱"
+    );
+
+    // ===== DIREKT ÖFFNEN =====
+    window.location.href =
+      "projekt-detail.html?id=" +
+      offlineId;
+
+    return;
+  }
+
+  // =======================
+// 🌐 ONLINE
+// =======================
+const customerName =
+  await loadCustomerName();
+
+const { data, error } =
+  await window.BaudokuCompanyContext
+    .insertScoped("projects", {
+
+      customer_id: kundeId,
+
+      customer:
+        customerName,
+
+      name: name,
+
+      ort: ort,
+
+      datum: datum,
+
+      material:
+        material,
+
+      faelligkeit:
+        faelligkeit,
+
+      beschreibung:
+        beschreibung
+
+    });
+
+  const savedProject =
+    Array.isArray(data)
+      ? data[0]
+      : data;
+
+  // ===== ERROR =====
+  if (error) {
+
+    console.log(error);
+
+    msg.textContent =
+      "Fehler beim Speichern";
+
+    return;
+  }
+
+  // ===== CACHE =====
+  localStorage.setItem(
+    "project_" + savedProject.id,
+    JSON.stringify(savedProject)
+  );
+
+  let projects =
+    JSON.parse(
+      localStorage.getItem(
+        "projects_" + kundeId
+      )
+    ) || [];
+
+  projects.unshift(savedProject);
+
+  localStorage.setItem(
+    "projects_" + kundeId,
+    JSON.stringify(projects)
+  );
+
+  // ===== WEITER =====
+  window.location.href =
+    "projekt-detail.html?id=" +
+    savedProject.id;
+}
+
+</script>
+
+<script src="pwa.js"></script>
+</body>
+</html>

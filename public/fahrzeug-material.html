@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fahrzeug Material</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <button class="back-btn" onclick="history.back()">&#8592;</button>
+      <h1 class="app-name" id="pageTitle"></h1>
+      <p class="company-name" id="pageSubtitle"></p>
+    </header>
+
+    <div class="task-card">
+      <input id="materialInput" class="compact-input">
+      <button id="addMaterialBtn" class="login-btn" style="margin-top:10px;">Hinzufügen</button>
+    </div>
+
+    <div id="materialList"></div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="active"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+    <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
+    <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+    <a href="profil.html"><span>&#128100;</span><small>Profil</small></a>
+  </nav>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="notifications.js"></script>
+<script>
+window.MaterialPageConfig = {
+  title: "Fahrzeug Material ersetzen",
+  subtitle: "Material, das morgen ins Auto muss",
+  placeholder: "Material fürs Auto eintragen...",
+  storageKey: window.BaudokuNotifications.VEHICLE_KEY
+};
+</script>
+<script src="material-list-page.js"></script>
+<script src="pwa.js"></script>
+</body>
+</html>

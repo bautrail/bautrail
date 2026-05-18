@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stundennachweis</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .sheet-shell {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .sheet-section {
+      background: #252525;
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .sheet-section h3 {
+      margin-bottom: 10px;
+    }
+
+    .sheet-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .sheet-full {
+      grid-column: 1 / -1;
+    }
+
+    .meta-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #323232;
+      font-size: 12px;
+      opacity: 0.9;
+      margin-right: 8px;
+      margin-top: 8px;
+    }
+
+    .company-preview {
+      background: linear-gradient(145deg, #2b2b2b, #222);
+      border: 1px solid #3b3b3b;
+      border-radius: 14px;
+      padding: 14px;
+      line-height: 1.45;
+    }
+
+    .company-preview-head {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .company-preview-logo {
+      width: 68px;
+      height: 68px;
+      border-radius: 14px;
+      object-fit: contain;
+      background: #ffffff;
+      padding: 6px;
+      display: none;
+    }
+
+    .signature-box {
+      background: #2a2a2a;
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+
+    #signaturePad {
+      width: 100%;
+      height: 180px;
+      background: white;
+      border-radius: 10px;
+      display: block;
+      touch-action: none;
+    }
+
+    .sheet-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .paper-like {
+      border: 1px solid #3b3b3b;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .paper-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-top: 1px solid #3b3b3b;
+    }
+
+    .paper-row:first-child {
+      border-top: none;
+    }
+
+    .paper-cell {
+      border-left: 1px solid #3b3b3b;
+      padding: 10px;
+      min-height: 74px;
+    }
+
+    .paper-cell:first-child {
+      border-left: none;
+    }
+
+    .paper-label {
+      font-size: 12px;
+      opacity: 0.75;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .paper-full {
+      border-top: 1px solid #3b3b3b;
+      padding: 10px;
+    }
+
+    .material-row {
+      display: grid;
+      grid-template-columns: 110px 90px 1fr;
+      gap: 8px;
+      margin-top: 8px;
+      align-items: center;
+    }
+    .worker-last {
+      background:#111 !important;
+      color:#fff !important;
+    }
+    .worker-code {
+      background:#2a2a2a !important;
+      color:#fff !important;
+      text-align:center;
+      font-weight:700;
+      max-width:90px;
+    }
+
+    .nachweis-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      border: 1px solid #3b3b3b;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #232323;
+      color: #fff;
+    }
+
+    .nachweis-table th,
+    .nachweis-table td {
+      border: 1px solid #3b3b3b;
+      padding: 8px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    .nachweis-table th {
+      background: #2d2d2d;
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .nachweis-table .compact-input,
+    .nachweis-table textarea {
+      background: #2a2a2a !important;
+      color: #fff !important;
+      border: none;
+      border-radius: 10px;
+      min-height: 40px;
+    }
+
+    .nachweis-table textarea {
+      min-height: 86px;
+    }
+
+    .nachweis-table .login-btn {
+      border-radius: 6px;
+      min-height: 36px;
+      margin-bottom: 0;
+      font-size: 14px;
+    }
+
+    .paper-sheet-title {
+      font-size: 12px;
+      opacity: 0.7;
+      margin-bottom: 8px;
+    }
+
+    .report-card {
+      background: #252525;
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 10px;
+      border-left: 4px solid #ff6b3d;
+    }
+
+    .report-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    @media (max-width: 420px) {
+      .sheet-grid,
+      .sheet-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <button class="back-btn" onclick="window.location.href='index.html'">&#8592;</button>
+      <h1 class="app-name">Stundennachweis</h1>
+      <p class="company-name">Sauber erfassen, unterschreiben, senden</p>
+    </header>
+
+    <div class="sheet-shell">
+      <div class="sheet-section">
+        <h3>Firma auf dem Nachweis</h3>
+        <div id="companyPreview" class="company-preview"></div>
+        <p id="companyHint" style="font-size:12px;opacity:0.75;margin-top:10px;"></p>
+      </div>
+
+      <div class="sheet-section">
+        <h3>Nachweis erfassen</h3>
+        <p class="paper-sheet-title">Formularansicht wie Leistungsnachweis</p>
+        <table class="nachweis-table">
+          <tr>
+            <th>Baustelle / Kunde</th>
+            <th>Rechnungsanschrift / Projekt</th>
+          </tr>
+          <tr>
+            <td>
+              <select id="customerSelect" class="compact-input"></select>
+              <input id="objektInput" class="compact-input" placeholder="Objekt / Baustelle" style="margin-top:6px;">
+              <button class="login-btn" style="margin:8px 0 0 0;background:#444;" onclick="createCustomerInline()">+ Kunde</button>
+            </td>
+            <td>
+              <select id="projectSelect" class="compact-input"></select>
+              <input id="projectFreeInput" class="compact-input" placeholder="Projekt (frei eingeben)" style="margin-top:6px;">
+              <input id="emailInput" type="email" class="compact-input" placeholder="E-Mail Kunde" style="margin-top:6px;">
+              <button class="login-btn" style="margin:8px 0 0 0;background:#444;" onclick="createProjectInline()">+ Projekt</button>
+            </td>
+          </tr>
+          <tr>
+            <th colspan="2">Gegenstand der Leistungen und Lieferung</th>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <textarea id="taetigkeitInput" class="compact-input compact-textarea" placeholder="Ausgefuehrte Arbeiten"></textarea>
+            </td>
+          </tr>
+          <tr>
+            <th colspan="2">Materialverbrauch</th>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <div id="materialRows"></div>
+            </td>
+          </tr>
+          <tr>
+            <th colspan="2">Mitarbeiter</th>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <div id="workerRows"></div>
+              <button type="button" class="login-btn" style="margin:8px 0 0 0;background:#444;" onclick="addWorkerRow()">+ Mitarbeiter</button>
+              <textarea id="personalInput" class="compact-input compact-textarea" placeholder="Automatisch aus Mitarbeiterliste" style="margin-top:8px;"></textarea>
+            </td>
+          </tr>
+          <tr>
+            <th>Datum</th>
+            <th>Fahrtkosten / Abrechnung</th>
+          </tr>
+          <tr>
+            <td>
+              <input id="datumInput" type="date" class="compact-input">
+            </td>
+            <td>
+              <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-top:6px;">
+                <input id="fahrtkostenJaNein" type="checkbox"> PKW-Fahrtkosten Ja
+              </label>
+              <input id="fahrtenAnzahl" type="number" min="0" step="1" class="compact-input" placeholder="Anzahl Fahrten" style="margin-top:6px;">
+              <input id="kilometerInput" type="number" min="0" step="0.1" class="compact-input" placeholder="Kilometer" aria-label="Gefahrene Kilometer" style="margin-top:6px;">
+              <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-top:6px;">
+                <input id="abrechenbarInput" type="checkbox" checked> Abrechnen
+              </label>
+            </td>
+          </tr>
+        </table>
+
+        <div class="signature-box">
+          <small style="opacity:0.7;">Kundenunterschrift</small>
+          <canvas id="signaturePad"></canvas>
+          <div class="button-row" style="margin-top:10px;">
+            <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="clearSignature()">Unterschrift loeschen</button>
+            <button class="login-btn" style="margin-bottom:0;" onclick="saveStundennachweis()">Nachweis speichern</button>
+          </div>
+        </div>
+
+        <div class="sheet-actions" style="margin-top:12px;">
+          <button class="login-btn" style="margin-bottom:0;background:#3a3a3a;" onclick="downloadCurrentPdf()">PDF laden</button>
+          <button class="login-btn" style="margin-bottom:0;" onclick="sendCurrentEmail()">Per E-Mail senden</button>
+          <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="resetForm()">Formular leeren</button>
+        </div>
+
+        <p id="sheetStatus" style="font-size:12px;opacity:0.75;margin-top:10px;"></p>
+      </div>
+
+      <div class="sheet-section">
+        <h3>Letzte Nachweise</h3>
+        <div id="reportList"></div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="active"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+    <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
+    <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+    <a href="profil.html"><span>&#128100;</span><small>Profil</small></a>
+  </nav>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script src="notifications.js"></script>
+<script>
+
+let customers = [];
+let projects = [];
+let currentReport = null;
+let signaturePad;
+let drawing = false;
+let reportCache = [];
+let authContextSN = null;
+let currentJobType = "";
+let employeePool = [];
+let companyDataCache = {
+  companyName: "",
+  companyOwner: "",
+  companyStreet: "",
+  companyZip: "",
+  companyCity: "",
+  companyPhone: "",
+  companyEmail: "",
+  companyWebsite: "",
+  companyTaxId: "",
+  companyVatId: "",
+  companyLogo: ""
+};
+
+const params = new URLSearchParams(window.location.search);
+const initialCustomerId = params.get("customer_id");
+const initialProjectId = params.get("project_id");
+
+function status(text, color) {
+  const el = document.getElementById("sheetStatus");
+  el.textContent = text || "";
+  el.style.color = color || "#aaa";
+}
+
+function getCompanyData() {
+  return companyDataCache;
+}
+
+async function loadCompanyDataOnline() {
+  const context =
+    window.BaudokuAuthContext
+      ? await window.BaudokuAuthContext.loadAuthContext({ noCache: true })
+      : null;
+
+  if (!context || !context.company_id) {
+    return;
+  }
+
+  const { data, error } = await db
+    .from("companies")
+    .select("*")
+    .eq("id", context.company_id)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.log(error);
+    return;
+  }
+
+  companyDataCache = {
+    companyName: data.name || "",
+    companyOwner: data.company_owner || "",
+    companyStreet: data.adresse || "",
+    companyZip: data.plz || "",
+    companyCity: data.ort || "",
+    companyPhone: data.telefon || "",
+    companyEmail: data.email || "",
+    companyWebsite: data.website || "",
+    companyTaxId: data.steuernummer || "",
+    companyVatId: data.ust_id || "",
+    companyLogo: data.logo_url || ""
+  };
+
+  const { data: memberData } = await db
+    .from("company_members")
+    .select("job_type")
+    .eq("user_id", context.user_id)
+    .eq("company_id", context.company_id)
+    .eq("active", true)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  currentJobType = (memberData && memberData.job_type) ? memberData.job_type : "";
+  const { data: members } = await db
+    .from("company_members")
+    .select("id, name, email, active, job_type")
+    .eq("company_id", context.company_id)
+    .eq("active", true)
+    .order("name", { ascending: true });
+
+  employeePool = members || [];
+  renderEmployeeOptions();
+}
+
+function renderCompanyPreview() {
+  const company = getCompanyData();
+  const preview = document.getElementById("companyPreview");
+  const hint = document.getElementById("companyHint");
+
+  preview.innerHTML = `
+    <div class="company-preview-head">
+      <img class="company-preview-logo" id="companyPreviewLogo" alt="Firmenlogo">
+      <div>
+        <strong style="font-size:16px;">${company.companyName || "Firmenname fehlt"}</strong><br>
+        ${company.companyOwner || ""}<br>
+        ${company.companyStreet || ""}<br>
+        ${(company.companyZip || "") + (company.companyCity ? " " + company.companyCity : "")}
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      ${company.companyPhone || ""}<br>
+      ${company.companyEmail || ""}<br>
+      ${company.companyWebsite || ""}
+      ${company.companyTaxId ? "<br>Steuernummer: " + company.companyTaxId : ""}
+      ${company.companyVatId ? "<br>USt-IdNr.: " + company.companyVatId : ""}
+    </div>
+  `;
+
+  const logo =
+    document.getElementById("companyPreviewLogo");
+
+  if (logo && company.companyLogo) {
+    logo.src = company.companyLogo;
+    logo.style.display = "block";
+  }
+
+  const importantMissing =
+    !company.companyName ||
+    !company.companyStreet ||
+    !company.companyZip ||
+    !company.companyCity;
+
+  hint.textContent =
+    importantMissing
+      ? "Im Profil sollten mindestens Firmenname, Strasse, PLZ und Ort gepflegt sein."
+      : "Diese Firmendaten werden auf dem PDF und im E-Mail-Anhang verwendet.";
+
+  hint.style.color =
+    importantMissing ? "#ff9f43" : "#9be15d";
+}
+
+function setupSignature() {
+  signaturePad = document.getElementById("signaturePad");
+  const ratio = window.devicePixelRatio || 1;
+  signaturePad.width = signaturePad.offsetWidth * ratio;
+  signaturePad.height = signaturePad.offsetHeight * ratio;
+  const ctx = signaturePad.getContext("2d");
+  ctx.scale(ratio, ratio);
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#111";
+
+  function pointFromEvent(event) {
+    const rect = signaturePad.getBoundingClientRect();
+    const source = event.touches ? event.touches[0] : event;
+    return {
+      x: source.clientX - rect.left,
+      y: source.clientY - rect.top
+    };
+  }
+
+  function start(event) {
+    drawing = true;
+    const point = pointFromEvent(event);
+    ctx.beginPath();
+    ctx.moveTo(point.x, point.y);
+  }
+
+  function move(event) {
+    if (!drawing) return;
+    event.preventDefault();
+    const point = pointFromEvent(event);
+    ctx.lineTo(point.x, point.y);
+    ctx.stroke();
+  }
+
+  function end() {
+    drawing = false;
+  }
+
+  signaturePad.addEventListener("mousedown", start);
+  signaturePad.addEventListener("mousemove", move);
+  window.addEventListener("mouseup", end);
+  signaturePad.addEventListener("touchstart", start, { passive: true });
+  signaturePad.addEventListener("touchmove", move, { passive: false });
+  window.addEventListener("touchend", end);
+}
+
+function clearSignature() {
+  const ctx = signaturePad.getContext("2d");
+  ctx.clearRect(0, 0, signaturePad.width, signaturePad.height);
+}
+
+function getSignatureData() {
+  return signaturePad.toDataURL("image/png");
+}
+
+function resetForm() {
+  document.getElementById("objektInput").value = "";
+  document.getElementById("datumInput").value = new Date().toISOString().slice(0, 10);
+  document.getElementById("fahrtkostenJaNein").checked = false;
+  document.getElementById("fahrtenAnzahl").value = "";
+  document.getElementById("kilometerInput").value = "";
+  document.getElementById("taetigkeitInput").value = "";
+  document.getElementById("materialRows").innerHTML = "";
+  addMaterialRow();
+  document.getElementById("workerRows").innerHTML = "";
+  addWorkerRow();
+  document.getElementById("personalInput").value = "";
+  clearSignature();
+  currentReport = null;
+  status("");
+}
+
+function addMaterialRow(quantityValue, textValue) {
+  const host = document.getElementById("materialRows");
+  const row = document.createElement("div");
+  row.className = "material-row";
+  row.innerHTML = `
+    <input class="compact-input mat-qty" placeholder="Anzahl" value="${quantityValue || ""}">
+    <input class="compact-input mat-text" placeholder="Material" value="${textValue || ""}">
+    <button type="button" class="login-btn" style="margin:0;padding:8px 0;min-height:38px;" onclick="addMaterialRow()">+</button>
+  `;
+  host.appendChild(row);
+}
+
+function readMaterialText() {
+  const rows = Array.from(document.querySelectorAll("#materialRows .material-row"));
+  return rows
+    .map(row => {
+      const qty = (row.querySelector(".mat-qty") || {}).value || "";
+      const text = (row.querySelector(".mat-text") || {}).value || "";
+      const q = String(qty).trim();
+      const t = String(text).trim();
+      if (!q && !t) return "";
+      if (q && t) return q + "x " + t;
+      return t || q;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function employeeNameToType(nameValue) {
+  const name = String(nameValue || "").trim().toLowerCase();
+  const found = employeePool.find(e => {
+    const full = String(e.name || e.email || "").trim();
+    const parts = full.split(/\s+/);
+    const last = (parts[parts.length - 1] || "").toLowerCase();
+    return last === name;
+  });
+  const type = found && found.job_type ? String(found.job_type).toLowerCase() : "";
+  if (type.includes("meister")) return "ME";
+  if (type.includes("monteur")) return "MO";
+  if (type.includes("helfer")) return "HE";
+  return "";
+}
+
+function addWorkerRow(nameValue, typeValue, hoursValue) {
+  const host = document.getElementById("workerRows");
+  if (!host) return;
+  const row = document.createElement("div");
+  row.className = "material-row";
+  row.innerHTML = `
+    <input class="compact-input worker-name worker-last" placeholder="Nachname" value="${nameValue || ""}">
+    <input class="compact-input worker-type worker-code" placeholder="ME/MO/HE" value="${typeValue || ""}" readonly>
+    <input class="compact-input worker-hours" type="number" step="0.25" placeholder="Std." value="${hoursValue || ""}">
+  `;
+  host.appendChild(row);
+
+  const nameInput = row.querySelector(".worker-name");
+  const typeInput = row.querySelector(".worker-type");
+  const hoursInput = row.querySelector(".worker-hours");
+
+  nameInput.addEventListener("input", () => {
+    typeInput.value = employeeNameToType(nameInput.value);
+    syncPersonalFromEmployees();
+  });
+  hoursInput.addEventListener("input", syncPersonalFromEmployees);
+}
+
+function renderEmployeeOptions() {
+  // no-op; Nachname wird direkt eingegeben
+}
+
+function syncPersonalFromEmployees() {
+  const rows = Array.from(document.querySelectorAll("#workerRows .material-row"));
+  const lines = rows.map(row => {
+    const name = String((row.querySelector(".worker-name") || {}).value || "").trim();
+    const qual = String((row.querySelector(".worker-type") || {}).value || "").trim();
+    const hrs = String((row.querySelector(".worker-hours") || {}).value || "").trim();
+    if (!name && !qual && !hrs) return "";
+    return [name, qual ? "(" + qual + ")" : "", hrs ? hrs + " Std." : ""].filter(Boolean).join(" ");
+  }).filter(Boolean);
+  document.getElementById("personalInput").value = lines.join("\n");
+}
+
+function calculateHours() {
+  return "";
+}
+
+function formatKilometers(value) {
+  const km = Number(value || 0);
+  if (!km) return "0 km";
+  return km.toLocaleString("de-DE", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1
+  }) + " km";
+}
+
+function reportNumber(report) {
+  if (report && report.nachweis_nummer) {
+    return String(report.nachweis_nummer);
+  }
+  const value = String(report.id || "");
+  return value ? "SN-" + value.slice(0, 8).toUpperCase() : "SN-NEU";
+}
+
+async function loadOptions() {
+  if (!authContextSN && window.BaudokuAuthContext) {
+    authContextSN = await window.BaudokuAuthContext.loadAuthContext({ noCache: true });
+  }
+
+  async function fetchScoped(table) {
+    if (!(authContextSN && authContextSN.company_id)) return [];
+    const scoped = await db
+      .from(table)
+      .select("*")
+      .eq("company_id", authContextSN.company_id)
+      .order("created_at", { ascending: false });
+    if (scoped.error) {
+      console.log(scoped.error);
+      return [];
+    }
+    return scoped.data || [];
+  }
+
+  const [customerData, projectData] = await Promise.all([
+    fetchScoped("customers"),
+    fetchScoped("projects")
+  ]);
+
+  customers = customerData || [];
+  projects = projectData || [];
+
+  const customerSelect = document.getElementById("customerSelect");
+  const projectSelect = document.getElementById("projectSelect");
+
+  customerSelect.innerHTML =
+    "<option value=''>Kunde waehlen</option>" +
+    customers.map(customer => {
+      const label = customer.firma || [customer.vorname, customer.nachname].filter(Boolean).join(" ");
+      return `<option value="${customer.id}">${label || "Kunde"}</option>`;
+    }).join("");
+
+  projectSelect.innerHTML =
+    "<option value=''>Projekt waehlen</option>" +
+    projects.map(project => `<option value="${project.id}">${project.name || "Projekt"}</option>`).join("");
+
+  if (!projects.length) {
+    status("Keine Projekte gefunden. Du kannst direkt mit '+ Projekt' eins anlegen.", "#ffb35c");
+  }
+
+  customerSelect.addEventListener("change", fillProjectsForCustomer);
+  customerSelect.addEventListener("change", fillCustomerEmail);
+
+  if (initialCustomerId) {
+    customerSelect.value = initialCustomerId;
+    fillProjectsForCustomer();
+    fillCustomerEmail();
+  }
+
+  if (initialProjectId) {
+    projectSelect.value = initialProjectId;
+  }
+}
+
+async function createCustomerInline() {
+  const name = prompt("Kundenname / Firma eingeben:");
+  if (!name || !name.trim()) return;
+  const email = prompt("E-Mail (optional):") || "";
+
+  const payload = {
+    firma: name.trim(),
+    email: email.trim()
+  };
+  if (authContextSN && authContextSN.company_id) {
+    payload.company_id = authContextSN.company_id;
+  }
+
+  const { data, error } = await db
+    .from("customers")
+    .insert([payload])
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    console.log(error);
+    status("Kunde konnte nicht angelegt werden: " + ((error && error.message) || "Fehler"), "#ff6b3b");
+    return;
+  }
+
+  await loadOptions();
+  document.getElementById("customerSelect").value = data.id;
+  fillProjectsForCustomer();
+  fillCustomerEmail();
+  status("Kunde angelegt.", "#9be15d");
+}
+
+async function createProjectInline() {
+  const customer = selectedCustomer();
+  if (!customer) {
+    status("Bitte zuerst einen Kunden waehlen.", "#ff6b3b");
+    return;
+  }
+
+  const name = prompt("Projektname eingeben:");
+  if (!name || !name.trim()) return;
+  const ort = prompt("Ort (optional):") || "";
+
+  const payload = {
+    name: name.trim(),
+    ort: ort.trim(),
+    customer_id: customer.id,
+    customer: customer.firma || [customer.vorname, customer.nachname].filter(Boolean).join(" "),
+    beschreibung: "",
+    material: ""
+  };
+  if (authContextSN && authContextSN.company_id) {
+    payload.company_id = authContextSN.company_id;
+  }
+
+  const { data, error } = await db
+    .from("projects")
+    .insert([payload])
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    console.log(error);
+    status("Projekt konnte nicht angelegt werden: " + ((error && error.message) || "Fehler"), "#ff6b3b");
+    return;
+  }
+
+  await loadOptions();
+  document.getElementById("customerSelect").value = customer.id;
+  fillProjectsForCustomer();
+  document.getElementById("projectSelect").value = data.id;
+  status("Projekt angelegt.", "#9be15d");
+}
+
+function fillCustomerEmail() {
+  const customerId = document.getElementById("customerSelect").value;
+  const customer = customers.find(item => String(item.id) === String(customerId));
+  if (!customer) return;
+  document.getElementById("emailInput").value = customer.email || "";
+}
+
+function fillProjectsForCustomer() {
+  const customerId = document.getElementById("customerSelect").value;
+  const projectSelect = document.getElementById("projectSelect");
+  const customer = customers.find(item => String(item.id) === String(customerId));
+  const customerName =
+    customer
+      ? String(customer.firma || [customer.vorname, customer.nachname].filter(Boolean).join(" ")).trim().toLowerCase()
+      : "";
+
+  let filtered = projects.filter(project => String(project.customer_id) === String(customerId));
+  if (!filtered.length && customerName) {
+    filtered = projects.filter(project => String(project.customer || "").trim().toLowerCase() === customerName);
+  }
+  if (!filtered.length) {
+    filtered = projects.slice();
+  }
+
+  projectSelect.innerHTML =
+    "<option value=''>Projekt waehlen</option>" +
+    filtered.map(project => `<option value="${project.id}">${project.name || "Projekt"}</option>`).join("");
+
+  if (initialProjectId) {
+    projectSelect.value = initialProjectId;
+  }
+}
+
+function selectedCustomer() {
+  const id = document.getElementById("customerSelect").value;
+  return customers.find(item => String(item.id) === String(id)) || null;
+}
+
+function selectedProject() {
+  const id = document.getElementById("projectSelect").value;
+  return projects.find(item => String(item.id) === String(id)) || null;
+}
+
+function currentPayload() {
+  const customer = selectedCustomer();
+  const project = selectedProject();
+  const freeProjectName = String((document.getElementById("projectFreeInput") || {}).value || "").trim();
+
+  const stunden =
+    Array.from(document.querySelectorAll(".worker-hours"))
+      .reduce((sum, node) => sum + Number(node.value || 0), 0);
+  const fahrtkosten =
+    document.getElementById("fahrtkostenJaNein").checked
+      ? Number(document.getElementById("fahrtenAnzahl").value || 1)
+      : 0;
+  const gefahreneKilometer =
+    Math.max(0, Number(((document.getElementById("kilometerInput") || {}).value) || 0));
+
+  return {
+    customer_id: customer ? customer.id : null,
+    customer: customer ? (customer.firma || [customer.vorname, customer.nachname].filter(Boolean).join(" ")) : "",
+    project_id: project ? project.id : null,
+    project: project ? (project.name || "") : freeProjectName,
+    objekt: document.getElementById("objektInput").value.trim(),
+    arbeitsdatum: document.getElementById("datumInput").value || null,
+    startzeit: "",
+    endzeit: "",
+    stunden,
+    stundensatz: 0,
+    netto_summe: 0,
+    abrechenbar: document.getElementById("abrechenbarInput").checked,
+    abgerechnet: false,
+    taetigkeit: document.getElementById("taetigkeitInput").value.trim(),
+    material: readMaterialText(),
+    personal: document.getElementById("personalInput").value.trim() || currentJobType || "",
+    fahrtkosten,
+    gefahrene_kilometer: gefahreneKilometer,
+    unterschrift_name: "",
+    unterschrift_data: getSignatureData(),
+    email: document.getElementById("emailInput").value.trim(),
+    created_by: authContextSN ? authContextSN.user_id : null,
+    firma_daten: getCompanyData()
+  };
+}
+
+async function saveStundennachweis() {
+  const payload = currentPayload();
+
+  const missing = [];
+  if (!payload.customer) missing.push("Kunde");
+  if (!payload.objekt) missing.push("Objekt");
+  if (!payload.arbeitsdatum) missing.push("Datum");
+  if (!payload.taetigkeit) missing.push("Taetigkeit");
+
+  if (missing.length) {
+    status("Fehlt: " + missing.join(", "), "#ff6b3b");
+    return;
+  }
+
+  // Online-Firma zuweisen, falls vorhanden
+  if (!authContextSN && window.BaudokuAuthContext) {
+    authContextSN = await window.BaudokuAuthContext.loadAuthContext({ noCache: true });
+  }
+  if (authContextSN && authContextSN.company_id) {
+    payload.company_id = authContextSN.company_id;
+  }
+
+  async function insertWithSchemaFallback(sourcePayload) {
+    let safe = { ...sourcePayload };
+    let result = await db.from("stundennachweise").insert([safe]).select().single();
+    let guard = 0;
+    while (result.error && guard < 20) {
+      const msg = String(result.error.message || "");
+      const match =
+        msg.match(/column\s+"([^"]+)"/i) ||
+        msg.match(/column\s+'([^']+)'/i) ||
+        msg.match(/find the '([^']+)' column/i) ||
+        msg.match(/find the "([^"]+)" column/i);
+      if (!match || !match[1]) break;
+      const badKey = match[1];
+      if (!(badKey in safe)) break;
+      delete safe[badKey];
+      result = await db.from("stundennachweise").insert([safe]).select().single();
+      guard += 1;
+    }
+    return result;
+  }
+
+  const { data, error } = await insertWithSchemaFallback(payload);
+
+  if (error) {
+    console.log(error);
+    status("Stundennachweis konnte nicht gespeichert werden: " + (error.message || "Fehler"), "#ff6b3b");
+    return;
+  }
+
+  currentReport = data;
+  status("Stundennachweis gespeichert.", "#9be15d");
+  await loadReports();
+}
+
+async function createPdfBlob(report) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    throw new Error("PDF-Modul nicht verfuegbar.");
+  }
+
+  const company = report.firma_daten || getCompanyData();
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: "mm", format: "a4" });
+  const materialLinesCount =
+    String(report.material || "")
+      .split("\n")
+      .map(line => line.trim())
+      .filter(Boolean).length;
+
+  function sectionLabel(text, y) {
+    pdf.setFillColor(245, 108, 61);
+    pdf.roundedRect(15, y - 4, 180, 8, 3, 3, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10);
+    pdf.text(text, 19, y + 0.5);
+    pdf.setTextColor(30, 30, 30);
+  }
+
+  function drawFieldBox(x, y, w, h, label, value) {
+    pdf.setDrawColor(210, 210, 210);
+    pdf.roundedRect(x, y, w, h, 3, 3);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.text(label, x + 4, y + 6);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    const lines =
+      pdf.splitTextToSize(String(value || "-"), w - 8);
+    pdf.text(lines, x + 4, y + 13);
+  }
+
+  pdf.setDrawColor(210, 210, 210);
+  pdf.setTextColor(30, 30, 30);
+  pdf.setFillColor(246, 247, 249);
+  pdf.roundedRect(15, 12, 180, 34, 4, 4, "F");
+
+  if (company.companyLogo) {
+    try {
+      pdf.addImage(company.companyLogo, "PNG", 18, 16, 24, 24);
+    } catch (error) {
+      console.log(error);
+    }
+  } else {
+    pdf.setDrawColor(210, 210, 210);
+    pdf.roundedRect(18, 16, 24, 24, 3, 3);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8);
+    pdf.text("LOGO", 30, 29, { align: "center" });
+  }
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(17);
+  pdf.text(company.companyName || "Firmenname fehlt", 48, 21);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9);
+  const companyLines = [
+    company.companyOwner,
+    company.companyStreet,
+    [company.companyZip, company.companyCity].filter(Boolean).join(" "),
+    [company.companyPhone, company.companyEmail].filter(Boolean).join(" | "),
+    company.companyWebsite,
+    [
+      company.companyTaxId ? "StNr. " + company.companyTaxId : "",
+      company.companyVatId ? "USt-IdNr. " + company.companyVatId : ""
+    ].filter(Boolean).join(" | ")
+  ].filter(Boolean);
+  pdf.text(companyLines, 48, 27);
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(19);
+  pdf.text("Stundennachweis", 190, 21, { align: "right" });
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9);
+  pdf.text("Nachweis-Nr. " + reportNumber(report), 190, 28, { align: "right" });
+  pdf.text("Leistungsdatum " + (report.arbeitsdatum || "-"), 190, 34, { align: "right" });
+
+  sectionLabel("Kunde und Objekt", 56);
+  drawFieldBox(15, 61, 85, 26, "Kunde", report.customer || "-");
+  drawFieldBox(110, 61, 85, 26, "Projekt / Objekt", [report.project || "-", report.objekt || "-"].join("\n"));
+
+  sectionLabel("Leistungsdaten", 97);
+  drawFieldBox(15, 102, 56, 18, "Stunden", String(report.stunden || "-"));
+  drawFieldBox(77, 102, 56, 18, "Fahrten", Number(report.fahrtkosten || 0) > 0 ? ("Ja (" + String(report.fahrtkosten || 1) + ")") : "Nein");
+  drawFieldBox(139, 102, 56, 18, "Kilometer", formatKilometers(report.gefahrene_kilometer));
+
+  // Arbeitsfeld bewusst kompakter
+  const taetigkeitHeight = 32;
+  sectionLabel("Ausgefuehrte Arbeiten", 126);
+  drawFieldBox(15, 131, 180, taetigkeitHeight, "Leistungsbeschreibung", report.taetigkeit || "-");
+
+  // Material/Personal nur je nach Materialmenge vergroessern
+  const materialBaseHeight = 42;
+  const materialExtra = Math.max(0, materialLinesCount - 2) * 5;
+  const materialHeight = Math.min(82, materialBaseHeight + materialExtra);
+  const materialSectionY = 131 + taetigkeitHeight + 10;
+  const materialBoxY = materialSectionY + 5;
+
+  sectionLabel("Material und Personal", materialSectionY);
+  drawFieldBox(15, materialBoxY, 87, materialHeight, "Material", report.material || "-");
+  drawFieldBox(108, materialBoxY, 87, materialHeight, "Personal", report.personal || "-");
+
+  const bestaetigungY = materialBoxY + materialHeight + 8;
+  sectionLabel("Bestaetigung", bestaetigungY);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9);
+  pdf.text(
+    pdf.splitTextToSize(
+      "Hiermit bestaetigt der Auftraggeber die oben aufgefuehrten Leistungen, Zeiten und Nebenkosten.",
+      180
+    ),
+    15,
+    bestaetigungY + 7
+  );
+  const signLineY = bestaetigungY + 22;
+  pdf.line(15, signLineY, 95, signLineY);
+  pdf.line(110, signLineY, 190, signLineY);
+  pdf.setFontSize(8);
+  pdf.text("Ort / Datum", 15, signLineY + 5);
+  pdf.text("Unterschrift Auftraggeber", 110, signLineY + 5);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9);
+  const ortDatumText =
+    [report.objekt || "-", report.arbeitsdatum || "-"]
+      .filter(Boolean)
+      .join(", ");
+  pdf.text(ortDatumText, 17, signLineY - 2);
+
+  pdf.setDrawColor(200, 200, 200);
+  const signBoxY = signLineY - 15;
+  pdf.roundedRect(110, signBoxY, 70, 12, 3, 3);
+  if (report.unterschrift_data) {
+    pdf.addImage(report.unterschrift_data, "PNG", 116, signBoxY + 2, 56, 8);
+  }
+
+  return pdf.output("blob");
+}
+
+async function downloadPdf(report) {
+  const blob = await createPdfBlob(report);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "stundennachweis-" + reportNumber(report) + ".pdf";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function downloadCurrentPdf() {
+  const payload = currentReport || currentPayload();
+  await downloadPdf(payload);
+}
+
+async function blobToBase64(blob) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      resolve(String(reader.result).split(",")[1]);
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function sendReportEmail(report) {
+  if (!report.email) {
+    status("Bitte zuerst eine E-Mail-Adresse eintragen.", "#ff6b3b");
+    return;
+  }
+
+  const blob = await createPdfBlob(report);
+  const pdfBase64 = await blobToBase64(blob);
+
+  try {
+    const response = await fetch("http://localhost:3000/send-report-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        to: report.email,
+        subject: "Stundennachweis " + reportNumber(report),
+        text: "Im Anhang erhalten Sie Ihren Stundennachweis.",
+        pdfBase64,
+        fileName: "stundennachweis-" + reportNumber(report) + ".pdf"
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || "Versand fehlgeschlagen.");
+    }
+
+    status("E-Mail wurde versendet.", "#9be15d");
+  } catch (error) {
+    console.log(error);
+    status("E-Mail noch nicht verfuegbar. PDF kann bereits geladen werden.", "orange");
+  }
+}
+
+async function sendCurrentEmail() {
+  const payload = currentReport || currentPayload();
+  await sendReportEmail(payload);
+}
+
+function renderReports(items) {
+  const list = document.getElementById("reportList");
+
+  if (!items.length) {
+    list.innerHTML = "<p style='opacity:0.7;'>Noch keine Nachweise vorhanden.</p>";
+    return;
+  }
+
+  list.innerHTML = "";
+
+  items.forEach(report => {
+    const deletedInfo =
+      report.deleted_at
+        ? `<div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:#3a1f1f;color:#ffb3a2;font-size:12px;">
+             Dieser Nachweis wurde geloescht am ${new Date(report.deleted_at).toLocaleString("de-DE")}.
+             ${report.delete_reason ? "<br>Grund: " + report.delete_reason : ""}
+           </div>`
+        : "";
+    const actions =
+      report.deleted_at
+        ? `<button class="login-btn" style="margin-bottom:0;background:#3a3a3a;" onclick="openReportPdf('${report.id}')">PDF</button>`
+        : `
+        <button class="login-btn" style="margin-bottom:0;background:#3a3a3a;" onclick="openReportPdf('${report.id}')">PDF</button>
+        <button class="login-btn" style="margin-bottom:0;" onclick="openReportEmail('${report.id}')">E-Mail</button>
+        ${canDeleteReport(report) ? `<button class="delete-btn" style="margin:0;" onclick="deleteOwnReport('${report.id}')">Stornieren (24h)</button>` : ""}
+      `;
+    const div = document.createElement("div");
+    div.className = "report-card";
+    div.innerHTML = `
+      <div class="report-top">
+        <div>
+          <strong>${report.customer || "Kunde"} - ${report.objekt || "Objekt"}</strong><br>
+          <small style="opacity:0.75;">${report.arbeitsdatum || "-"} | ${report.project || ""}</small>
+          <div>
+            <span class="meta-chip">${report.stunden || 0} Std.</span>
+            <span class="meta-chip">${formatKilometers(report.gefahrene_kilometer)}</span>
+            <span class="meta-chip">${reportNumber(report)}</span>
+            ${report.deleted_at ? `<span class="meta-chip" style="background:#5a2b2b;color:#ffd5ca;">Geloescht</span>` : ""}
+          </div>
+        </div>
+      </div>
+      ${deletedInfo}
+      <div class="button-row" style="margin-top:12px;">
+        ${actions}
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function canDeleteReport(report) {
+  if (!authContextSN || !report || report.deleted_at) return false;
+  const role = String(authContextSN.role || "").toLowerCase();
+  if (role !== "angestellter") return false;
+  const createdAt = report.created_at ? new Date(report.created_at).getTime() : 0;
+  if (!createdAt) return false;
+  const hours24 = 24 * 60 * 60 * 1000;
+  const within24h = (Date.now() - createdAt) <= hours24;
+  if (!within24h) return false;
+  // Standardfall: nur eigener Nachweis
+  if (report.created_by) {
+    return String(report.created_by) === String(authContextSN.user_id);
+  }
+  // Fallback fuer Alt-Daten ohne created_by (nach Migration nicht mehr noetig)
+  return true;
+}
+
+window.deleteOwnReport = async function(id) {
+  const report = reportCache.find(item => String(item.id) === String(id));
+  if (!report) return;
+  if (!canDeleteReport(report)) {
+    status("Loeschen nur fuer eigene Nachweise innerhalb von 24 Stunden moeglich.", "#ff6b3b");
+    return;
+  }
+  const ok = confirm("Nachweis wirklich loeschen? Der Chef sieht weiterhin, dass er geloescht wurde.");
+  if (!ok) return;
+
+  const reason = prompt("Grund fuer Loeschung (optional):") || "";
+  const { error } = await db
+    .from("stundennachweise")
+    .update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: authContextSN.user_id,
+      delete_reason: reason.trim() || "Vom Monteur innerhalb 24h geloescht"
+    })
+    .eq("id", id)
+    .eq("company_id", authContextSN.company_id)
+    .is("deleted_at", null);
+
+  if (error) {
+    console.log(error);
+    status("Loeschen fehlgeschlagen.", "#ff6b3b");
+    return;
+  }
+
+  status("Nachweis als geloescht markiert. Chef sieht den Hinweis.", "#9be15d");
+  await loadReports();
+};
+
+async function loadReports() {
+  if (!authContextSN && window.BaudokuAuthContext) {
+    authContextSN = await window.BaudokuAuthContext.loadAuthContext({ noCache: true });
+  }
+
+  let query = db
+    .from("stundennachweise")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (authContextSN && authContextSN.company_id) {
+    query = query.eq("company_id", authContextSN.company_id);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.log(error);
+    renderReports([]);
+    return;
+  }
+
+  reportCache = data || [];
+  renderReports(reportCache);
+}
+
+window.openReportPdf = async function(id) {
+  const report = reportCache.find(item => String(item.id) === String(id));
+  if (!report) return;
+  await downloadPdf(report);
+};
+
+window.openReportEmail = async function(id) {
+  const report = reportCache.find(item => String(item.id) === String(id));
+  if (!report) return;
+  await sendReportEmail(report);
+};
+
+(async function initPage() {
+  if (window.BaudokuAuthContext) {
+    authContextSN = await window.BaudokuAuthContext.loadAuthContext({ noCache: true });
+  }
+  setupSignature();
+  addMaterialRow();
+  addWorkerRow();
+  await loadCompanyDataOnline();
+  renderCompanyPreview();
+  await loadOptions();
+  await loadReports();
+  syncPersonalFromEmployees();
+  document.getElementById("datumInput").value = new Date().toISOString().slice(0, 10);
+})();
+
+</script>
+
+<script src="pwa.js"></script>
+</body>
+</html>

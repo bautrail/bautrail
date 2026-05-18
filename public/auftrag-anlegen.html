@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Auftrag erstellen</title>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+
+.input{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:#2b2b2b;
+  color:white;
+  margin-top:10px;
+  box-sizing:border-box;
+}
+
+textarea{
+  width:100%;
+  height:140px;
+  border:none;
+  border-radius:12px;
+  padding:14px;
+  background:#2b2b2b;
+  color:white;
+  resize:none;
+  margin-top:10px;
+  box-sizing:border-box;
+}
+
+.save-btn{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:#ff6b3d;
+  color:white;
+  font-size:16px;
+  font-weight:bold;
+  margin-top:14px;
+  cursor:pointer;
+}
+
+.search-results{
+  margin-top:10px;
+}
+
+.result-item{
+  background:#1e1e1e;
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:8px;
+  cursor:pointer;
+  color:white !important;
+}
+
+.result-item strong{
+  color:white !important;
+}
+
+.result-item div{
+  color:white !important;
+}
+
+.result-item span{
+  color:white !important;
+}
+
+.result-item,
+.result-item *{
+  color:white !important;
+}
+
+
+
+</style>
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+
+<div class="app-wrapper">
+
+<div class="app-content">
+
+<header class="app-header">
+
+<button
+class="back-btn"
+onclick="goBack()"
+>&#8592;</button>
+
+<h1 class="app-name">
+➕ Auftrag
+</h1>
+
+<p class="company-name">
+Neue Kleinigkeit
+</p>
+
+</header>
+
+<!-- KUNDE -->
+<div class="task-card">
+
+<h3>👥 Kunde</h3>
+
+<input
+type="text"
+id="customerSearch"
+class="input"
+placeholder="Kunde suchen..."
+oninput="searchCustomers()"
+>
+
+<div id="customerResults"
+class="search-results"></div>
+
+</div>
+
+<!-- PROJEKT -->
+<div class="task-card">
+
+<h3>📦 Projekt</h3>
+
+<input
+type="text"
+id="projectSearch"
+class="input"
+placeholder="Projekt suchen..."
+oninput="searchProjects()"
+disabled
+>
+
+<div id="projectResults"
+class="search-results"></div>
+
+</div>
+
+<!-- MATERIAL -->
+<div class="task-card" id="materialCard" style="display:none;">
+
+<h3>🧱 Material</h3>
+
+<textarea
+id="material"
+placeholder="Welches Material wird benötigt?"
+></textarea>
+
+<div
+id="favoriteMaterialList"
+style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"
+></div>
+
+<button
+class="save-btn"
+style="background:#444;margin-top:10px;"
+onclick="saveCurrentMaterialFavorite()"
+>
+Material als Favorit speichern
+</button>
+
+</div>
+
+<!-- NOTIZ -->
+<div class="task-card">
+
+<h3>📝 Beschreibung</h3>
+
+
+<select
+  id="priority"
+  class="input"
+>
+
+  <option value="normal">
+    🟢 Normal
+  </option>
+
+  <option value="week">
+    🟠 Diese Woche
+  </option>
+
+  <option value="urgent">
+    🔴 Dringend
+  </option>
+
+</select>
+
+<input
+  type="date"
+  id="faelligkeit"
+  class="input"
+>
+
+<textarea
+  id="beschreibung"
+  class="input"
+  placeholder="Beschreibung..."
+></textarea>
+
+<h3 style="margin-top:14px;">Vorlagen</h3>
+<div id="templateList" class="search-results"></div>
+
+<button
+  class="save-btn"
+  style="background:#444;"
+  onclick="saveCurrentTemplate()"
+>
+  Aktuelle Eingabe als Vorlage speichern
+</button>
+
+</div>
+
+<button
+class="save-btn"
+onclick="saveJob()"
+>
+Speichern
+</button>
+
+</div>
+
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script src="company-context.js"></script>
+<script src="work-presets.js"></script>
+<script src="auto-textareas.js"></script>
+
+<script>
+
+let selectedCustomer = null;
+let selectedProject = null;
+let allCustomers = [];
+
+loadCustomerOptions();
+renderFavoriteMaterials();
+renderTemplates();
+
+function renderFavoriteMaterials(){
+
+  const target =
+    document.getElementById("favoriteMaterialList");
+
+  if(!target || !window.BaudokuPresets) return;
+
+  const favorites =
+    window.BaudokuPresets.getMaterialFavorites();
+
+  target.innerHTML = "";
+
+  favorites.forEach(item => {
+    const button =
+      document.createElement("button");
+
+    button.type = "button";
+    button.className = "result-item";
+    button.style.margin = "0";
+    button.style.padding = "8px 10px";
+    button.style.width = "auto";
+    button.textContent = item;
+
+    button.onclick = () => {
+      const field =
+        document.getElementById("material");
+
+      field.value =
+        field.value.trim()
+          ? field.value.trim() + "\n" + item
+          : item;
+    };
+
+    target.appendChild(button);
+  });
+}
+
+function renderTemplates(){
+
+  const target =
+    document.getElementById("templateList");
+
+  if(!target || !window.BaudokuPresets) return;
+
+  const templates =
+    window.BaudokuPresets.getJobTemplates();
+
+  if(!templates.length){
+    target.innerHTML =
+      "<p style='opacity:0.7;'>Noch keine Vorlagen gespeichert.</p>";
+    return;
+  }
+
+  target.innerHTML = "";
+
+  templates.forEach(template => {
+    const div =
+      document.createElement("div");
+
+    div.className = "result-item";
+
+    div.innerHTML = `
+      <strong>${template.name}</strong>
+      <div style="opacity:0.8;margin-top:6px;">
+        ${template.beschreibung || "Ohne Beschreibung"}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button type="button" class="save-btn" style="margin:0;padding:10px;background:#ff6b3d;" onclick="applyTemplate('${template.id}')">Anwenden</button>
+        <button type="button" class="save-btn" style="margin:0;padding:10px;background:#444;" onclick="removeTemplate('${template.id}')">Loeschen</button>
+      </div>
+    `;
+
+    target.appendChild(div);
+  });
+}
+
+function saveCurrentMaterialFavorite(){
+
+  const value =
+    document.getElementById("material").value
+      .split("\n")
+      .map(line => line.trim())
+      .filter(Boolean)[0];
+
+  if(!value || !window.BaudokuPresets) return;
+
+  window.BaudokuPresets.saveMaterialFavorite(value);
+  renderFavoriteMaterials();
+}
+
+function saveCurrentTemplate(){
+
+  if(!window.BaudokuPresets) return;
+
+  const name =
+    prompt("Name der Vorlage:");
+
+  if(!name) return;
+
+  window.BaudokuPresets.saveJobTemplate({
+    name,
+    beschreibung: document.getElementById("beschreibung").value.trim(),
+    material: document.getElementById("material").value.trim(),
+    priority: document.getElementById("priority").value
+  });
+
+  renderTemplates();
+}
+
+function applyTemplate(id){
+
+  if(!window.BaudokuPresets) return;
+
+  const template =
+    window.BaudokuPresets
+      .getJobTemplates()
+      .find(item => item.id === id);
+
+  if(!template) return;
+
+  document.getElementById("beschreibung").value =
+    template.beschreibung || "";
+
+  document.getElementById("material").value =
+    template.material || "";
+
+  document.getElementById("priority").value =
+    template.priority || "normal";
+}
+
+function removeTemplate(id){
+
+  if(!window.BaudokuPresets) return;
+
+  window.BaudokuPresets.removeJobTemplate(id);
+  renderTemplates();
+}
+
+async function loadCustomerOptions(){
+
+  const cached =
+    JSON.parse(
+      localStorage.getItem("customers")
+    ) || [];
+
+  allCustomers = cached;
+
+  if(!navigator.onLine) return;
+
+  const { data, error } =
+    await window.BaudokuCompanyContext
+      .selectScoped("customers");
+
+  if(error){
+
+    console.log(error);
+    return;
+  }
+
+  allCustomers =
+    (data || [])
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+  localStorage.setItem(
+    "customers",
+    JSON.stringify(allCustomers)
+  );
+}
+
+function getCustomerName(customer){
+
+  return customer.firma ||
+    (
+      customer.vorname &&
+      customer.nachname
+        ? customer.vorname + " " + customer.nachname
+        : ""
+    );
+}
+
+function sameText(a,b){
+
+  return String(a || "")
+    .trim()
+    .toLowerCase() ===
+    String(b || "")
+    .trim()
+    .toLowerCase();
+}
+
+async function loadProjectsForCustomer(customerId){
+
+  if(
+    !customerId ||
+    String(customerId).startsWith("custom_") ||
+    !navigator.onLine
+  ){
+    return;
+  }
+
+  let query =
+    db
+      .from("projects")
+      .select("*")
+      .eq("customer_id", customerId)
+      .order("created_at", {
+        ascending:false
+      });
+
+  const ctx =
+    window.BaudokuAuthContext
+      ? await window.BaudokuAuthContext.loadAuthContext({ noCache: true })
+      : null;
+
+  if (!(ctx && ctx.company_id)) {
+    return;
+  }
+
+  const { data, error } = await query.eq("company_id", ctx.company_id);
+
+  if(error){
+    console.log(error);
+    return;
+  }
+
+  localStorage.setItem(
+    "projects_" + customerId,
+    JSON.stringify(data || [])
+  );
+}
+
+function searchCustomers(){
+
+  const input =
+    document.getElementById(
+      "customerSearch"
+    );
+
+  const value =
+    input.value.toLowerCase();
+
+  const results =
+    document.getElementById(
+      "customerResults"
+    );
+
+  results.innerHTML = "";
+
+  if(!value) return;
+
+  const customers =
+    allCustomers.length
+      ? allCustomers
+      : JSON.parse(
+          localStorage.getItem("customers")
+        ) || [];
+
+  const filtered =
+    customers.filter(c => {
+
+      const name =
+        getCustomerName(c)
+        .toLowerCase();
+
+      return name.includes(value);
+
+    });
+
+  filtered.forEach(c => {
+
+    const name =
+      getCustomerName(c);
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "result-item";
+
+    div.innerHTML = `
+      <strong style="color:white;">
+        ${name}
+      </strong>
+    `;
+
+    div.onclick = () => {
+
+      selectedCustomer = {
+        id:c.id,
+        name:name
+      };
+
+      input.value = name;
+
+      results.innerHTML = "";
+
+      document.getElementById(
+        "projectSearch"
+      ).disabled = false;
+
+      loadProjectsForCustomer(c.id);
+    };
+
+    results.appendChild(div);
+
+  });
+
+  // 🔥 FREIEN TEXT ERLAUBEN
+  if(!filtered.length){
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "result-item";
+
+    div.innerHTML = `
+      <strong style="color:white;">
+        ➕ Neuer Kunde:
+        ${input.value}
+      </strong>
+    `;
+
+    div.onclick = () => {
+
+      selectedCustomer = {
+        id:"custom_" + Date.now(),
+        name:input.value
+      };
+
+      results.innerHTML = "";
+
+      document.getElementById(
+        "projectSearch"
+      ).disabled = false;
+    };
+
+    results.appendChild(div);
+  }
+
+}
+
+function searchProjects(){
+
+  const input =
+    document.getElementById(
+      "projectSearch"
+    );
+
+  const value =
+    input.value.toLowerCase();
+
+  const results =
+    document.getElementById(
+      "projectResults"
+    );
+
+  results.innerHTML = "";
+
+  if(!value) return;
+
+  let projects = [];
+
+  if(
+    selectedCustomer &&
+    !String(selectedCustomer.id)
+    .startsWith("custom_")
+  ){
+
+    projects =
+      JSON.parse(
+        localStorage.getItem(
+          "projects_" +
+          selectedCustomer.id
+        )
+      ) || [];
+  }
+
+  const filtered =
+    projects.filter(p =>
+      p.name
+      .toLowerCase()
+      .includes(value)
+    );
+
+  filtered.forEach(p => {
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "result-item";
+
+    div.innerHTML = `
+      <strong style="color:white;">
+        ${p.name}
+      </strong>
+    `;
+
+    div.onclick = () => {
+
+      selectedProject = {
+        id:p.id,
+        name:p.name
+      };
+
+      input.value = p.name;
+
+      results.innerHTML = "";
+    };
+
+    results.appendChild(div);
+
+  });
+
+  // 🔥 FREIES PROJEKT
+  if(!filtered.length){
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "result-item";
+
+    div.innerHTML = `
+      <strong style="color:white;">
+        ➕ Neues Projekt:
+        ${input.value}
+      </strong>
+    `;
+
+    div.onclick = () => {
+
+      selectedProject = {
+        id:"custom_" + Date.now(),
+        name:input.value
+      };
+
+      results.innerHTML = "";
+    };
+
+    results.appendChild(div);
+  }
+
+}
+
+
+async function saveJob(){
+  if(!selectedCustomer){
+
+  const customerValue =
+    document.getElementById(
+      "customerSearch"
+    ).value.trim();
+
+  if(customerValue){
+
+    selectedCustomer = {
+
+      id:"custom_" + Date.now(),
+
+      name:customerValue
+    };
+  }
+}
+
+if(!selectedProject){
+
+  const projectValue =
+    document.getElementById(
+      "projectSearch"
+    ).value.trim();
+
+  if(projectValue){
+
+    selectedProject = {
+
+      id:"custom_" + Date.now(),
+
+      name:projectValue
+    };
+  }
+}
+
+  if(!selectedCustomer){
+
+    alert("Kunde fehlt");
+    return;
+  }
+
+  if(!selectedProject){
+
+    alert("Projekt fehlt");
+    return;
+  }
+
+  // 🔥 Neuen Kunden speichern
+ // 🔥 Neuen Kunden in Supabase speichern
+try{
+
+  await ensureCustomerSaved();
+
+} catch(error){
+
+  return;
+}
+  // 🔥 Neues Projekt speichern
+  // 🔥 Neues Projekt in Supabase speichern
+try{
+
+  await ensureProjectSaved();
+
+} catch(error){
+
+  return;
+}
+
+  const { error } =
+  await window.BaudokuCompanyContext
+  .insertScoped("auftraege", {
+
+    customer:
+      selectedCustomer.name,
+
+    customer_id:
+      selectedCustomer.id,
+
+    project:
+      selectedProject.name,
+
+    project_id:
+      selectedProject.id,
+
+    beschreibung:
+      document.getElementById(
+        "beschreibung"
+      ).value,
+
+    priority:
+      document.getElementById(
+        "priority"
+      ).value,
+
+   faelligkeit:
+
+  document.getElementById(
+    "faelligkeit"
+  ).value || null,
+
+    done:false
+  });
+
+if(error){
+
+  console.log(error);
+
+  alert(error.message);
+
+  return;
+}
+
+window.location.href =
+  "auftraege.html";
+  }
+
+async function ensureCustomerSaved(){
+
+  const customerName =
+    selectedCustomer.name.trim();
+
+  const cachedMatch =
+    (
+      JSON.parse(
+        localStorage.getItem("customers")
+      ) || []
+    ).find(c =>
+      sameText(
+        getCustomerName(c),
+        customerName
+      )
+    );
+
+  if(cachedMatch){
+
+    selectedCustomer.id =
+      cachedMatch.id;
+
+    selectedCustomer.name =
+      getCustomerName(cachedMatch);
+
+    return;
+  }
+
+  if(
+    !String(selectedCustomer.id)
+    .startsWith("custom_")
+  ){
+    return;
+  }
+
+  const { data:newCustomerData, error } =
+    await window.BaudokuCompanyContext
+    .insertScoped("customers", {
+
+      firma:
+        customerName,
+
+      vorname:"",
+      nachname:""
+
+    });
+
+  const newCustomer =
+    Array.isArray(newCustomerData)
+      ? newCustomerData[0]
+      : newCustomerData;
+
+  if(error){
+
+    console.log(error);
+    alert(error.message);
+    throw error;
+  }
+
+  selectedCustomer.id =
+    newCustomer.id;
+
+  selectedCustomer.name =
+    getCustomerName(newCustomer);
+
+  const customers =
+    JSON.parse(
+      localStorage.getItem("customers")
+    ) || [];
+
+  customers.unshift(newCustomer);
+
+  localStorage.setItem(
+    "customers",
+    JSON.stringify(customers)
+  );
+}
+
+async function ensureProjectSaved(){
+
+  const projectName =
+    selectedProject.name.trim();
+
+  if(
+    !String(selectedProject.id)
+    .startsWith("custom_")
+  ){
+    return;
+  }
+
+  const projectPayload = {
+
+    customer_id:
+      selectedCustomer.id,
+
+    customer:
+      selectedCustomer.name,
+
+    name:
+      projectName,
+
+    material:"",
+
+    faelligkeit:
+      document.getElementById(
+        "faelligkeit"
+      ).value || null,
+
+    beschreibung:
+      document.getElementById(
+        "beschreibung"
+      ).value
+  };
+
+  const { data:newProjectData, error } =
+    await window.BaudokuCompanyContext
+    .insertScoped("projects", projectPayload);
+
+  const newProject =
+    Array.isArray(newProjectData)
+      ? newProjectData[0]
+      : newProjectData;
+
+  if(error){
+
+    console.log(error);
+    alert(error.message);
+    throw error;
+  }
+
+  selectedProject.id =
+    newProject.id;
+
+  selectedProject.name =
+    newProject.name;
+
+  const cacheKey =
+    "projects_" +
+    selectedCustomer.id;
+
+  const projects =
+    JSON.parse(
+      localStorage.getItem(cacheKey)
+    ) || [];
+
+  projects.unshift(newProject);
+
+  localStorage.setItem(
+    cacheKey,
+    JSON.stringify(projects)
+  );
+
+  localStorage.setItem(
+    "project_" + newProject.id,
+    JSON.stringify(newProject)
+  );
+}
+
+function goBack(){
+
+  window.history.back();
+}
+
+
+</script>
+
+<script src="pwa.js"></script>
+</body>
+</html>

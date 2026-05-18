@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Rolle</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <button class="back-btn" onclick="window.location.href='profil.html'">&#8592;</button>
+      <h1 class="app-name">System Rolle</h1>
+      <p class="company-name">Rolle und Firmen-Code</p>
+    </header>
+
+    <div class="task-card">
+      <p id="currentRoleText" style="font-size:12px;opacity:0.75;">Lade Rolle...</p>
+      <select id="roleSelect" class="compact-input" style="margin-top:8px;">
+        <option value="chef">Chef</option>
+        <option value="buero">Buero</option>
+        <option value="angestellter">Mitarbeiter</option>
+      </select>
+      <button class="login-btn" style="margin-top:8px;" onclick="saveRole()">Rolle speichern</button>
+
+      <input id="joinInviteCode" class="compact-input" placeholder="Code z.B. BAU-8F3K-22" style="margin-top:8px;">
+      <button class="login-btn" style="margin-top:8px;" onclick="joinCompanyByInvite()">Mit Firma verbinden</button>
+
+      <p id="roleStatus" style="font-size:12px;opacity:0.75;"></p>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script>
+let authContext = null;
+let memberRecordId = null;
+
+async function loadRoleSettings() {
+  const roleText = document.getElementById("currentRoleText");
+  const roleSelect = document.getElementById("roleSelect");
+
+  authContext = window.BaudokuAuthContext
+    ? await window.BaudokuAuthContext.loadAuthContext({ noCache: true })
+    : null;
+
+  const { data: sessionData } = await db.auth.getSession();
+  const user = sessionData && sessionData.session ? sessionData.session.user : null;
+  if (!user) {
+    roleText.textContent = "Keine Session gefunden. Bitte neu einloggen.";
+    return;
+  }
+
+  const { data } = await db
+    .from("company_members")
+    .select("id, role, company_id")
+    .eq("user_id", user.id)
+    .eq("active", true)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) {
+    roleText.textContent = "Keine aktive Rollen-Zuordnung gefunden.";
+    return;
+  }
+
+  memberRecordId = data.id;
+  if (!authContext) authContext = {};
+  authContext.user_id = user.id;
+  authContext.company_id = data.company_id;
+  authContext.role = data.role;
+  roleSelect.value = data.role || "angestellter";
+  roleText.textContent = "Aktuelle Rolle: " + (data.role || "-");
+}
+
+async function saveRole() {
+  const status = document.getElementById("roleStatus");
+  const newRole = document.getElementById("roleSelect").value;
+  if (!memberRecordId) {
+    status.textContent = "Keine Firmen-Zuordnung gefunden.";
+    status.style.color = "#ff3b3b";
+    return;
+  }
+
+  const { error } = await db.from("company_members").update({ role: newRole }).eq("id", memberRecordId);
+  if (error) {
+    status.textContent = "Rollenwechsel fehlgeschlagen.";
+    status.style.color = "#ff3b3b";
+    return;
+  }
+
+  status.textContent = "Rolle gespeichert.";
+  status.style.color = "#4caf50";
+}
+
+async function joinCompanyByInvite() {
+  const status = document.getElementById("roleStatus");
+  const code = String(document.getElementById("joinInviteCode").value || "").trim().toUpperCase();
+  if (!code) {
+    status.textContent = "Bitte Einladungscode eingeben.";
+    status.style.color = "#ff3b3b";
+    return;
+  }
+
+  const { data: sessionData } = await db.auth.getSession();
+  const user = sessionData && sessionData.session ? sessionData.session.user : null;
+  if (!user) {
+    status.textContent = "Keine Session gefunden.";
+    status.style.color = "#ff3b3b";
+    return;
+  }
+
+  const requestedRole = String(document.getElementById("roleSelect").value || "").trim();
+  const { data, error } = await db.rpc("consume_company_invite", {
+    p_invite_code: code,
+    p_requested_role: requestedRole
+  });
+
+  if (error || !data || !data.length || !data[0].ok) {
+    console.log(error || data);
+    const msg =
+      (data && data[0] && data[0].message)
+      || (error && error.message)
+      || "Einladungscode ungueltig.";
+    status.textContent = msg;
+    status.style.color = "#ff3b3b";
+    return;
+  }
+  status.textContent = data[0].message || "Firma verknuepft.";
+  status.style.color = "#4caf50";
+  document.getElementById("joinInviteCode").value = "";
+  await loadRoleSettings();
+}
+
+loadRoleSettings();
+</script>
+<script src="pwa.js"></script>
+</body>
+</html>

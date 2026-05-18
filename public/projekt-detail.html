@@ -1,0 +1,2269 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projekt</title>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+#imageList {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+#folderPath {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-bottom:10px;
+}
+
+.folder-path-btn,
+.document-action-btn {
+  border:none;
+  border-radius:10px;
+  background:#333;
+  color:white;
+  padding:8px 10px;
+  cursor:pointer;
+}
+
+.document-row {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+}
+
+.document-main {
+  flex:1;
+  min-width:0;
+}
+
+.document-title {
+  font-weight:600;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.document-meta {
+  color:#aaa;
+  font-size:12px;
+  margin-top:3px;
+}
+
+.project-header-row {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.folder-add-top {
+  border:none;
+  border-radius:12px;
+  background:#333;
+  color:white;
+  padding:9px 10px;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.media-actions-card h3 {
+  margin-bottom:12px;
+}
+
+.document-action-btn {
+  flex-shrink:0;
+  font-size:12px;
+}
+
+.folder-dialog-backdrop {
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.7);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  z-index:10000;
+}
+
+.folder-dialog {
+  width:100%;
+  max-width:360px;
+  background:#252525;
+  color:white;
+  border-radius:16px;
+  padding:18px;
+}
+
+.folder-dialog h3 {
+  margin-bottom:12px;
+}
+
+.folder-dialog input {
+  width:100%;
+  margin-bottom:12px;
+}
+
+.folder-dialog-actions {
+  display:flex;
+  gap:8px;
+}
+
+.folder-dialog-actions button {
+  flex:1;
+  margin-bottom:0;
+}
+
+.folder-choice-list {
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  max-height:300px;
+  overflow:auto;
+  margin-bottom:12px;
+}
+
+.folder-choice-list button {
+  width:100%;
+  text-align:left;
+  border:none;
+  border-radius:10px;
+  background:#333;
+  color:white;
+  padding:11px 12px;
+  cursor:pointer;
+}
+
+.info-box{
+  background:#1e1e1e;
+  border-radius:12px;
+
+  padding:10px 12px;
+
+  margin-bottom:8px;
+
+  min-height:auto;
+}
+
+.info-box small{
+  opacity:0.6;
+  font-size:12px;
+}
+
+.text{
+  white-space:pre-wrap;
+  line-height:1.3;
+  font-size:14px;
+  margin-top:4px;
+}
+</style>
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+
+<div class="app-wrapper">
+  <div class="app-content">
+
+    <header class="app-header">
+      <button class="back-btn" onclick="goBack()">&#8592;</button>
+      <div class="project-header-row">
+        <div>
+          <h1 class="app-name" id="projektName"></h1>
+          <p class="company-name">Projekt</p>
+        </div>
+        <button type="button" class="folder-add-top" onclick="createDocumentFolder()">+ Ordner</button>
+      </div>
+    </header>
+
+    <div class="task-card" id="projektInfo"></div>
+
+    <div class="task-card">
+      <h3>Projekt bearbeiten</h3>
+      <input id="editProjectNumber" class="compact-input" placeholder="Projektnummer" readonly style="margin-bottom:8px;background:#212121;">
+      <input id="editProjectName" class="compact-input" placeholder="Projektname">
+      <input id="editProjectOrt" class="compact-input" placeholder="Ort" style="margin-top:8px;">
+      <input id="editProjectDatum" class="compact-input" placeholder="Datum" style="margin-top:8px;">
+      <input id="editProjectFaelligkeit" class="compact-input" type="date" style="margin-top:8px;">
+      <select id="editProjectStatus" class="compact-input" style="margin-top:8px;">
+        <option value="offen">offen</option>
+        <option value="in_arbeit">in Arbeit</option>
+        <option value="wartet_auf_material">wartet auf Material</option>
+        <option value="abgenommen">abgenommen</option>
+        <option value="abgerechnet">abgerechnet</option>
+      </select>
+      <textarea id="editProjectMaterial" class="compact-input compact-textarea" placeholder="Material" style="margin-top:8px;"></textarea>
+      <div class="button-row" style="margin-top:10px;">
+        <button class="login-btn" onclick="saveProjectDetails()">Projekt speichern</button>
+        <button class="login-btn" style="background:#444;" onclick="downloadProjectPdf()">PDF-Bericht</button>
+      </div>
+      <button class="login-btn" style="background:#3a3a3a;" onclick="downloadProjectZip()">Projektordner laden</button>
+      <p id="projectSaveStatus" style="font-size:12px;opacity:0.7;margin:0;"></p>
+    </div>
+
+    <div class="task-card">
+      <textarea id="beschreibung" placeholder="Was wurde gemacht..."
+      style="width:100%;height:110px;border-radius:10px;border:none;padding:10px;"></textarea>
+
+      <div style="margin-top:6px; display:flex; justify-content:space-between;">
+        <p id="saveStatus" style="font-size:12px;opacity:0.6;margin:0;"></p>
+        <p id="offlineStatus" style="font-size:12px;margin:0;"></p>
+      </div>
+    </div>
+
+    <div class="task-card media-actions-card">
+      <h3>Ablage</h3>
+      <input type="file" id="imageInput" multiple accept="image/*" style="display:none">
+      <input type="file" id="documentInput" multiple style="display:none">
+      <button onclick="openImagePicker()" class="login-btn">Bilder ausw&auml;hlen</button>
+      <button onclick="openDocumentPicker()" class="login-btn" style="background:#444;">Dokumente ausw&auml;hlen</button>
+      <p id="documentStatus" style="font-size:12px;opacity:0.7;margin:0;"></p>
+    </div>
+
+    <div id="folderPath"></div>
+    <div id="documentList"></div>
+    <div id="imageList"></div>
+
+    <div class="task-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <h3>Stundennachweise</h3>
+        <button class="login-btn" style="width:auto;margin:0;padding:10px 12px;" onclick="openProjectReportCreate()">Neu</button>
+      </div>
+      <div id="reportListProject" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="task-card">
+      <h3>Aenderungsverlauf</h3>
+      <div id="auditListProject" style="margin-top:10px;"></div>
+    </div>
+
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+    <a href="kunden.html" class="active"><span>&#128101;</span><small>Kunden</small></a>
+    <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+    <a href="profil.html"><span>&#128100;</span><small>Profil</small></a>
+  </nav>
+</div>
+
+<!-- OVERLAY -->
+<div id="imageOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:9999;">
+  <button onclick="closeImage(event)" aria-label="Bild schliessen" style="position:absolute;top:20px;right:20px;font-size:28px;background:none;border:none;color:white;">&times;</button>
+  <button onclick="prevImage(event)" aria-label="Vorheriges Bild" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:32px;background:none;border:none;color:white;">&#10094;</button>
+  <button onclick="nextImage(event)" aria-label="Naechstes Bild" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:32px;background:none;border:none;color:white;">&#10095;</button>
+  <button onclick="deleteCurrentImage(event)" aria-label="Bild loeschen" style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);font-size:16px;background:#ff6b35;border:none;color:white;padding:12px 18px;border-radius:12px;font-weight:700;">Bild loeschen</button>
+  <img id="overlayImg" style="max-width:90%;border-radius:10px;">
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="supabase.js"></script>
+<script src="project-documents.js"></script>
+<script src="auto-textareas.js"></script>
+<script src="notifications.js"></script>
+
+<script>
+
+// =====================================================
+// GLOBAL
+// =====================================================
+let projektId;
+let currentProject = null;
+
+let currentImages = [];
+let currentImageEntries = [];
+let currentIndex = 0;
+let saveTimeout;
+
+
+// =====================================================
+// QUEUES
+// =====================================================
+function getCreateQueue() {
+  return JSON.parse(localStorage.getItem("createQueue")) || [];
+}
+
+function saveCreateQueue(q) {
+  localStorage.setItem("createQueue", JSON.stringify(q));
+}
+
+function getUpdateQueue() {
+  return JSON.parse(localStorage.getItem("updateQueue")) || [];
+}
+
+function saveUpdateQueue(q) {
+  localStorage.setItem("updateQueue", JSON.stringify(q));
+}
+
+function getDeleteQueue() {
+  return JSON.parse(localStorage.getItem("deleteQueue")) || [];
+}
+
+function saveDeleteQueue(q) {
+  localStorage.setItem("deleteQueue", JSON.stringify(q));
+}
+
+function getOfflineUploads() {
+  return JSON.parse(localStorage.getItem("offlineUploads")) || [];
+}
+
+function saveOfflineUploads(q) {
+  localStorage.setItem("offlineUploads", JSON.stringify(q));
+}
+
+function getPendingUpdateValue(id, field) {
+  const item =
+    getUpdateQueue()
+      .slice()
+      .reverse()
+      .find(q =>
+        String(q.id) === String(id) &&
+        q.field === field
+      );
+
+  return item ? item.value : undefined;
+}
+
+function getPendingUploadsForProject(id) {
+  return getOfflineUploads().filter(img =>
+    String(img.project_id) === String(id)
+  );
+}
+
+function getCurrentFolderId() {
+  if (!window.BaudokuDocuments) return null;
+
+  return window.BaudokuDocuments.getCurrentFolderId();
+}
+
+function makeOfflineImageId() {
+  return [
+    "image",
+    Date.now(),
+    Math.random().toString(36).slice(2)
+  ].join("_");
+}
+
+function getOfflineImageKey(item) {
+  return item.id || item.image;
+}
+
+function imageIsInCurrentFolder(key, fallbackFolderId) {
+  const folderId =
+    getCurrentFolderId();
+
+  if (fallbackFolderId !== undefined) {
+    const imageFolder =
+      fallbackFolderId || null;
+
+    const currentFolder =
+      folderId || null;
+
+    return String(imageFolder) === String(currentFolder);
+  }
+
+  if (!window.BaudokuDocuments) {
+    return !folderId;
+  }
+
+  return window.BaudokuDocuments.imageBelongsToFolder(
+    projektId,
+    key,
+    folderId
+  );
+}
+
+function makeImageFileName(projectId) {
+  return [
+    projectId,
+    Date.now(),
+    Math.random().toString(36).slice(2)
+  ].join("_") + ".jpg";
+}
+
+function dataURLtoBlob(dataurl) {
+  const arr =
+    dataurl.split(",");
+
+  const mime =
+    arr[0]
+      .match(/:(.*?);/)[1];
+
+  const bstr =
+    atob(arr[1]);
+
+  let n =
+    bstr.length;
+
+  const u8arr =
+    new Uint8Array(n);
+
+  while(n--) {
+    u8arr[n] =
+      bstr.charCodeAt(n);
+  }
+
+  return new Blob(
+    [u8arr],
+    { type:mime }
+  );
+}
+
+
+// =====================================================
+// START
+// =====================================================
+document.addEventListener("DOMContentLoaded", function() {
+
+  projektId =
+    new URLSearchParams(window.location.search)
+    .get("id");
+
+  const textarea =
+    document.getElementById("beschreibung");
+
+  const status =
+    document.getElementById("saveStatus");
+
+  const offlineStatus =
+    document.getElementById("offlineStatus");
+
+  const documentStatus =
+    document.getElementById("documentStatus");
+
+
+  // =====================================================
+  // STATUS
+  // =====================================================
+  function setOfflineStatus(text, color="#aaa") {
+
+    offlineStatus.textContent = text;
+    offlineStatus.style.color = color;
+  }
+
+  function updateConnectionStatus() {
+
+    if (!navigator.onLine) {
+      setOfflineStatus("Offline - Aenderungen werden synchronisiert", "orange");
+      if (documentStatus) {
+        documentStatus.textContent = "Offline - Uploads werden spaeter uebertragen";
+        documentStatus.style.color = "orange";
+      }
+      return;
+    }
+
+    setOfflineStatus("Online - Daten bereits hochgeladen", "#9be15d");
+    if (documentStatus) {
+      documentStatus.textContent = "Online - neue Dateien werden direkt hochgeladen";
+      documentStatus.style.color = "#9be15d";
+    }
+  }
+
+  if (window.BaudokuDocuments) {
+
+    window.BaudokuDocuments.init({
+      getProjectId: () => projektId,
+      setStatus: (text, color="#aaa") => {
+        setOfflineStatus(text, color);
+
+        if (documentStatus) {
+          documentStatus.textContent = text;
+          documentStatus.style.color = color;
+        }
+      },
+      onFolderChange: () => loadImages()
+    });
+  }
+
+  updateConnectionStatus();
+  window.addEventListener("online", updateConnectionStatus);
+  window.addEventListener("offline", updateConnectionStatus);
+
+
+  // =====================================================
+  // LOAD PROJEKT
+  // =====================================================
+  async function loadProjekt() {
+
+    // ?? OFFLINE
+    if (!navigator.onLine) {
+
+      const cached =
+        JSON.parse(
+          localStorage.getItem(
+            "project_" + projektId
+          )
+        );
+
+      if (cached) {
+
+        const pendingDescription =
+          getPendingUpdateValue(
+            projektId,
+            "beschreibung"
+          );
+
+        if (pendingDescription !== undefined) {
+          cached.beschreibung =
+            pendingDescription;
+        }
+
+        document.getElementById("projektName").textContent =
+          cached.name || "";
+
+        document.getElementById("projektInfo").textContent =
+          (cached.ort || "") + " " + (cached.datum || "");
+
+        textarea.value =
+          cached.beschreibung || "";
+
+        currentProject = cached;
+        fillProjectEditForm(cached);
+      }
+
+      loadImages();
+
+      if (window.BaudokuDocuments) {
+        await window.BaudokuDocuments.load();
+      }
+
+      return;
+    }
+
+    // ?? ONLINE
+    const { data, error } = await db
+  .from("projects")
+  .select("*")
+  .eq("id", projektId)
+  .single();
+
+if (error || !data) {
+
+  // ?? fallback cache
+  const cached =
+    JSON.parse(
+      localStorage.getItem(
+        "project_" + projektId
+      )
+    );
+
+  if (cached) {
+
+    const pendingDescription =
+      getPendingUpdateValue(
+        projektId,
+        "beschreibung"
+      );
+
+    if (pendingDescription !== undefined) {
+      cached.beschreibung =
+        pendingDescription;
+    }
+
+    document.getElementById("projektName").textContent =
+      cached.name || "";
+
+    document.getElementById("projektInfo").textContent =
+      (cached.ort || "") +
+      " " +
+      (cached.datum || "");
+
+    textarea.value =
+      cached.beschreibung || "";
+
+    currentProject = cached;
+    fillProjectEditForm(cached);
+  }
+
+  if (window.BaudokuDocuments) {
+    await window.BaudokuDocuments.load();
+  }
+
+  return;
+}
+
+const visibleProject = {
+  ...data
+};
+
+currentProject = visibleProject;
+
+const pendingDescription =
+  getPendingUpdateValue(
+    projektId,
+    "beschreibung"
+  );
+
+if (pendingDescription !== undefined) {
+  visibleProject.beschreibung =
+    pendingDescription;
+}
+
+// ===== CACHE =====
+localStorage.setItem(
+  "project_" + projektId,
+  JSON.stringify(visibleProject)
+);
+
+document.getElementById("projektName").textContent =
+  visibleProject.name || "";
+
+
+ const info =
+   document.getElementById("projektInfo");
+
+ if (data.customer) {
+
+   info.style.display = "block";
+
+   info.innerHTML = `
+     <div class="info-box">
+       <small>Kunde</small>
+       <div class="text">
+         ${data.customer}
+       </div>
+     </div>
+   `;
+
+ } else {
+
+   info.style.display = "none";
+ }
+
+textarea.value =
+  visibleProject.beschreibung || "";
+
+fillProjectEditForm(visibleProject);
+
+if (window.BaudokuAutoTextareas) {
+  window.BaudokuAutoTextareas.init();
+}
+
+    loadImages();
+    loadProjectReports();
+    loadAuditHistory();
+
+    if (window.BaudokuDocuments) {
+      await window.BaudokuDocuments.load();
+    }
+  }
+
+  function fillProjectEditForm(project) {
+    document.getElementById("editProjectNumber").value =
+      project.project_number || "";
+
+    document.getElementById("editProjectName").value =
+      project.name || "";
+
+    document.getElementById("editProjectOrt").value =
+      project.ort || "";
+
+    document.getElementById("editProjectDatum").value =
+      project.datum || "";
+
+    document.getElementById("editProjectFaelligkeit").value =
+      project.faelligkeit || "";
+
+    document.getElementById("editProjectStatus").value =
+      project.status || "offen";
+
+    document.getElementById("editProjectMaterial").value =
+      project.material || "";
+  }
+
+  async function loadProjectReports() {
+
+    const list =
+      document.getElementById("reportListProject");
+
+    if (!list || !projektId) return;
+
+    if (!navigator.onLine) {
+      list.innerHTML =
+        "<p style='opacity:0.7;'>Stundennachweise werden online geladen.</p>";
+      return;
+    }
+
+    const { data, error } =
+      await db
+        .from("stundennachweise")
+        .select("*")
+        .eq("project_id", projektId)
+        .order("created_at", { ascending: false })
+        .limit(6);
+
+    if (error) {
+      console.log(error);
+      list.innerHTML =
+        "<p style='opacity:0.7;'>Stundennachweise konnten nicht geladen werden.</p>";
+      return;
+    }
+
+    if (!(data || []).length) {
+      list.innerHTML =
+        "<p style='opacity:0.7;'>Noch keine Stundennachweise vorhanden.</p>";
+      return;
+    }
+
+    list.innerHTML =
+      (data || []).map(item => `
+        <div class="info-box" style="margin-top:0;margin-bottom:8px;min-height:0;">
+          <small>${item.arbeitsdatum || "-"}</small>
+          <div class="text">${item.objekt || "Objekt"} - ${item.customer || ""}</div>
+          <small>${item.stunden || 0} Std. | ${item.unterschrift_name || "ohne Name"}</small>
+        </div>
+      `).join("");
+  }
+
+  async function loadAuditHistory() {
+    const list =
+      document.getElementById("auditListProject");
+
+    if (!list || !projektId) return;
+
+    if (!navigator.onLine) {
+      list.innerHTML =
+        "<p style='opacity:0.7;'>Verlauf wird online geladen.</p>";
+      return;
+    }
+
+    const { data, error } =
+      await db
+        .from("audit_log")
+        .select("*")
+        .eq("table_name", "projects")
+        .eq("row_id", String(projektId))
+        .order("created_at", { ascending: false })
+        .limit(12);
+
+    if (error) {
+      console.log(error);
+      list.innerHTML =
+        "<p style='opacity:0.7;'>Verlauf aktuell nicht verfuegbar.</p>";
+      return;
+    }
+
+    if (!(data || []).length) {
+      list.innerHTML =
+        "<p style='opacity:0.7;'>Noch keine Aenderungen vorhanden.</p>";
+      return;
+    }
+
+    list.innerHTML =
+      (data || []).map(item => `
+        <div class="info-box" style="margin-top:0;margin-bottom:8px;min-height:0;">
+          <small>${new Date(item.created_at).toLocaleString("de-DE")}</small>
+          <div class="text">${item.action || "update"}</div>
+        </div>
+      `).join("");
+  }
+
+  function openProjectReportCreate() {
+
+    const params = new URLSearchParams();
+
+    if (currentProject && currentProject.customer_id) {
+      params.set("customer_id", currentProject.customer_id);
+    }
+
+    if (projektId) {
+      params.set("project_id", projektId);
+    }
+
+    window.location.href =
+      "stunden-nachweis.html?" + params.toString();
+  }
+
+  window.saveProjectDetails = async function() {
+
+    const status =
+      document.getElementById(
+        "projectSaveStatus"
+      );
+
+    const payload = {
+      name: document.getElementById("editProjectName").value.trim(),
+      ort: document.getElementById("editProjectOrt").value.trim(),
+      datum: document.getElementById("editProjectDatum").value.trim(),
+      faelligkeit: document.getElementById("editProjectFaelligkeit").value || null,
+      status: document.getElementById("editProjectStatus").value || "offen",
+      material: document.getElementById("editProjectMaterial").value.trim()
+    };
+
+    if (!payload.name) {
+      status.textContent = "Projektname fehlt.";
+      status.style.color = "#ff3b3b";
+      return;
+    }
+
+    const { data, error } =
+      await db
+      .from("projects")
+      .update(payload)
+      .eq("id", projektId)
+      .select()
+      .single();
+
+    if (error) {
+      console.log(error);
+      status.textContent =
+        "Projekt konnte nicht gespeichert werden.";
+      status.style.color = "#ff3b3b";
+      return;
+    }
+
+    currentProject = data;
+
+    localStorage.setItem(
+      "project_" + projektId,
+      JSON.stringify(data)
+    );
+
+    document.getElementById("projektName").textContent =
+      data.name || "";
+
+    status.textContent = "Projekt gespeichert.";
+    status.style.color = "#4caf50";
+
+    await loadProjekt();
+  };
+
+  function safeZipName(name) {
+    return String(name || "datei")
+      .replace(/[\\/:*?"<>|]+/g, "_")
+      .trim() || "datei";
+  }
+
+  function folderPathFor(folderId, folders) {
+    const parts = [];
+    let active =
+      folders.find(folder =>
+        String(folder.id) === String(folderId)
+      );
+
+    while (active) {
+      parts.unshift(safeZipName(active.name));
+      active =
+        folders.find(folder =>
+          String(folder.id) === String(active.parent_id)
+        );
+    }
+
+    return parts.join("/");
+  }
+
+  window.downloadProjectZip = async function() {
+
+    if (!window.JSZip) {
+      alert("Download-Modul konnte nicht geladen werden.");
+      return;
+    }
+
+    const zip =
+      new JSZip();
+
+    const project =
+      currentProject || {};
+
+    const folderRoot =
+      safeZipName(project.name || "Projekt");
+
+    zip.file(
+      folderRoot + "/projekt.json",
+      JSON.stringify(project, null, 2)
+    );
+
+    const exportData =
+      window.BaudokuDocuments &&
+      window.BaudokuDocuments.getProjectExportData
+        ? await window.BaudokuDocuments
+            .getProjectExportData(projektId)
+        : {
+            folders: [],
+            documents: [],
+            imageFolders: []
+          };
+
+    for (let folder of exportData.folders) {
+      const folderPath =
+        folderPathFor(
+          folder.id,
+          exportData.folders
+        );
+
+      zip.folder(
+        folderRoot + "/" + folderPath
+      );
+    }
+
+    for (let file of exportData.documents) {
+      let blob = file.blob;
+
+      if (!blob && file.public_url) {
+        try {
+          blob =
+            await fetch(file.public_url)
+            .then(response => response.blob());
+        } catch (err) {
+          console.log(err);
+        }
+      }
+
+      if (!blob) continue;
+
+      const folderPath =
+        folderPathFor(
+          file.folder_id,
+          exportData.folders
+        );
+
+      const path =
+        [
+          folderRoot,
+          folderPath,
+          safeZipName(file.name)
+        ]
+        .filter(Boolean)
+        .join("/");
+
+      zip.file(path, blob);
+    }
+
+    const { data:images } =
+      await db
+      .from("project_images")
+      .select("*")
+      .eq("project_id", projektId);
+
+    let imageIndex = 1;
+
+    for (let image of images || []) {
+      try {
+        const blob =
+          await fetch(image.image_url)
+          .then(response => response.blob());
+
+        const imageFolder =
+          exportData.imageFolders
+          .find(item =>
+            item.image_key === image.image_url
+          );
+
+        const folderPath =
+          folderPathFor(
+            imageFolder && imageFolder.folder_id,
+            exportData.folders
+          );
+
+        const path =
+          [
+            folderRoot,
+            folderPath,
+            "bild_" + imageIndex + ".jpg"
+          ]
+          .filter(Boolean)
+          .join("/");
+
+        zip.file(path, blob);
+        imageIndex++;
+      } catch (err) {
+        console.log(err);
+      }
+    }
+
+    const blob =
+      await zip.generateAsync({
+        type: "blob"
+      });
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const link =
+      document.createElement("a");
+
+    link.href = url;
+    link.download =
+      folderRoot + ".zip";
+
+    link.click();
+
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
+  };
+
+  function blobToDataUrl(blob) {
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function collectProjectImagesForPdf(limit) {
+
+    const { data: images } =
+      await db
+        .from("project_images")
+        .select("*")
+        .eq("project_id", projektId)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+    const result = [];
+
+    for (let image of images || []) {
+      try {
+        const blob =
+          await fetch(image.image_url)
+            .then(response => response.blob());
+
+        result.push({
+          url: image.image_url,
+          dataUrl: await blobToDataUrl(blob)
+        });
+      } catch (err) {
+        console.log(err);
+      }
+    }
+
+    return result;
+  }
+
+  window.downloadProjectPdf = async function() {
+
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      alert("PDF-Modul konnte nicht geladen werden.");
+      return;
+    }
+
+    const { jsPDF } =
+      window.jspdf;
+
+    const pdf =
+      new jsPDF({
+        unit: "mm",
+        format: "a4"
+      });
+
+    const project =
+      currentProject || {};
+
+    const exportData =
+      window.BaudokuDocuments &&
+      window.BaudokuDocuments.getProjectExportData
+        ? await window.BaudokuDocuments.getProjectExportData(projektId)
+        : {
+            documents: []
+          };
+
+    const images =
+      await collectProjectImagesForPdf(4);
+
+    let y = 18;
+
+    function addLine(label, value) {
+      if (!value) return;
+
+      pdf.setFont("helvetica", "bold");
+      pdf.text(label, 14, y);
+      pdf.setFont("helvetica", "normal");
+
+      const lines =
+        pdf.splitTextToSize(String(value), 180);
+
+      pdf.text(lines, 48, y);
+      y += Math.max(8, lines.length * 6);
+    }
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(18);
+    pdf.text("Baudoku Projektbericht", 14, y);
+    y += 12;
+
+    pdf.setFontSize(11);
+    addLine("Kunde", project.customer || "-");
+    addLine("Projekt", project.name || "-");
+    addLine("Ort", project.ort || "-");
+    addLine("Datum", project.datum || "-");
+    addLine("Faelligkeit", project.faelligkeit || "-");
+    addLine("Beschreibung", project.beschreibung || "-");
+    addLine("Material", project.material || "-");
+
+    if (exportData.documents && exportData.documents.length) {
+      y += 4;
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Dokumente", 14, y);
+      y += 7;
+      pdf.setFont("helvetica", "normal");
+
+      exportData.documents.slice(0, 12).forEach(file => {
+        const lines =
+          pdf.splitTextToSize("- " + (file.name || "Dokument"), 180);
+        pdf.text(lines, 18, y);
+        y += lines.length * 6;
+      });
+    }
+
+    if (images.length) {
+      pdf.addPage();
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(16);
+      pdf.text("Bilder", 14, 18);
+
+      let imageY = 28;
+      let imageX = 14;
+
+      for (let index = 0; index < images.length; index++) {
+        pdf.addImage(
+          images[index].dataUrl,
+          "JPEG",
+          imageX,
+          imageY,
+          85,
+          60
+        );
+
+        if (imageX > 14) {
+          imageX = 14;
+          imageY += 70;
+        } else {
+          imageX = 109;
+        }
+      }
+    }
+
+    pdf.save(
+      safeZipName(project.name || "Projektbericht") + ".pdf"
+    );
+  };
+
+
+  // =====================================================
+  // AUTOSAVE
+  // =====================================================
+  textarea.addEventListener("input", function() {
+
+    clearTimeout(saveTimeout);
+
+    status.textContent = "Speichert...";
+    status.style.color = "#aaa";
+
+    saveTimeout = setTimeout(async () => {
+
+      const text = textarea.value;
+
+      // ===== CACHE =====
+      let cached =
+        JSON.parse(
+          localStorage.getItem(
+            "project_" + projektId
+          )
+        ) || {};
+
+      cached.beschreibung = text;
+
+      localStorage.setItem(
+        "project_" + projektId,
+        JSON.stringify(cached)
+      );
+
+      // ===== CREATE QUEUE FIX =====
+      let createQueue =
+        getCreateQueue();
+
+      createQueue =
+        createQueue.map(p => {
+
+          if (
+            String(p.id) ===
+            String(projektId)
+          ) {
+
+            return {
+              ...p,
+              beschreibung: text
+            };
+          }
+
+          return p;
+        });
+
+      saveCreateQueue(createQueue);
+
+      // ?? OFFLINE
+      if (!navigator.onLine) {
+
+        let queue =
+          getUpdateQueue();
+
+        queue =
+          queue.filter(q =>
+            !(
+              q.id === projektId &&
+              q.field === "beschreibung"
+            )
+          );
+
+        queue.push({
+          id: projektId,
+          field: "beschreibung",
+          value: text
+        });
+
+        saveUpdateQueue(queue);
+
+        status.textContent =
+          "Offline gespeichert";
+
+        status.style.color =
+          "orange";
+
+        return;
+      }
+
+      // ?? ONLINE
+      const { error } = await db
+        .from("projects")
+        .update({
+          beschreibung: text
+        })
+        .eq("id", projektId);
+
+      if (error) {
+
+        console.log(error);
+
+        status.textContent =
+          "Fehler ?";
+
+        status.style.color =
+          "red";
+
+      } else {
+
+        status.textContent =
+          "Gespeichert ?";
+
+        status.style.color =
+          "#4caf50";
+
+        setTimeout(() => {
+
+          status.textContent = "";
+
+        }, 2000);
+      }
+
+    }, 800);
+  });
+
+
+  // =====================================================
+  // SYNC CREATE
+  // =====================================================
+  async function syncCreatedProjects() {
+
+    if (!navigator.onLine) return;
+
+    let createQ =
+      getCreateQueue();
+
+    if (!createQ.length) return;
+
+    const remaining = [];
+
+    for (let p of createQ) {
+
+      try {
+
+        const { data, error } = await db
+          .from("projects")
+          .insert([{
+
+  customer_id:
+    p.customer_id,
+
+  customer:
+    p.customer,
+
+  name:
+    p.name,
+
+  ort:
+    p.ort,
+
+  datum:
+    p.datum,
+
+  material:
+    p.material,
+
+  faelligkeit:
+    p.faelligkeit,
+
+  beschreibung:
+    p.beschreibung || ""
+
+}])
+          .select()
+          .single();
+
+        if (error || !data) {
+
+          console.log(error);
+
+          remaining.push(p);
+
+          continue;
+        }
+
+        const newId = data.id;
+
+        // ===== CACHE MIGRATION =====
+const oldCache =
+  JSON.parse(
+    localStorage.getItem(
+      "project_" + p.id
+    )
+  );
+
+if (oldCache) {
+
+  // ?? neue id setzen
+  oldCache.id = newId;
+
+  // ?? neuen cache speichern
+  localStorage.setItem(
+    "project_" + newId,
+    JSON.stringify(oldCache)
+  );
+
+  // ?? alten l&ouml;schen
+  localStorage.removeItem(
+    "project_" + p.id
+  );
+}
+
+        // ===== URL =====
+        if (
+          String(projektId) ===
+          String(p.id)
+        ) {
+
+          projektId = newId;
+
+          window.history.replaceState(
+            {},
+            "",
+            "projekt-detail.html?id=" + newId
+          );
+        }
+
+        // ===== PROJECT CACHE =====
+        const cached =
+          JSON.parse(
+            localStorage.getItem(
+              "project_" + p.id
+            )
+          );
+
+        if (cached) {
+
+          cached.id = newId;
+
+          localStorage.setItem(
+            "project_" + newId,
+            JSON.stringify(cached)
+          );
+
+          localStorage.removeItem(
+            "project_" + p.id
+          );
+        }
+
+        // ===== UPDATE QUEUE =====
+        let updates =
+          getUpdateQueue();
+
+        updates =
+          updates.map(u => {
+
+            if (
+              String(u.id) ===
+              String(p.id)
+            ) {
+
+              return {
+                ...u,
+                id: newId
+              };
+            }
+
+            return u;
+          });
+
+        saveUpdateQueue(updates);
+
+        // ===== OFFLINE IMAGES =====
+        let uploads =
+          getOfflineUploads();
+
+        uploads =
+          uploads.map(img => {
+
+            if (
+              String(img.project_id) ===
+              String(p.id)
+            ) {
+
+              return {
+                ...img,
+                project_id: newId
+              };
+            }
+
+            return img;
+          });
+
+        saveOfflineUploads(uploads);
+
+        if (window.BaudokuDocuments) {
+          await window.BaudokuDocuments.migrateProjectId(
+            p.id,
+            newId
+          );
+        }
+
+      } catch(err) {
+
+        console.log(err);
+
+        remaining.push(p);
+      }
+    }
+
+    saveCreateQueue(remaining);
+  }
+
+
+  // =====================================================
+  // SYNC UPDATES
+  // =====================================================
+  async function syncUpdates() {
+
+    if (!navigator.onLine) return;
+
+    let queue =
+      getUpdateQueue();
+
+    if (!queue.length) return;
+
+    const remaining = [];
+
+    for (let item of queue) {
+
+      try {
+
+        const { data, error } =
+          await db
+          .from("projects")
+          .update({
+            [item.field]: item.value
+          })
+          .eq("id", item.id)
+          .select("id")
+          .maybeSingle();
+
+        if (error || !data) {
+
+          console.log(error);
+
+          remaining.push(item);
+
+          continue;
+        }
+
+        const cached =
+          JSON.parse(
+            localStorage.getItem(
+              "project_" + item.id
+            )
+          ) || {};
+
+        cached[item.field] =
+          item.value;
+
+        localStorage.setItem(
+          "project_" + item.id,
+          JSON.stringify(cached)
+        );
+
+      } catch(err) {
+
+        console.log(err);
+
+        remaining.push(item);
+      }
+    }
+
+    saveUpdateQueue(remaining);
+  }
+
+
+  // =====================================================
+  // LOAD IMAGES
+  // =====================================================
+  async function loadImages() {
+
+    const list =
+      document.getElementById("imageList");
+
+    list.innerHTML = "";
+
+    const pendingUploads =
+      getPendingUploadsForProject(projektId);
+
+    function appendImage(src, label, key) {
+
+      const div =
+        document.createElement("div");
+
+      div.className =
+        "task-card image-card";
+
+      div.dataset.imageSrc =
+        src;
+
+      div.dataset.imageKey =
+        key || src;
+
+      div.dataset.offline =
+        label === "Offline gespeichert" || label === "Wird synchronisiert"
+          ? "true"
+          : "false";
+
+      const img =
+        document.createElement("img");
+
+      img.src =
+        src;
+
+      img.style.width =
+        "100%";
+
+      img.style.borderRadius =
+        "10px";
+
+      img.addEventListener("click", () => {
+        window.openImage(src);
+      });
+
+      div.appendChild(img);
+
+      if (label) {
+
+        const note =
+          document.createElement("p");
+
+        note.textContent =
+          label;
+
+        note.style.fontSize =
+          "12px";
+
+        note.style.opacity =
+          "0.7";
+
+        note.style.marginTop =
+          "6px";
+
+        div.appendChild(note);
+      }
+
+      if (window.BaudokuDocuments && key) {
+
+        const button =
+          document.createElement("button");
+
+        button.className =
+          "document-action-btn";
+
+        button.textContent =
+          "Verschieben";
+
+        button.style.marginTop =
+          "8px";
+
+        button.style.width =
+          "100%";
+
+        button.addEventListener("click", event => {
+          event.stopPropagation();
+          window.BaudokuDocuments.moveImage(
+            key,
+            projektId
+          );
+        });
+
+        div.appendChild(button);
+      }
+
+      const deleteButton =
+        document.createElement("button");
+
+      deleteButton.className =
+        "document-action-btn";
+
+      deleteButton.textContent =
+        "Loeschen";
+
+      deleteButton.style.marginTop =
+        "8px";
+
+      deleteButton.style.width =
+        "100%";
+
+      deleteButton.style.background =
+        "#7a2f2f";
+
+      deleteButton.addEventListener("click", async event => {
+        event.stopPropagation();
+        await deleteProjectImage(
+          div.dataset.imageKey,
+          div.dataset.offline === "true"
+        );
+      });
+
+      div.appendChild(deleteButton);
+
+      list.appendChild(div);
+    }
+
+    // ?? OFFLINE
+    if (!navigator.onLine) {
+
+      const visiblePendingUploads =
+        pendingUploads.filter(img =>
+          imageIsInCurrentFolder(
+            getOfflineImageKey(img),
+            img.folder_id
+          )
+        );
+
+      if (!visiblePendingUploads.length) {
+
+        list.innerHTML = "";
+
+        return;
+      }
+
+      visiblePendingUploads.forEach(img =>
+        appendImage(
+          img.image,
+          "Offline gespeichert",
+          getOfflineImageKey(img)
+        )
+      );
+
+      return;
+    }
+
+    // ?? ONLINE
+    const { data } = await db
+      .from("project_images")
+      .select("*")
+      .eq("project_id", projektId)
+      .order("created_at", {
+        ascending:false
+      });
+
+    if (!data && !pendingUploads.length) return;
+
+    (data || [])
+      .filter(img =>
+        imageIsInCurrentFolder(img.image_url)
+      )
+      .forEach(img =>
+        appendImage(
+          img.image_url,
+          "",
+          img.image_url
+        )
+      );
+
+    pendingUploads
+      .filter(img =>
+        imageIsInCurrentFolder(
+          getOfflineImageKey(img),
+          img.folder_id
+        )
+      )
+      .forEach(img =>
+      appendImage(
+        img.image,
+        "Wird synchronisiert",
+        getOfflineImageKey(img)
+      )
+    );
+  }
+
+  async function deleteProjectImage(imageKey, isOffline) {
+
+    if (!imageKey) return;
+
+    if (isOffline) {
+      const remainingUploads =
+        getOfflineUploads().filter(item =>
+          String(getOfflineImageKey(item)) !== String(imageKey)
+        );
+
+      saveOfflineUploads(remainingUploads);
+      closeImage({ stopPropagation() {} });
+      await loadImages();
+      return;
+    }
+
+    const { error } =
+      await db
+        .from("project_images")
+        .delete()
+        .eq("project_id", projektId)
+        .eq("image_url", imageKey);
+
+    if (error) {
+      console.log(error);
+      setOfflineStatus("Bild konnte nicht geloescht werden", "red");
+      return;
+    }
+
+    closeImage({ stopPropagation() {} });
+    await loadImages();
+  }
+
+
+  // =====================================================
+  // IMAGE UPLOAD
+  // =====================================================
+  document
+  .getElementById("imageInput")
+  .addEventListener("change", async function() {
+
+    for (let file of this.files) {
+
+      // ?? OFFLINE
+      if (!navigator.onLine) {
+
+        const reader =
+          new FileReader();
+
+        reader.onload = function(e) {
+
+          let uploads =
+            getOfflineUploads();
+
+         const img = new Image();
+
+img.onload = function() {
+
+  const canvas =
+    document.createElement("canvas");
+
+  const ctx =
+    canvas.getContext("2d");
+
+  // ?? kleiner machen
+  const maxWidth = 1000;
+
+  const scale =
+    maxWidth / img.width;
+
+  canvas.width = maxWidth;
+
+  canvas.height =
+    img.height * scale;
+
+  ctx.drawImage(
+    img,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  // ?? komprimieren
+  const compressed =
+    canvas.toDataURL(
+      "image/jpeg",
+      0.5
+    );
+
+  let uploads =
+    getOfflineUploads();
+
+  const imageId =
+    makeOfflineImageId();
+
+  uploads.push({
+
+    id: imageId,
+
+    project_id: projektId,
+
+    folder_id: getCurrentFolderId(),
+
+    image: compressed
+  });
+
+  saveOfflineUploads(uploads);
+
+  setOfflineStatus(
+    "Offline Bild gespeichert",
+    "orange"
+  );
+
+  loadImages();
+};
+
+img.src = e.target.result;
+        };
+
+        reader.readAsDataURL(file);
+
+        continue;
+      }
+
+      // ?? ONLINE
+      const fileName =
+        makeImageFileName(projektId);
+
+      const { error: uploadError } =
+        await db
+        .storage
+        .from("bilder")
+        .upload(fileName, file);
+
+      if (uploadError) {
+
+        console.log(uploadError);
+
+        continue;
+      }
+
+      const { data } =
+        db.storage
+        .from("bilder")
+        .getPublicUrl(fileName);
+
+      if (!data || !data.publicUrl) {
+
+        console.log("Keine Bild-URL erhalten");
+
+        continue;
+      }
+
+      const { error: insertError } =
+        await db
+        .from("project_images")
+        .insert([{
+          project_id: projektId,
+          image_url: data.publicUrl,
+          folder_id: getCurrentFolderId()
+        }]);
+
+      if (insertError) {
+        console.log(insertError);
+      } else if (window.BaudokuDocuments) {
+        await window.BaudokuDocuments.assignImageToFolder(
+          data.publicUrl,
+          projektId,
+          getCurrentFolderId()
+        );
+      }
+    }
+
+    loadImages();
+    this.value = "";
+  });
+
+
+  // =====================================================
+  // SYNC OFFLINE IMAGES
+  // =====================================================
+  async function syncOfflineUploads() {
+
+    if (!navigator.onLine) return;
+
+    let uploads =
+      getOfflineUploads();
+
+    if (!uploads.length) return;
+
+    const remaining = [];
+
+    for (let item of uploads) {
+
+      try {
+
+        if (
+          String(item.project_id)
+            .startsWith("offline_")
+        ) {
+
+          remaining.push(item);
+
+          continue;
+        }
+
+const blob =
+  dataURLtoBlob(item.image);
+
+        const fileName =
+          makeImageFileName(item.project_id);
+
+        const { error: uploadError } =
+  await db
+    .storage
+    .from("bilder")
+    .upload(fileName, blob);
+
+if (uploadError) {
+
+  console.log(uploadError);
+
+  remaining.push(item);
+
+  continue;
+}
+
+const { data } =
+  db.storage
+    .from("bilder")
+    .getPublicUrl(fileName);
+
+if (!data || !data.publicUrl) {
+
+  console.log("Keine Bild-URL erhalten");
+
+  remaining.push(item);
+
+  continue;
+}
+
+       const { error: insertError } =
+  await db
+    .from("project_images")
+    .insert([{
+      project_id: item.project_id,
+      image_url: data.publicUrl,
+      folder_id: item.folder_id || null
+    }]);
+
+if (insertError) {
+
+  console.log(insertError);
+
+  remaining.push(item);
+
+  continue;
+}
+
+if (window.BaudokuDocuments) {
+  window.BaudokuDocuments.migrateImageKey(
+    item.project_id,
+    getOfflineImageKey(item),
+    data.publicUrl,
+    item.folder_id
+  );
+}
+
+      } catch(err) {
+
+        console.log(err);
+
+        remaining.push(item);
+      }
+    }
+
+    saveOfflineUploads(remaining);
+
+    loadImages();
+  }
+
+
+  // =====================================================
+  // SYNC PENDING CHANGES
+  // =====================================================
+  function hasPendingChanges() {
+
+    return (
+      getCreateQueue().length > 0 ||
+      getUpdateQueue().length > 0 ||
+      getOfflineUploads().length > 0 ||
+      (
+        window.BaudokuDocuments &&
+        window.BaudokuDocuments.hasPending()
+      )
+    );
+  }
+
+  async function syncPendingChanges() {
+
+    if (!navigator.onLine) return;
+
+    if (!hasPendingChanges()) {
+
+      await loadProjekt();
+
+      return;
+    }
+
+    setOfflineStatus(
+      "Synchronisiere...",
+      "#2196f3"
+    );
+
+    await syncCreatedProjects();
+
+    await syncUpdates();
+
+    await syncOfflineUploads();
+
+    if (window.BaudokuDocuments) {
+      await window.BaudokuDocuments.syncAll();
+    }
+
+    await loadProjekt();
+
+    if (hasPendingChanges()) {
+
+      setOfflineStatus(
+        "Noch nicht alles synchronisiert",
+        "orange"
+      );
+
+      return;
+    }
+
+    setOfflineStatus(
+      "Synchronisiert",
+      "#4caf50"
+    );
+
+    setTimeout(() => {
+
+      setOfflineStatus("");
+
+    }, 2000);
+  }
+
+
+  // =====================================================
+  // EVENTS
+  // =====================================================
+  window.addEventListener("online", async () => {
+
+  return syncPendingChanges();
+
+  /*
+
+  // 1️⃣ erst projekt erstellen
+
+  // 2️⃣ dann text updates
+
+  // 3️⃣ dann bilder
+
+  // 4️⃣ neu laden
+
+  setOfflineStatus(
+    "Synchronisiert ?",
+    "#4caf50"
+  );
+
+  setTimeout(() => {
+
+    setOfflineStatus("");
+
+  }, 2000);
+  */
+});
+
+
+  // =====================================================
+  // OFFLINE STATUS
+  // =====================================================
+  if (!navigator.onLine) {
+
+    setOfflineStatus(
+      "Offline Modus",
+      "orange"
+    );
+  }
+
+
+  // =====================================================
+  // OVERLAY
+  // =====================================================
+  window.openImage = function(url) {
+
+    currentImageEntries =
+      Array.from(
+        document.querySelectorAll(
+          "#imageList .image-card"
+        )
+      ).map(card => ({
+        src: card.dataset.imageSrc,
+        key: card.dataset.imageKey,
+        offline: card.dataset.offline === "true"
+      }));
+
+    currentImages =
+      currentImageEntries.map(item => item.src);
+
+    currentIndex =
+      currentImages.indexOf(url);
+
+    showImage();
+  };
+
+  function showImage() {
+
+    document.getElementById("overlayImg").src =
+      currentImages[currentIndex];
+
+    document.getElementById("imageOverlay").style.display =
+      "flex";
+  }
+
+  window.closeImage = e => {
+
+    e.stopPropagation();
+
+    document.getElementById("imageOverlay").style.display = "none";
+  };
+
+  window.nextImage = e => {
+
+    e.stopPropagation();
+
+    currentIndex =
+      (currentIndex + 1) %
+      currentImages.length;
+
+    showImage();
+  };
+
+  window.prevImage = e => {
+
+    e.stopPropagation();
+
+    currentIndex =
+      (
+        currentIndex - 1 +
+        currentImages.length
+      ) %
+      currentImages.length;
+
+    showImage();
+  };
+
+  window.deleteCurrentImage = async e => {
+
+    e.stopPropagation();
+
+    const currentEntry =
+      currentImageEntries[currentIndex];
+
+    if (!currentEntry) return;
+
+    await deleteProjectImage(
+      currentEntry.key,
+      currentEntry.offline
+    );
+  };
+
+
+  // =====================================================
+  // INIT
+  // =====================================================
+  if (navigator.onLine) {
+
+    syncPendingChanges();
+
+  } else {
+
+    loadProjekt();
+  }
+
+});
+
+
+// =====================================================
+// IMAGE PICKER
+// =====================================================
+window.openImagePicker = function() {
+
+  document
+    .getElementById("imageInput")
+    .click();
+};
+
+window.openCamera = function() {
+  window.openImagePicker();
+};
+
+window.openFilePicker = function() {
+  window.openImagePicker();
+};
+
+
+// =====================================================
+// NAV
+// =====================================================
+function goBack() {
+
+  const cached =
+    JSON.parse(
+      localStorage.getItem(
+        "project_" + projektId
+      )
+    );
+
+  if (
+    cached &&
+    cached.customer_id
+  ) {
+
+    window.location.href =
+      "kunde-detail.html?id=" +
+      cached.customer_id;
+
+    return;
+  }
+
+  window.location.href =
+    "kunden.html";
+}
+
+</script>
+
+<script src="pwa.js"></script>
+</body>
+</html>
+

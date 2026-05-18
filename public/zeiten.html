@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zeiten</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .time-form { display:grid; gap:8px; }
+    .time-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .time-segments { margin-top:10px; }
+    .time-segment {
+      display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:8px; margin-top:8px;
+    }
+    .time-tabs { display:flex; gap:8px; margin-top:10px; overflow:auto; }
+    .time-tab {
+      border:none; border-radius:10px; padding:8px 12px; background:#2b2b2b; color:#fff; cursor:pointer;
+    }
+    .time-tab.active { background:#ff6b3d; }
+  </style>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <h1 class="app-name">Zeiterfassung</h1>
+      <p class="company-name" id="zeitenRoleLine">Tageszeiten</p>
+    </header>
+
+    <div class="task-card">
+      <h3>Tagesblatt</h3>
+      <div class="time-form">
+        <input id="workDate" type="date" class="compact-input">
+        <div id="segmentList" class="time-segments"></div>
+        <button class="login-btn" style="margin:0;background:#444;" onclick="addSegmentRow()">+ Zeitblock</button>
+        <textarea id="dayNote" class="compact-input" style="min-height:80px;" placeholder="Tagesnotiz (optional)"></textarea>
+        <button class="login-btn" style="margin:0;" onclick="saveDayTimes()">Tag speichern</button>
+      </div>
+      <p id="timeStatus" style="font-size:12px;opacity:0.75;margin-top:8px;"></p>
+    </div>
+
+    <div class="task-card">
+      <h3>Verlauf</h3>
+      <div class="time-tabs">
+        <button class="time-tab active" onclick="setViewMode('week', event)">Diese Woche</button>
+        <button class="time-tab" onclick="setViewMode('month', event)">Dieser Monat</button>
+      </div>
+      <div class="time-row" style="margin-top:8px;">
+        <input id="searchDate" type="date" class="compact-input">
+        <button class="login-btn" style="margin:0;background:#444;" onclick="loadTimes()">Datum suchen</button>
+      </div>
+      <div class="time-row" style="margin-top:8px;">
+        <input id="exportMonth" type="month" class="compact-input">
+        <button id="exportBtn" class="login-btn" style="margin:0;" onclick="downloadMonthlyExport()">Monats-Export CSV</button>
+      </div>
+      <button id="exportPdfBtn" class="login-btn" style="margin-top:8px;margin-bottom:0;background:#3a3a3a;" onclick="downloadMonthlyExportPdf()">Monats-Export PDF</button>
+      <div id="timeList" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+    <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
+    <a href="zeiten.html" class="active"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+    <a href="profil.html"><span>&#128100;</span><small>Profil</small></a>
+  </nav>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script>
+let timeCtx = null;
+let viewMode = "week";
+let customers = [];
+let projects = [];
+let membersMap = new Map();
+let allTimesCache = [];
+let companyInfo = null;
+
+function setStatus(text, ok) {
+  const el = document.getElementById("timeStatus");
+  el.textContent = text || "";
+  el.style.color = ok ? "#9be15d" : "#ff6b3d";
+}
+
+function currentDateIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addSegmentRow(prefill) {
+  const host = document.getElementById("segmentList");
+  const row = document.createElement("div");
+  row.className = "time-segment";
+  const cOpts = customers.map(c => {
+    const label = c.firma || [c.vorname, c.nachname].filter(Boolean).join(" ") || "Kunde";
+    const sel = prefill && String(prefill.customer_id) === String(c.id) ? "selected" : "";
+    return `<option value="${c.id}" ${sel}>${label}</option>`;
+  }).join("");
+  const pOpts = projects.map(p => {
+    const sel = prefill && String(prefill.project_id) === String(p.id) ? "selected" : "";
+    return `<option value="${p.id}" ${sel}>${p.name || "Projekt"}</option>`;
+  }).join("");
+  row.innerHTML = `
+    <input type="time" class="compact-input seg-start" value="${(prefill && prefill.start) || ""}">
+    <input type="time" class="compact-input seg-end" value="${(prefill && prefill.end) || ""}">
+    <select class="compact-input seg-customer">${`<option value="">Kunde</option>${cOpts}`}</select>
+    <button class="delete-btn" style="margin:0;" onclick="this.closest('.time-segment').remove()">X</button>
+    <select class="compact-input seg-project" style="grid-column:1 / -1; margin-top:0;">${`<option value="">Projekt (optional)</option>${pOpts}`}</select>
+  `;
+  const customerSel = row.querySelector(".seg-customer");
+  const projectSel = row.querySelector(".seg-project");
+  customerSel.addEventListener("change", () => {
+    const cid = customerSel.value;
+    let list = projects.filter(p => String(p.customer_id) === String(cid));
+    if (!list.length) list = projects;
+    projectSel.innerHTML = "<option value=''>Projekt (optional)</option>" + list.map(p => `<option value="${p.id}">${p.name || "Projekt"}</option>`).join("");
+  });
+  host.appendChild(row);
+}
+
+function minutesBetween(start, end) {
+  if (!start || !end) return 0;
+  const [h1, m1] = start.split(":").map(Number);
+  const [h2, m2] = end.split(":").map(Number);
+  return Math.max(0, (h2 * 60 + m2) - (h1 * 60 + m1));
+}
+
+async function loadMasterData() {
+  const [custRes, projRes, memberRes, companyRes] = await Promise.all([
+    db.from("customers").select("*").eq("company_id", timeCtx.company_id).order("created_at", { ascending: false }),
+    db.from("projects").select("*").eq("company_id", timeCtx.company_id).order("created_at", { ascending: false }),
+    db.from("company_members").select("user_id,name,email").eq("company_id", timeCtx.company_id).eq("active", true),
+    db.from("companies").select("name,company_owner,adresse,plz,ort,telefon,email,website").eq("id", timeCtx.company_id).maybeSingle()
+  ]);
+  customers = custRes.data || [];
+  projects = projRes.data || [];
+  membersMap = new Map((memberRes.data || []).map(m => [String(m.user_id), m.name || m.email || "Mitarbeiter"]));
+  companyInfo = companyRes.data || null;
+}
+
+async function saveDayTimes() {
+  const date = document.getElementById("workDate").value;
+  const note = document.getElementById("dayNote").value.trim();
+  const rows = Array.from(document.querySelectorAll("#segmentList .time-segment"));
+  if (!date || !rows.length) {
+    setStatus("Bitte Datum und mindestens einen Zeitblock eintragen.", false);
+    return;
+  }
+
+  const payload = [];
+  let totalMin = 0;
+  for (const row of rows) {
+    const start = row.querySelector(".seg-start").value;
+    const end = row.querySelector(".seg-end").value;
+    const customerId = row.querySelector(".seg-customer").value || null;
+    const projectId = row.querySelector(".seg-project").value || null;
+    if (!start || !end || !customerId) continue;
+    const minutes = minutesBetween(start, end);
+    if (minutes <= 0) continue;
+    totalMin += minutes;
+    const startIso = new Date(date + "T" + start + ":00").toISOString();
+    const endIso = new Date(date + "T" + end + ":00").toISOString();
+    const customer = customers.find(c => String(c.id) === String(customerId));
+    const project = projects.find(p => String(p.id) === String(projectId));
+    payload.push({
+      company_id: timeCtx.company_id,
+      user_id: timeCtx.user_id,
+      project_id: projectId,
+      start_time: startIso,
+      end_time: endIso,
+      pause_minutes: 0,
+      note: (customer ? (customer.firma || [customer.vorname, customer.nachname].filter(Boolean).join(" ")) : "Kunde") +
+        (project ? " | " + (project.name || "Projekt") : "") +
+        (note ? " | " + note : ""),
+      status: "eingereicht"
+    });
+  }
+
+  if (!payload.length) {
+    setStatus("Keine gueltigen Zeitbloecke gefunden.", false);
+    return;
+  }
+
+  const { error } = await db.from("employee_timesheets").insert(payload);
+  if (error) {
+    console.log(error);
+    setStatus("Speichern fehlgeschlagen: " + (error.message || "Unbekannter Fehler"), false);
+    return;
+  }
+  setStatus("Gespeichert: " + (totalMin / 60).toFixed(2) + " Std.", true);
+  document.getElementById("segmentList").innerHTML = "";
+  addSegmentRow();
+  document.getElementById("dayNote").value = "";
+  await loadTimes();
+}
+
+function inCurrentWeek(d) {
+  const now = new Date();
+  const day = (now.getDay() + 6) % 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - day);
+  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 7);
+  return d >= monday && d < sunday;
+}
+
+function inCurrentMonth(d) {
+  const now = new Date();
+  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+}
+
+function groupByDate(rows) {
+  const grouped = {};
+  rows.forEach(r => {
+    const key = String(r.start_time || "").slice(0, 10);
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(r);
+  });
+  return grouped;
+}
+
+async function loadTimes() {
+  let query = db.from("employee_timesheets").select("*").eq("company_id", timeCtx.company_id).order("start_time", { ascending: false }).limit(400);
+  if (timeCtx.role === "angestellter") {
+    query = query.eq("user_id", timeCtx.user_id);
+  }
+  const { data, error } = await query;
+  const list = document.getElementById("timeList");
+  if (error) {
+    console.log(error);
+    list.innerHTML = "<p style='opacity:0.7;'>Zeiten konnten nicht geladen werden.</p>";
+    return;
+  }
+  allTimesCache = data || [];
+  const searchDate = document.getElementById("searchDate").value;
+  let rows = allTimesCache.slice();
+  if (searchDate) {
+    rows = rows.filter(r => String(r.start_time || "").slice(0, 10) === searchDate);
+  } else {
+    rows = rows.filter(r => {
+      const d = new Date(r.start_time);
+      return viewMode === "week" ? inCurrentWeek(d) : inCurrentMonth(d);
+    });
+  }
+
+  if (!rows.length) {
+    list.innerHTML = "<p style='opacity:0.7;'>Keine Zeiten gefunden.</p>";
+    return;
+  }
+
+  const grouped = groupByDate(rows);
+  const dates = Object.keys(grouped).sort((a, b) => (a < b ? 1 : -1));
+  list.innerHTML = "";
+  dates.forEach(date => {
+    const items = grouped[date].sort((a, b) => (a.start_time > b.start_time ? 1 : -1));
+    let sumMin = 0;
+    const card = document.createElement("div");
+    card.className = "task-card";
+    let inner = `<strong>${new Date(date).toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })}</strong>`;
+    items.forEach(item => {
+      const s = new Date(item.start_time);
+      const e = new Date(item.end_time);
+      const minutes = Math.max(0, Math.round((e - s) / 60000) - Number(item.pause_minutes || 0));
+      sumMin += minutes;
+      inner += `<div style="margin-top:8px;padding:8px;border-radius:10px;background:#1f1f1f;">
+        <div>${s.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} - ${e.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}</div>
+        <small>${item.note || ""}</small>
+        ${timeCtx.role !== "angestellter" ? `<br><small>Mitarbeiter: ${membersMap.get(String(item.user_id)) || "-"}</small>` : ""}
+      </div>`;
+    });
+    inner += `<div style="margin-top:8px;font-weight:700;">Summe: ${(sumMin / 60).toFixed(2)} Std.</div>`;
+    card.innerHTML = inner;
+    list.appendChild(card);
+  });
+}
+
+function csvEscape(value) {
+  const s = String(value == null ? "" : value);
+  if (s.includes(";") || s.includes('"') || s.includes("\n")) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function toMonthKeyFromIso(iso) {
+  return String(iso || "").slice(0, 7);
+}
+
+function durationHours(item) {
+  const s = new Date(item.start_time);
+  const e = new Date(item.end_time);
+  const minutes = Math.max(0, Math.round((e - s) / 60000) - Number(item.pause_minutes || 0));
+  return minutes / 60;
+}
+
+function downloadTextFile(name, text) {
+  const blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+window.downloadMonthlyExport = async function() {
+  if (!allTimesCache.length) {
+    await loadTimes();
+  }
+  const monthInput = document.getElementById("exportMonth");
+  const monthKey = (monthInput && monthInput.value) ? monthInput.value : currentDateIso().slice(0, 7);
+  const rows = allTimesCache.filter(item => toMonthKeyFromIso(item.start_time) === monthKey);
+
+  if (!rows.length) {
+    setStatus("Keine Eintraege fuer den ausgewaehlten Monat.", false);
+    return;
+  }
+
+  const byUser = new Map();
+  rows.forEach(item => {
+    const uid = String(item.user_id || "");
+    if (!byUser.has(uid)) byUser.set(uid, []);
+    byUser.get(uid).push(item);
+  });
+
+  const lines = [];
+  lines.push(["Monat", monthKey].map(csvEscape).join(";"));
+  lines.push(["Erstellt am", new Date().toLocaleString("de-DE")].map(csvEscape).join(";"));
+  lines.push("");
+  lines.push(["Mitarbeiter", "Summe Std."].map(csvEscape).join(";"));
+
+  Array.from(byUser.entries())
+    .sort((a, b) => {
+      const an = membersMap.get(a[0]) || a[0];
+      const bn = membersMap.get(b[0]) || b[0];
+      return an.localeCompare(bn, "de");
+    })
+    .forEach(([uid, items]) => {
+      const total = items.reduce((sum, it) => sum + durationHours(it), 0);
+      lines.push([membersMap.get(uid) || "Mitarbeiter", total.toFixed(2)].map(csvEscape).join(";"));
+    });
+
+  lines.push("");
+  lines.push(["Datum", "Von", "Bis", "Stunden", "Mitarbeiter", "Notiz"].map(csvEscape).join(";"));
+  rows
+    .sort((a, b) => (a.start_time < b.start_time ? -1 : 1))
+    .forEach(item => {
+      const s = new Date(item.start_time);
+      const e = new Date(item.end_time);
+      lines.push([
+        s.toLocaleDateString("de-DE"),
+        s.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }),
+        e.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }),
+        durationHours(item).toFixed(2),
+        membersMap.get(String(item.user_id || "")) || "-",
+        item.note || ""
+      ].map(csvEscape).join(";"));
+    });
+
+  downloadTextFile("zeiten-export-" + monthKey + ".csv", lines.join("\n"));
+  setStatus("Monats-Export wurde heruntergeladen.", true);
+};
+
+window.downloadMonthlyExportPdf = async function() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    setStatus("PDF-Modul nicht verfuegbar.", false);
+    return;
+  }
+  if (!allTimesCache.length) {
+    await loadTimes();
+  }
+  const monthInput = document.getElementById("exportMonth");
+  const monthKey = (monthInput && monthInput.value) ? monthInput.value : currentDateIso().slice(0, 7);
+  const rows = allTimesCache
+    .filter(item => toMonthKeyFromIso(item.start_time) === monthKey)
+    .sort((a, b) => (a.start_time < b.start_time ? -1 : 1));
+
+  if (!rows.length) {
+    setStatus("Keine Eintraege fuer den ausgewaehlten Monat.", false);
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: "mm", format: "a4" });
+  let y = 14;
+  const pageBottom = 285;
+
+  function addLine(text, bold, indent) {
+    if (y > pageBottom) {
+      pdf.addPage();
+      y = 14;
+      drawHeader();
+    }
+    pdf.setFont("helvetica", bold ? "bold" : "normal");
+    pdf.setFontSize(10);
+    const lines = pdf.splitTextToSize(String(text || ""), 182);
+    pdf.text(lines, 14 + (indent || 0), y);
+    y += Math.max(6, lines.length * 5);
+  }
+
+  function drawHeader() {
+    const c = companyInfo || {};
+    pdf.setFillColor(245, 108, 61);
+    pdf.roundedRect(12, 10, 186, 20, 3, 3, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(15);
+    pdf.text(c.name || "BAUDOKU", 16, 19);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    const headRight = [
+      c.company_owner || "",
+      c.adresse || "",
+      [c.plz || "", c.ort || ""].filter(Boolean).join(" "),
+      [c.telefon || "", c.email || ""].filter(Boolean).join(" | ")
+    ].filter(Boolean).join(" | ");
+    pdf.text(headRight || "Firmenangaben", 196, 19, { align: "right" });
+    pdf.setTextColor(30, 30, 30);
+  }
+
+  const byUser = new Map();
+  rows.forEach(item => {
+    const uid = String(item.user_id || "");
+    if (!byUser.has(uid)) byUser.set(uid, []);
+    byUser.get(uid).push(item);
+  });
+
+  drawHeader();
+  y = 36;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(16);
+  pdf.text("Monatsbericht Zeiterfassung", 14, y);
+  y += 8;
+  addLine("Monat: " + monthKey, false);
+  addLine("Erstellt: " + new Date().toLocaleString("de-DE"), false);
+  if (timeCtx.role === "angestellter") {
+    addLine("Mitarbeiter: " + (membersMap.get(String(timeCtx.user_id)) || timeCtx.user_id), false);
+  }
+  y += 2;
+
+  pdf.setDrawColor(220, 220, 220);
+  pdf.line(14, y, 196, y);
+  y += 6;
+  addLine("Summen pro Mitarbeiter", true);
+
+  Array.from(byUser.entries()).sort((a, b) => {
+    const an = membersMap.get(a[0]) || a[0];
+    const bn = membersMap.get(b[0]) || b[0];
+    return an.localeCompare(bn, "de");
+  }).forEach(([uid, items]) => {
+    const total = items.reduce((sum, it) => sum + durationHours(it), 0);
+    addLine((membersMap.get(uid) || "Mitarbeiter") + ": " + total.toFixed(2) + " Std.", false, 2);
+  });
+
+  y += 2;
+  pdf.line(14, y, 196, y);
+  y += 6;
+  addLine("Details", true);
+  rows.forEach(item => {
+    const s = new Date(item.start_time);
+    const e = new Date(item.end_time);
+    addLine(
+      s.toLocaleDateString("de-DE") + " | " +
+      s.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + "-" +
+      e.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + " | " +
+      durationHours(item).toFixed(2) + " Std. | " +
+      (membersMap.get(String(item.user_id || "")) || "-"),
+      false
+    );
+    if (item.note) addLine("Notiz: " + item.note, false, 2);
+  });
+
+  pdf.save("zeiten-export-" + monthKey + ".pdf");
+  setStatus("Monats-Export PDF wurde heruntergeladen.", true);
+};
+
+function setViewMode(mode, ev) {
+  viewMode = mode;
+  Array.from(document.querySelectorAll(".time-tab")).forEach(x => x.classList.remove("active"));
+  if (ev && ev.target) ev.target.classList.add("active");
+  loadTimes();
+}
+
+(async function init() {
+  if (!window.BaudokuAuthContext) return;
+  timeCtx = await window.BaudokuAuthContext.loadAuthContext({ noCache: true });
+  if (!timeCtx) {
+    window.location.href = "login.html";
+    return;
+  }
+  const roleLine = document.getElementById("zeitenRoleLine");
+  if (roleLine) {
+    roleLine.textContent = timeCtx.role === "angestellter"
+      ? "Meine Tageszeiten"
+      : "Team-Zeiten und Tageszeiten";
+  }
+  document.getElementById("workDate").value = currentDateIso();
+  const exportMonth = document.getElementById("exportMonth");
+  if (exportMonth) exportMonth.value = currentDateIso().slice(0, 7);
+  await loadMasterData();
+  addSegmentRow();
+  if (timeCtx.role === "angestellter") {
+    const exportBtn = document.getElementById("exportBtn");
+    if (exportBtn) exportBtn.textContent = "Mein Monats-Export CSV";
+    const exportPdfBtn = document.getElementById("exportPdfBtn");
+    if (exportPdfBtn) exportPdfBtn.textContent = "Mein Monats-Export PDF";
+  }
+  await loadTimes();
+})();
+</script>
+<script src="pwa.js"></script>
+</body>
+</html>

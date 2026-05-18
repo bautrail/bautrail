@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Baudoku</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+
+<body>
+
+<div class="app-wrapper">
+
+  <div class="app-content">
+
+    <!-- HEADER -->
+    <header class="app-header">
+      <h1 class="app-name">BAUDOKU</h1>
+      <p class="company-name" id="headerCompanyText">Firma<br>-</p>
+    </header>
+
+    <!-- DATUM -->
+    <div class="task-card">
+      <small>Morgen</small>
+      <h2 id="dateTime"></h2>
+    </div>
+
+<div class="task-card">
+  <h3 style="margin-bottom:8px;">?? Globale Suche</h3>
+  <input
+    id="globalSearchInput"
+    type="text"
+    placeholder="Globale Suche: Kunde, Projekt, Auftrag, Nachweis"
+    class="compact-input"
+    oninput="runGlobalSearch()"
+  >
+  <div id="globalSearchList" style="margin-top:10px;"></div>
+</div>
+
+<div class="task-card" onclick="openPlanung()" style="cursor:pointer;">
+  <h3>&#128197; Planung</h3>
+</div>
+
+<div class="task-card" onclick="openAuftraege()" style="cursor:pointer;">
+  <h3>&#128203; Auftr&auml;ge</h3>
+</div>
+
+<div class="task-card" onclick="openFahrzeugMaterial()" style="cursor:pointer;">
+  <h3>&#128666; Fahrzeug Material ersetzen</h3>
+</div>
+
+<div class="task-card" onclick="openMaterialBestellen()" style="cursor:pointer;">
+  <h3>&#128230; Material bestellen</h3>
+</div>
+
+<div class="task-card" onclick="openStundennachweis()" style="cursor:pointer;">
+  <h3>&#128221; Stunden Nachweis</h3>
+</div>
+
+<div class="task-card" onclick="openMitarbeiter()" style="cursor:pointer;">
+  <h3>&#128101; Mitarbeiter Uebersicht</h3>
+</div>
+
+<div class="task-card" onclick="openOffeneLeistungen()" style="cursor:pointer;">
+  <h3>&#128176; Offene Leistungen</h3>
+</div>
+
+
+    <!-- FIRMA -->
+    <div class="company-info">
+      <p id="footerCompanyName">Firma</p>
+      <p id="footerCompanyStreet">-</p>
+      <p id="footerCompanyCity">-</p>
+      <p id="footerCompanyEmail">-</p>
+      <p id="footerCompanyPhone">-</p>
+    </div>
+
+  </div>
+
+  <!-- NAV -->
+  <nav class="bottom-nav">
+    <a href="index.html" class="active"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+
+    <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
+
+    <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+
+    <a href="profil.html"><span>&#128100;</span><small>Profil</small></a>
+  </nav>
+
+</div>
+
+<!-- LOGOUT BUTTON -->
+<button onclick="logout()" style="
+position:fixed;
+top:20px;
+right:20px;
+background:#ff3b3b;
+color:white;
+padding:10px 14px;
+border:none;
+border-radius:10px;
+z-index:9999;
+cursor:pointer;
+">
+Logout
+</button>
+
+<!-- SUPABASE -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script src="notifications.js"></script>
+
+<script>
+
+// STABILER LOGIN CHECK
+window.addEventListener("load", () => {
+
+  setTimeout(async () => {
+
+    const { data } = await db.auth.getSession();
+
+    if (!data.session) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    if (window.BaudokuAuthContext) {
+      const authContext = await window.BaudokuAuthContext.loadAuthContext();
+      // Kein harter Logout mehr bei Rollen-/Firmenkontext-Fehlern,
+      // damit keine Login-Schleife entsteht.
+      if (authContext) {
+        window.BAUDOKU_AUTH_CONTEXT = authContext;
+      }
+    }
+
+  }, 300);
+
+});
+
+
+// LOGOUT
+async function logout() {
+  await db.auth.signOut();
+  window.location.href = "login.html";
+}
+
+
+// DATUM
+function updateDateTime() {
+  const el = document.getElementById("dateTime");
+  if (!el) return;
+
+  const now = new Date();
+
+  el.textContent = now.toLocaleString("de-DE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+setInterval(updateDateTime, 1000);
+updateDateTime();
+
+async function loadCompanyBranding() {
+  if (!window.BaudokuAuthContext) return;
+  const ctx = await window.BaudokuAuthContext.loadAuthContext({ noCache: true });
+  if (!ctx || !ctx.company_id) return;
+
+  const { data, error } = await db
+    .from("companies")
+    .select("name, company_owner, adresse, plz, ort, email, telefon")
+    .eq("id", ctx.company_id)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.log(error);
+    return;
+  }
+
+  const header =
+    document.getElementById("headerCompanyText");
+  if (header) {
+    header.innerHTML =
+      (data.name || "Firma") +
+      "<br>" +
+      (data.company_owner || "-");
+  }
+
+  const cityLine =
+    [data.plz || "", data.ort || ""]
+      .filter(Boolean)
+      .join(" ");
+
+  const map = {
+    footerCompanyName: data.name || "Firma",
+    footerCompanyStreet: data.adresse || "-",
+    footerCompanyCity: cityLine || "-",
+    footerCompanyEmail: data.email || "-",
+    footerCompanyPhone: data.telefon || "-"
+  };
+
+  Object.keys(map).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = map[id];
+  });
+}
+
+async function runGlobalSearch() {
+  const value = document.getElementById("globalSearchInput").value.trim().toLowerCase();
+  const list = document.getElementById("globalSearchList");
+  list.innerHTML = "";
+  if (!value) return;
+
+  if (!navigator.onLine) {
+    list.innerHTML = "<p style='opacity:0.7;'>Globale Suche ist offline nicht verfuegbar.</p>";
+    return;
+  }
+
+  const { data, error } =
+    await db
+      .from("global_search_items")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(120);
+
+  if (error) {
+    console.log(error);
+    list.innerHTML = "<p style='opacity:0.7;'>Suche aktuell nicht verfuegbar.</p>";
+    return;
+  }
+
+  const filtered =
+    (data || []).filter(item =>
+      String(item.title || "").toLowerCase().includes(value) ||
+      String(item.subtitle || "").toLowerCase().includes(value)
+    ).slice(0, 20);
+
+  if (!filtered.length) {
+    list.innerHTML = "<p style='opacity:0.7;'>Keine Treffer gefunden.</p>";
+    return;
+  }
+
+  filtered.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "info-box";
+    div.style.cursor = "pointer";
+    div.style.marginBottom = "8px";
+    div.innerHTML = `
+      <small>${item.item_type}</small>
+      <div class="text">${item.title || "-"}</div>
+      <small>${item.subtitle || ""}</small>
+    `;
+
+    div.onclick = () => {
+      if (item.item_type === "customer") {
+        window.location.href = "kunde-detail.html?id=" + item.item_id;
+      } else if (item.item_type === "project") {
+        window.location.href = "projekt-detail.html?id=" + item.item_id;
+      } else if (item.item_type === "auftrag") {
+        window.location.href = "auftrag-detail.html?id=" + item.item_id;
+      } else if (item.item_type === "nachweis") {
+        window.location.href = "stunden-nachweis.html";
+      }
+    };
+
+    list.appendChild(div);
+  });
+}
+
+
+
+function openPlanung() {
+  window.location.href = "planung.html";
+}
+
+function openAuftraege() {
+  window.location.href = "auftraege.html";
+}
+
+function openFahrzeugMaterial() {
+  window.location.href = "fahrzeug-material.html";
+}
+
+function openMaterialBestellen() {
+  window.location.href = "material-bestellen.html";
+}
+
+function openStundennachweis() {
+  window.location.href = "stunden-nachweis.html";
+}
+
+function openMitarbeiter() {
+  window.location.href = "mitarbeiter.html";
+}
+
+function openOffeneLeistungen() {
+  window.location.href = "offene-leistungen.html";
+}
+
+loadCompanyBranding();
+
+async function applyRoleOverviewVisibility() {
+  if (!window.BaudokuAuthContext) return;
+  const ctx = await window.BaudokuAuthContext.loadAuthContext({ noCache: true });
+  if (!ctx) return;
+  if (ctx.role === "angestellter") {
+    Array.from(document.querySelectorAll(".task-card h3")).forEach(h3 => {
+      const txt = String(h3.textContent || "").toLowerCase();
+      if (txt.includes("mitarbeiter uebersicht") || txt.includes("offene leistungen")) {
+        const card = h3.closest(".task-card");
+        if (card) card.style.display = "none";
+      }
+    });
+  }
+}
+
+applyRoleOverviewVisibility();
+
+
+
+</script>
+
+<script src="pwa.js"></script>
+</body>
+</html>
+

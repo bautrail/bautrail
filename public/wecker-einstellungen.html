@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wecker Einstellungen</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <button class="back-btn" onclick="window.location.href='profil.html'">&#8592;</button>
+      <h1 class="app-name">Wecker Einstellungen</h1>
+      <p class="company-name">Benachrichtigungszeiten (online)</p>
+    </header>
+
+    <div class="task-card">
+      <label style="display:block;font-size:12px;opacity:0.75;">Fahrzeug Material ersetzen</label>
+      <input id="vehicleTime" type="time" class="compact-input" style="margin-top:6px;">
+      <label style="display:block;font-size:12px;opacity:0.75;margin-top:10px;">Material bestellen</label>
+      <input id="orderTime" type="time" class="compact-input" style="margin-top:6px;">
+      <label style="display:block;font-size:12px;opacity:0.75;margin-top:10px;">Kundenmaterial fuer morgen</label>
+      <input id="customerMaterialTime" type="time" class="compact-input" style="margin-top:6px;">
+      <button class="login-btn" style="margin-top:10px;" onclick="saveAlarmSettings()">Speichern</button>
+      <button class="login-btn" style="background:#444;margin-top:0;" onclick="enableNotifications()">Benachrichtigungen erlauben</button>
+      <p id="alarmStatus" style="font-size:12px;opacity:0.9;min-height:18px;">&nbsp;</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script src="notifications.js"></script>
+<script>
+let authContext = null;
+
+function setStatus(text, ok) {
+  const s = document.getElementById("alarmStatus");
+  s.textContent = text || "\u00A0";
+  s.style.color = ok ? "#4caf50" : "#ff3b3b";
+  if (text) {
+    setTimeout(() => {
+      if (s.textContent === text) s.textContent = "\u00A0";
+    }, 2500);
+  }
+}
+
+async function loadAlarmSettings() {
+  if (!authContext || !authContext.company_id) return;
+  const { data, error } = await db
+    .from("companies")
+    .select("vehicle_time, order_time, customer_material_time")
+    .eq("id", authContext.company_id)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.log(error);
+    setStatus("Konnte Weckerzeiten nicht laden.", false);
+    return;
+  }
+
+  document.getElementById("vehicleTime").value = data.vehicle_time || "06:30";
+  document.getElementById("orderTime").value = data.order_time || "16:30";
+  document.getElementById("customerMaterialTime").value = data.customer_material_time || "18:00";
+}
+
+async function saveAlarmSettings() {
+  if (!authContext || !authContext.company_id) {
+    setStatus("Keine Firmen-Zuordnung gefunden.", false);
+    return;
+  }
+  const payload = {
+    vehicle_time: document.getElementById("vehicleTime").value || "06:30",
+    order_time: document.getElementById("orderTime").value || "16:30",
+    customer_material_time: document.getElementById("customerMaterialTime").value || "18:00"
+  };
+
+  const { error } = await db
+    .from("companies")
+    .update(payload)
+    .eq("id", authContext.company_id);
+
+  if (error) {
+    console.log(error);
+    setStatus("Speichern fehlgeschlagen: " + (error.message || "Unbekannter Fehler"), false);
+    return;
+  }
+  setStatus("Gespeichert", true);
+}
+
+async function enableNotifications() {
+  const allowed = await window.BaudokuNotifications.ensurePermission();
+  setStatus(allowed ? "Benachrichtigungen sind erlaubt." : "Benachrichtigungen sind nicht erlaubt.", allowed);
+}
+
+(async function() {
+  authContext = window.BaudokuAuthContext
+    ? await window.BaudokuAuthContext.loadAuthContext({ noCache: true })
+    : null;
+  if (!authContext) {
+    window.location.href = "login.html";
+    return;
+  }
+  await loadAlarmSettings();
+})();
+</script>
+<script src="pwa.js"></script>
+</body>
+</html>

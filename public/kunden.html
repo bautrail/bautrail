@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kunden - Baudoku</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+
+<body>
+
+<div class="app-wrapper">
+
+  <div class="app-content">
+
+    <header class="app-header">
+      <h1 class="app-name">Kunden</h1>
+    </header>
+
+    <!-- ?? Suche -->
+    <div class="task-card">
+      <input 
+        id="searchInput" 
+        placeholder="Kunden suchen..."
+        oninput="searchCustomers()"
+        style="width:100%;padding:12px;border-radius:10px;border:none;"
+      >
+    </div>
+
+    <!-- + Button -->
+    <div class="task-card">
+      <div class="button-row" style="margin:0;">
+        <button onclick="window.location.href='kunde-anlegen.html'" style="
+          width:100%;
+          padding:12px;
+          border:none;
+          border-radius:10px;
+          background:#ff6b3d;
+          color:white;
+          font-size:16px;
+          cursor:pointer;
+        ">
+          + Neuer Kunde
+        </button>
+        <button onclick="window.location.href='papierkorb.html'" style="
+          width:100%;
+          padding:12px;
+          border:none;
+          border-radius:10px;
+          background:#444;
+          color:white;
+          font-size:16px;
+          cursor:pointer;
+        ">
+          Papierkorb
+        </button>
+      </div>
+    </div>
+
+    <!-- ?? Liste -->
+    <div id="customerList"></div>
+
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+
+    <a href="kunden.html" class="active"><span>&#128101;</span><small>Kunden</small></a>
+
+    <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+
+    <a href="profil.html"><span>&#128100;</span><small>Profil</small></a>
+  </nav>
+
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script src="company-context.js"></script>
+<script src="notifications.js"></script>
+
+<script>
+
+let allCustomers = [];
+
+// ?? START
+loadCustomers();
+
+
+// ================= LOAD =================
+async function loadCustomers() {
+
+  let data = [];
+
+  // ?? OFFLINE
+  if (!navigator.onLine) {
+    console.log("Offline -> lade gespeicherte Kunden");
+
+    data = JSON.parse(localStorage.getItem("customers")) || [];
+
+    allCustomers = data;
+    renderCustomers(data);
+    return;
+  }
+
+  // ?? ONLINE
+  const { data: dbData, error } =
+    await window.BaudokuCompanyContext.selectScoped("customers");
+
+  if (error) {
+    console.log("Fehler:", error);
+    return;
+  }
+
+  data =
+    (dbData || [])
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+  console.log("Online Daten:", data);
+
+  // ?? speichern
+  localStorage.setItem("customers", JSON.stringify(data));
+
+  allCustomers = data;
+  renderCustomers(data);
+}
+
+
+// ================= RENDER =================
+function renderCustomers(customers) {
+
+  const list = document.getElementById("customerList");
+  list.innerHTML = "";
+
+  customers.forEach(c => {
+
+    const div = document.createElement("div");
+    div.className = "task-card";
+    div.style.cursor = "pointer";
+
+    const name =
+      c.firma ||
+      (c.vorname && c.nachname ? c.vorname + " " + c.nachname : "Unbekannt");
+
+    div.innerHTML = `
+      <strong>${name}</strong><br>
+      <small>${c.adresse || ""}</small>
+    `;
+
+    div.onclick = () => {
+      window.location.href = "kunde-detail.html?id=" + c.id;
+    };
+
+    list.appendChild(div);
+  });
+}
+
+
+// ================= SUCHE =================
+function searchCustomers() {
+
+  const value = document.getElementById("searchInput").value.toLowerCase();
+
+  const filtered = allCustomers.filter(c => {
+
+    const name =
+      c.firma ||
+      (c.vorname && c.nachname ? c.vorname + " " + c.nachname : "");
+
+    return name.toLowerCase().includes(value);
+  });
+
+  renderCustomers(filtered);
+}
+
+</script>
+
+<script src="pwa.js"></script>
+</body>
+</html>

@@ -1,0 +1,462 @@
+/* =========================
+   RESET
+========================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Inter", Arial, sans-serif;
+}
+
+/* =========================
+   BODY
+========================= */
+body {
+  background: linear-gradient(160deg, #1c1c1c, #2a2a2a);
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  color-scheme: dark;
+}
+
+/* =========================
+   APP WRAPPER
+========================= */
+.app-wrapper {
+  width: 100%;
+  max-width: 420px;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #1f1f1f;
+}
+
+/* =========================
+   CONTENT
+========================= */
+.app-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  animation: fadeIn 0.3s ease;
+}
+
+/* =========================
+   HEADER
+========================= */
+.app-header {
+  margin-bottom: 1.5rem;
+  color: white;
+}
+
+.app-name {
+  font-size: 1.4rem;
+}
+
+.company-name {
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+.user-name {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+/* FLEX HEADER (Projekt) */
+.header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* HEADER BUTTON */
+.header-flex button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* BACK BUTTON */
+.back-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+/* =========================
+   DATE CARD
+========================= */
+.date-card {
+  background: linear-gradient(145deg, #2e2e2e, #1f1f1f);
+  padding: 1.4rem;
+  border-radius: 18px;
+  margin-bottom: 1.5rem;
+}
+
+/* =========================
+   SECTIONS
+========================= */
+.task-section {
+  margin-bottom: 1.5rem;
+}
+
+.task-section h3 {
+  color: #aaa;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+/* =========================
+   CARDS
+========================= */
+.task-card,
+.customer-card,
+.projekt-card,
+.info-card {
+  background: #252525;
+  padding: 0.85rem;
+  border-radius: 16px;
+  margin-bottom: 10px;
+  color: white;
+}
+
+/* =========================
+   CUSTOMER
+========================= */
+.customer-card {
+  cursor: pointer;
+  transition: 0.1s;
+}
+
+.customer-card:hover {
+  background: #2d2d2d;
+}
+
+.customer-card:active {
+  transform: scale(0.97);
+}
+
+.customer-card p {
+  color: #aaa;
+  font-size: 0.8rem;
+}
+
+/* =========================
+   PROJEKT
+========================= */
+.projekt-card {
+  cursor: pointer;
+  transition: 0.1s;
+}
+
+.projekt-card:active {
+  transform: scale(0.97);
+}
+
+.projekt-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* =========================
+   SEARCH
+========================= */
+.search-bar input {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  background: #2a2a2a;
+  color: white;
+  margin-bottom: 1rem;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+.add-btn,
+.login-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(145deg, #ff6b3d, #e85b2e);
+  color: white;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.delete-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  background: #ff3b3b;
+  color: white;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+/* =========================
+   FORM
+========================= */
+.customer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.customer-form input,
+textarea {
+  background: #2a2a2a;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 48px;
+}
+
+textarea {
+  height: auto;
+  min-height: 54px;
+  overflow: hidden;
+}
+
+.compact-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 12px;
+  border: none;
+  border-radius: 12px;
+  background: #2a2a2a;
+  color: white;
+  box-sizing: border-box;
+}
+
+.compact-textarea {
+  width: 100%;
+  min-height: 54px;
+  max-height: 180px;
+  resize: none;
+}
+
+.button-row {
+  display: flex;
+  gap: 10px;
+}
+
+.button-row button,
+.button-row a {
+  flex: 1;
+}
+
+/* =========================
+   VIEW TEXT
+========================= */
+#vText {
+  color: #ccc;
+  font-size: 0.9rem;
+}
+
+/* =========================
+   IMAGES
+========================= */
+#imageList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.image-card {
+  background: #252525;
+  padding: 8px;
+  border-radius: 12px;
+}
+
+.image-card img {
+  width: 100%;
+  border-radius: 10px;
+}
+
+.image-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.image-actions a,
+.image-actions button {
+  background: #2a2a2a;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: white;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+/* =========================
+   FILE INPUT
+========================= */
+input[type="file"] {
+  color: #aaa;
+  margin-top: 10px;
+}
+
+/* =========================
+   COMPANY INFO
+========================= */
+.company-info {
+  margin-top: 2rem;
+  font-size: 0.8rem;
+  color: #aaa;
+}
+
+/* =========================
+   NAVIGATION
+========================= */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 420px;
+  height: calc(70px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: #1c1c1c;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border-top: 1px solid #333;
+}
+
+.bottom-nav a {
+  text-decoration: none;
+  color: #777;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.7rem;
+}
+
+.bottom-nav a span {
+  font-size: 1.4rem;
+}
+
+.bottom-nav a small {
+  margin-top: 2px;
+}
+
+.bottom-nav a.active {
+  color: #ff6b3d;
+}
+
+/* =========================
+   UTIL
+========================= */
+.hidden {
+  display: none;
+}
+
+/* =========================
+   ANIMATION
+========================= */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* SELECT */
+select {
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: #2a2a2a;
+  color: white;
+}input[type="time"] {
+  background: #2a2a2a;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.document-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-left: 4px solid #4a4a4a;
+}
+
+.document-row-folder {
+  border-left-color: #f4b642;
+}
+
+.document-row-file {
+  border-left-color: #5bb7ff;
+}
+
+.document-icon {
+  min-width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  background: #333;
+  color: white;
+}
+
+.document-icon-folder {
+  background: #5b461f;
+}
+
+.document-icon-file {
+  background: #20394d;
+}
+
+@media (min-width: 860px) {
+  .app-wrapper {
+    max-width: 720px;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.35);
+  }
+
+  .app-content {
+    padding: 2rem 2.25rem;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .bottom-nav {
+    max-width: 720px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-wrapper,
+  .bottom-nav {
+    max-width: none;
+  }
+
+  .button-row {
+    flex-wrap: wrap;
+  }
+}

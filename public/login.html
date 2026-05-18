@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Baudoku</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+
+<div class="app-wrapper">
+  <div class="app-content" style="display:flex;justify-content:center;align-items:center;height:100vh;">
+    <div class="task-card" style="width:100%;max-width:350px;">
+      <h2 style="text-align:center;margin-bottom:20px;">Login</h2>
+
+      <input type="email" id="email" placeholder="E-Mail" style="width:100%;margin-bottom:10px;padding:12px;border-radius:10px;border:none;">
+      <input type="password" id="password" placeholder="Passwort" style="width:100%;margin-bottom:10px;padding:12px;border-radius:10px;border:none;">
+
+      <p id="errorMsg" style="color:#ff3b3b;font-size:14px;text-align:center;margin-bottom:10px;display:none;"></p>
+
+      <button onclick="login()" style="width:100%;padding:12px;border:none;border-radius:10px;background:#ff6b3d;color:white;font-size:16px;cursor:pointer;">
+        Einloggen
+      </button>
+
+      <p style="margin-top:15px;text-align:center;font-size:14px;">
+        Noch kein Konto?
+        <a href="register.html" style="color:#ff6b3d;text-decoration:none;">Registrieren</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script>
+const PENDING_SETUP_KEY = "baudokuPendingCompanySetup";
+
+function mapLoginError(error) {
+  if (!error || !error.message) return "Unbekannter Fehler.";
+  if (error.message.includes("Invalid login credentials")) return "E-Mail oder Passwort falsch.";
+  return error.message;
+}
+
+function readPendingSetup() {
+  try {
+    return JSON.parse(localStorage.getItem(PENDING_SETUP_KEY) || "null");
+  } catch (err) {
+    console.log(err);
+    return null;
+  }
+}
+
+function clearPendingSetup() {
+  localStorage.removeItem(PENDING_SETUP_KEY);
+}
+
+async function finalizePendingSetupIfNeeded(sessionUser) {
+  const pending = readPendingSetup();
+  if (!pending || !sessionUser) return { ok: true };
+  if (String(pending.email || "").toLowerCase() !== String(sessionUser.email || "").toLowerCase()) {
+    return { ok: true };
+  }
+
+  const { data: existingMember } = await db
+    .from("company_members")
+    .select("id, role, company_id")
+    .eq("user_id", sessionUser.id)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (existingMember) {
+    clearPendingSetup();
+    return { ok: true };
+  }
+
+  let inviteRow = null;
+  if (pending.role !== "chef") {
+    const { data, error } = await db.rpc("consume_company_invite", {
+      p_invite_code: String(pending.inviteCode || "").toUpperCase(),
+      p_requested_role: pending.role
+    });
+
+    const result = Array.isArray(data) ? data[0] : null;
+    if (error || !result || !result.ok) {
+      console.log(error || result);
+      return { ok: false, message: (result && result.message) || "Einladungscode ungueltig oder nicht mehr aktiv." };
+    }
+    clearPendingSetup();
+    return { ok: true };
+  }
+
+  let companyId = null;
+  let memberRole = pending.role;
+
+  if (pending.role === "chef") {
+    const { data: company, error: companyError } = await db
+      .from("companies")
+      .insert([{ name: pending.companyName || "Neue Firma", email: pending.email || "" }])
+      .select("id")
+      .single();
+
+    if (companyError || !company) {
+      console.log(companyError);
+      return { ok: false, message: "Firma konnte nicht erstellt werden." };
+    }
+    companyId = company.id;
+  } else {
+    return { ok: false, message: "Einladungs-Setup konnte nicht abgeschlossen werden." };
+  }
+
+  const { error: memberError } = await db
+    .from("company_members")
+    .insert([{
+      company_id: companyId,
+      user_id: sessionUser.id,
+      role: memberRole,
+      name: pending.fullName || "",
+      email: pending.email || sessionUser.email || "",
+      active: true
+    }]);
+
+  if (memberError) {
+    console.log(memberError);
+    return { ok: false, message: "Rollen-Zuordnung konnte nicht abgeschlossen werden." };
+  }
+
+  clearPendingSetup();
+  return { ok: true };
+}
+
+async function login() {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const errorBox = document.getElementById("errorMsg");
+
+  errorBox.style.display = "none";
+  errorBox.textContent = "";
+
+  if (!email || !password) {
+    errorBox.style.display = "block";
+    errorBox.textContent = "Bitte E-Mail und Passwort eingeben.";
+    return;
+  }
+
+  const { data: signInData, error } = await db.auth.signInWithPassword({ email, password });
+  if (error) {
+    errorBox.style.display = "block";
+    errorBox.textContent = mapLoginError(error);
+    return;
+  }
+
+  const setupResult =
+    await finalizePendingSetupIfNeeded(signInData && signInData.user ? signInData.user : null);
+
+  if (!setupResult.ok) {
+    errorBox.style.display = "block";
+    errorBox.textContent = setupResult.message || "Konto konnte nicht fertig eingerichtet werden.";
+    return;
+  }
+
+  let context = null;
+  if (window.BaudokuAuthContext) {
+    context = await window.BaudokuAuthContext.loadAuthContext({ noCache: true });
+  }
+
+  if (context && context.role) {
+    const target =
+      window.BaudokuAuthContext.dashboardPathForRole(context.role);
+    window.location.href = target;
+    return;
+  }
+
+  // Fallback ohne Schleife
+  window.location.href = "index.html";
+}
+</script>
+
+<script src="pwa.js"></script>
+</body>
+</html>

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chef Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <button class="back-btn" onclick="window.location.href='index.html'">&#8592;</button>
+      <h1 class="app-name">Chef Dashboard</h1>
+      <p class="company-name" id="companySubline">Firmensteuerung</p>
+    </header>
+
+    <div class="task-card">
+      <h3>Firmenuebersicht</h3>
+      <p id="roleInfo" style="opacity:0.8;margin-top:8px;">Lade Daten...</p>
+      <div class="button-row" style="margin-top:10px;">
+        <button class="login-btn" style="margin-bottom:0;" onclick="window.location.href='firma-einstellungen.html'">Firma einstellen</button>
+        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="window.location.href='index.html'">Zur Uebersicht</button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <h3>Einladungscode erstellen</h3>
+      <div class="button-row" style="margin-top:8px;">
+        <select id="inviteRole" class="compact-input">
+          <option value="buero">Buero</option>
+          <option value="angestellter">Angestellter</option>
+        </select>
+        <button class="login-btn" style="margin-bottom:0;" onclick="createInvite()">Code erstellen</button>
+      </div>
+      <p id="inviteResult" style="margin-top:10px;font-weight:700;"></p>
+      <p id="inviteStatus" style="font-size:12px;opacity:0.75;"></p>
+    </div>
+
+    <div class="task-card">
+      <h3>Mitarbeiterliste</h3>
+      <div id="memberList" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="task-card">
+      <h3>Kilometeruebersicht</h3>
+      <div class="button-row" style="margin-top:8px;">
+        <input id="mileageMonth" type="month" class="compact-input">
+        <button class="login-btn" style="margin-bottom:0;" onclick="loadMileageOverview()">Aktualisieren</button>
+      </div>
+      <div id="mileageOverview" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="task-card">
+      <h3>Offene Stundenzettel</h3>
+      <div id="timesheetList" style="margin-top:10px;"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script>
+let authContext = null;
+let company = null;
+let membersCache = [];
+
+function randomInviteCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const pick = (len) => Array.from({ length: len }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+  return "BAU-" + pick(5) + "-" + pick(5);
+}
+
+function setInviteStatus(text, ok) {
+  const el = document.getElementById("inviteStatus");
+  el.textContent = text || "";
+  el.style.color = ok ? "#6bd86b" : "#ff6b3d";
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+function defaultMonthValue() {
+  const today = new Date();
+  return today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0");
+}
+
+function monthBounds(monthValue) {
+  const fallback = defaultMonthValue();
+  const value = monthValue || fallback;
+  const parts = value.split("-");
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+
+  if (!year || !month) {
+    return monthBounds(fallback);
+  }
+
+  const start = year + "-" + String(month).padStart(2, "0") + "-01";
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const end = nextYear + "-" + String(nextMonth).padStart(2, "0") + "-01";
+  return { start, end, label: value };
+}
+
+function formatDateDe(dateValue) {
+  if (!dateValue) return "-";
+  const parts = String(dateValue).split("-");
+  if (parts.length === 3) return parts[2] + "." + parts[1] + "." + parts[0];
+  return dateValue;
+}
+
+function formatKm(value) {
+  const km = Number(value || 0);
+  return km.toLocaleString("de-DE", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1
+  }) + " km";
+}
+
+async function loadCompany() {
+  const { data, error } = await db
+    .from("companies")
+    .select("*")
+    .eq("id", authContext.company_id)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.log(error);
+    document.getElementById("roleInfo").textContent = "Firma konnte nicht geladen werden.";
+    return;
+  }
+
+  company = data;
+  document.getElementById("companySubline").textContent = company.name || "Firmensteuerung";
+  document.getElementById("roleInfo").textContent =
+    "Angemeldet als " + (authContext.name || authContext.email || "Chef") + " | Firma: " + (company.name || "-");
+}
+
+async function createInvite() {
+  if (!authContext || !authContext.company_id) return;
+
+  const role = document.getElementById("inviteRole").value;
+  let lastError = null;
+  let createdCode = "";
+
+  for (let i = 0; i < 6; i += 1) {
+    const invite_code = randomInviteCode();
+    const { error } = await db
+      .from("company_invites")
+      .insert([{
+        company_id: authContext.company_id,
+        invite_code,
+        role,
+        created_by: authContext.user_id,
+        active: true,
+        expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+      }]);
+    if (!error) {
+      createdCode = invite_code;
+      break;
+    }
+    lastError = error;
+    const msg = String(error.message || "").toLowerCase();
+    if (!msg.includes("duplicate") && !msg.includes("unique")) break;
+  }
+
+  if (!createdCode) {
+    console.log(lastError);
+    setInviteStatus("Code konnte nicht erstellt werden: " + ((lastError && lastError.message) || "Fehler"), false);
+    return;
+  }
+
+  document.getElementById("inviteResult").textContent = createdCode;
+  setInviteStatus("Code erstellt. Du kannst ihn direkt kopieren.", true);
+}
+
+async function loadMembers() {
+  const list = document.getElementById("memberList");
+  list.innerHTML = "<p style='opacity:0.7;'>Lade Team...</p>";
+
+  const { data, error } = await db
+    .from("company_members")
+    .select("*")
+    .eq("company_id", authContext.company_id)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.log(error);
+    list.innerHTML = "<p style='opacity:0.7;'>Team konnte nicht geladen werden.</p>";
+    return;
+  }
+
+  if (!(data || []).length) {
+    membersCache = [];
+    list.innerHTML = "<p style='opacity:0.7;'>Noch keine Mitglieder.</p>";
+    return;
+  }
+
+  membersCache = data || [];
+  list.innerHTML = "";
+  (data || []).forEach(member => {
+    const card = document.createElement("div");
+    card.className = "info-box";
+    card.style.marginBottom = "8px";
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <div>
+          <strong>${member.name || member.email || "Mitarbeiter"}</strong><br>
+          <small>${member.role} | ${member.active ? "aktiv" : "deaktiviert"} | ${member.job_type || "ohne Typ"}</small>
+          <div style="margin-top:8px;display:flex;gap:8px;">
+            <select id="jobtype_${member.id}" class="compact-input" style="min-height:38px;padding:8px 10px;">
+              <option value="">Typ waehlen</option>
+              <option value="Meister" ${member.job_type === "Meister" ? "selected" : ""}>Meister</option>
+              <option value="Monteur" ${member.job_type === "Monteur" ? "selected" : ""}>Monteur</option>
+              <option value="Helfer" ${member.job_type === "Helfer" ? "selected" : ""}>Helfer</option>
+            </select>
+            <button class="login-btn" style="width:auto;margin:0;padding:8px 10px;background:#444;" onclick="saveMemberJobType('${member.id}')">Speichern</button>
+          </div>
+        </div>
+        <button class="login-btn" style="width:auto;margin:0;padding:10px 12px;background:${member.active ? "#444" : "#ff6b3d"};" onclick="toggleMember('${member.id}', ${member.active ? "false" : "true"})">
+          ${member.active ? "Deaktivieren" : "Aktivieren"}
+        </button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+window.toggleMember = async function(memberId, targetActive) {
+  const { error } = await db
+    .from("company_members")
+    .update({ active: targetActive })
+    .eq("id", memberId)
+    .eq("company_id", authContext.company_id);
+
+  if (error) {
+    console.log(error);
+    alert("Status konnte nicht geaendert werden.");
+    return;
+  }
+
+  await loadMembers();
+  await loadMileageOverview();
+};
+
+window.saveMemberJobType = async function(memberId) {
+  const select = document.getElementById("jobtype_" + memberId);
+  const jobType = select ? select.value : "";
+
+  const { error } = await db
+    .from("company_members")
+    .update({ job_type: jobType || null })
+    .eq("id", memberId)
+    .eq("company_id", authContext.company_id);
+
+  if (error) {
+    console.log(error);
+    alert("Mitarbeiter-Typ konnte nicht gespeichert werden.");
+    return;
+  }
+
+  await loadMembers();
+  await loadMileageOverview();
+};
+
+async function loadMileageOverview() {
+  const overview = document.getElementById("mileageOverview");
+  const monthInput = document.getElementById("mileageMonth");
+  if (!overview || !authContext || !authContext.company_id) return;
+
+  if (monthInput && !monthInput.value) {
+    monthInput.value = defaultMonthValue();
+  }
+
+  const { start, end, label } = monthBounds(monthInput ? monthInput.value : "");
+  overview.innerHTML = "<p style='opacity:0.7;'>Lade Kilometer...</p>";
+
+  const { data, error } = await db
+    .from("stundennachweise")
+    .select("*")
+    .eq("company_id", authContext.company_id)
+    .gte("arbeitsdatum", start)
+    .lt("arbeitsdatum", end)
+    .is("deleted_at", null)
+    .order("arbeitsdatum", { ascending: true });
+
+  if (error) {
+    console.log(error);
+    overview.innerHTML = "<p style='opacity:0.7;'>Kilometer konnten nicht geladen werden.</p>";
+    return;
+  }
+
+  const activeMembers = (membersCache || []).filter(member => member.active !== false);
+  if (!activeMembers.length) {
+    overview.innerHTML = "<p style='opacity:0.7;'>Noch keine aktiven Mitarbeiter.</p>";
+    return;
+  }
+
+  const reportsByUser = new Map();
+  (data || []).forEach(report => {
+    const userId = String(report.created_by || "");
+    if (!userId) return;
+    const km = Number(report.gefahrene_kilometer || 0);
+    if (!km) return;
+    if (!reportsByUser.has(userId)) {
+      reportsByUser.set(userId, []);
+    }
+    reportsByUser.get(userId).push({
+      date: report.arbeitsdatum || "",
+      km,
+      customer: report.customer || "",
+      objekt: report.objekt || ""
+    });
+  });
+
+  const monthTotal = Array.from(reportsByUser.values())
+    .flat()
+    .reduce((sum, report) => sum + report.km, 0);
+
+  overview.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;">
+      <small style="opacity:0.75;">Monat ${escapeHtml(label)}</small>
+      <strong>${formatKm(monthTotal)}</strong>
+    </div>
+  `;
+
+  activeMembers.forEach(member => {
+    const userId = String(member.user_id || "");
+    const reports = reportsByUser.get(userId) || [];
+    const byDay = new Map();
+
+    reports.forEach(report => {
+      const day = report.date || "-";
+      const current = byDay.get(day) || {
+        km: 0,
+        entries: []
+      };
+      current.km += report.km;
+      current.entries.push(report);
+      byDay.set(day, current);
+    });
+
+    const dayRows = Array.from(byDay.entries())
+      .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+      .map(([day, value]) => {
+        const details = value.entries
+          .map(entry => [entry.customer, entry.objekt].filter(Boolean).join(" - "))
+          .filter(Boolean)
+          .slice(0, 2)
+          .map(escapeHtml)
+          .join("<br>");
+        return `
+          <div style="display:grid;grid-template-columns:92px 1fr auto;gap:8px;align-items:start;padding:8px 0;border-top:1px solid #3a3a3a;">
+            <small>${formatDateDe(day)}</small>
+            <small style="opacity:0.75;">${details || value.entries.length + " Nachweis(e)"}</small>
+            <strong>${formatKm(value.km)}</strong>
+          </div>
+        `;
+      })
+      .join("");
+
+    const total = reports.reduce((sum, report) => sum + report.km, 0);
+    const card = document.createElement("div");
+    card.className = "info-box";
+    card.style.marginBottom = "8px";
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+        <div>
+          <strong>${escapeHtml(member.name || member.email || "Mitarbeiter")}</strong><br>
+          <small>${escapeHtml(member.role || "-")} | ${reports.length ? byDay.size + " Tag(e)" : "keine Kilometer"}</small>
+        </div>
+        <strong>${formatKm(total)}</strong>
+      </div>
+      <div style="margin-top:8px;">
+        ${dayRows || "<small style='opacity:0.7;'>Keine Kilometer in diesem Monat erfasst.</small>"}
+      </div>
+    `;
+    overview.appendChild(card);
+  });
+}
+
+async function loadOpenTimesheets() {
+  const list = document.getElementById("timesheetList");
+  list.innerHTML = "<p style='opacity:0.7;'>Lade Stundenzettel...</p>";
+
+  const { data, error } = await db
+    .from("employee_timesheets")
+    .select("*")
+    .eq("company_id", authContext.company_id)
+    .eq("status", "eingereicht")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.log(error);
+    list.innerHTML = "<p style='opacity:0.7;'>Stundenzettel konnten nicht geladen werden.</p>";
+    return;
+  }
+
+  if (!(data || []).length) {
+    list.innerHTML = "<p style='opacity:0.7;'>Keine eingereichten Stundenzettel.</p>";
+    return;
+  }
+
+  list.innerHTML = "";
+  (data || []).forEach(item => {
+    const card = document.createElement("div");
+    card.className = "info-box";
+    card.style.marginBottom = "8px";
+    card.innerHTML = `
+      <strong>${item.note || "Stundenzettel"}</strong><br>
+      <small>${item.start_time ? new Date(item.start_time).toLocaleString("de-DE") : "-"} bis ${item.end_time ? new Date(item.end_time).toLocaleString("de-DE") : "-"}</small>
+      <div class="button-row" style="margin-top:8px;">
+        <button class="login-btn" style="margin-bottom:0;" onclick="reviewTimesheet('${item.id}','genehmigt')">Genehmigen</button>
+        <button class="delete-btn" style="margin:0;" onclick="reviewTimesheet('${item.id}','abgelehnt')">Ablehnen</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+window.reviewTimesheet = async function(timesheetId, status) {
+  const { error } = await db
+    .from("employee_timesheets")
+    .update({
+      status,
+      approved_by: authContext.user_id
+    })
+    .eq("id", timesheetId)
+    .eq("company_id", authContext.company_id);
+
+  if (error) {
+    console.log(error);
+    alert("Konnte nicht speichern.");
+    return;
+  }
+
+  await loadOpenTimesheets();
+};
+
+(async function() {
+  authContext = await window.BaudokuAuthContext.loadAuthContext();
+  if (!authContext) {
+    window.location.href = "login.html";
+    return;
+  }
+  if (!window.BaudokuAuthContext.requireRole(authContext, ["chef"])) {
+    window.location.href = window.BaudokuAuthContext.dashboardPathForRole(authContext.role);
+    return;
+  }
+  await loadCompany();
+  await loadMembers();
+  await loadMileageOverview();
+  await loadOpenTimesheets();
+})();
+</script>
+<script src="pwa.js"></script>
+</body>
+</html>

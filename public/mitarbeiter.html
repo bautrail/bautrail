@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mitarbeiter</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <button class="back-btn" onclick="window.location.href='index.html'">&#8592;</button>
+      <h1 class="app-name">Mitarbeiter</h1>
+      <p class="company-name">Team verwalten und zuweisen</p>
+    </header>
+
+    <div class="task-card">
+      <input id="nameInput" class="compact-input" placeholder="Name">
+      <div class="button-row" style="margin-top:8px;">
+        <input id="emailInput" class="compact-input" placeholder="E-Mail">
+        <input id="phoneInput" class="compact-input" placeholder="Telefon">
+      </div>
+      <div class="button-row" style="margin-top:8px;">
+        <input id="rateInput" type="number" step="0.01" class="compact-input" placeholder="Stundensatz">
+        <button class="login-btn" style="margin-bottom:0;" onclick="saveEmployee()">Speichern</button>
+      </div>
+      <p id="status" style="font-size:12px;opacity:0.75;margin-top:8px;"></p>
+    </div>
+
+    <div id="employeeList"></div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+    <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
+    <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+    <a href="profil.html"><span>&#128100;</span><small>Profil</small></a>
+  </nav>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script>
+let currentEditId = null;
+let cache = [];
+
+function setStatus(text, ok) {
+  const el = document.getElementById("status");
+  el.textContent = text || "";
+  el.style.color = ok ? "#6bd86b" : "#ff6b3d";
+}
+
+function resetForm() {
+  currentEditId = null;
+  document.getElementById("nameInput").value = "";
+  document.getElementById("emailInput").value = "";
+  document.getElementById("phoneInput").value = "";
+  document.getElementById("rateInput").value = "";
+}
+
+async function loadEmployees() {
+  const { data, error } = await db.from("employees").select("*").order("name", { ascending: true });
+  if (error) {
+    console.log(error);
+    setStatus("Mitarbeiter konnten nicht geladen werden.", false);
+    return;
+  }
+
+  cache = data || [];
+  const list = document.getElementById("employeeList");
+  list.innerHTML = "";
+
+  cache.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "task-card";
+    card.innerHTML = `
+      <strong>${item.name || "-"}</strong><br>
+      <small>${item.email || ""} ${item.phone ? " | " + item.phone : ""}</small>
+      <p style="margin-top:8px;opacity:0.8;">Stundensatz: ${Number(item.hourly_rate || 0).toFixed(2)} EUR</p>
+      <div class="button-row">
+        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="editEmployee('${item.id}')">Bearbeiten</button>
+        <button class="delete-btn" style="margin-top:0;" onclick="deleteEmployee('${item.id}')">Loeschen</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+window.editEmployee = function(id) {
+  const item = cache.find(row => String(row.id) === String(id));
+  if (!item) return;
+  currentEditId = item.id;
+  document.getElementById("nameInput").value = item.name || "";
+  document.getElementById("emailInput").value = item.email || "";
+  document.getElementById("phoneInput").value = item.phone || "";
+  document.getElementById("rateInput").value = item.hourly_rate || "";
+};
+
+window.deleteEmployee = async function(id) {
+  const typed = prompt("Zum Loeschen bitte BESTAETIGEN eingeben.");
+  if (typed !== "BESTAETIGEN") return;
+
+  const { error } = await db.from("employees").delete().eq("id", id);
+  if (error) {
+    console.log(error);
+    setStatus("Loeschen fehlgeschlagen.", false);
+    return;
+  }
+  setStatus("Mitarbeiter geloescht.", true);
+  await loadEmployees();
+};
+
+async function saveEmployee() {
+  const payload = {
+    name: document.getElementById("nameInput").value.trim(),
+    email: document.getElementById("emailInput").value.trim(),
+    phone: document.getElementById("phoneInput").value.trim(),
+    hourly_rate: Number(document.getElementById("rateInput").value || 0)
+  };
+
+  if (!payload.name) {
+    setStatus("Bitte einen Namen eintragen.", false);
+    return;
+  }
+
+  const query = currentEditId
+    ? db.from("employees").update(payload).eq("id", currentEditId)
+    : db.from("employees").insert([payload]);
+
+  const { error } = await query;
+  if (error) {
+    console.log(error);
+    setStatus("Speichern fehlgeschlagen.", false);
+    return;
+  }
+
+  setStatus("Gespeichert.", true);
+  resetForm();
+  await loadEmployees();
+}
+
+loadEmployees();
+</script>
+<script src="pwa.js"></script>
+</body>
+</html>

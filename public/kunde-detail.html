@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kunde</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+
+<body>
+
+<div class="app-wrapper">
+
+  <div class="app-content">
+
+    <!-- HEADER -->
+    <header class="app-header">
+      <button class="back-btn" onclick="goBack()">&#8592;</button>
+      <h1 class="app-name" id="kundeName"></h1>
+      <p class="company-name">Kunde</p>
+    </header>
+
+    <!-- INFO -->
+    <div class="task-card" id="kundeInfo"></div>
+
+    <div class="task-card">
+      <h3>Kunde bearbeiten</h3>
+      <input id="editFirma" class="compact-input" placeholder="Firma">
+      <input id="editAnsprechpartner" class="compact-input" placeholder="Ansprechpartner" style="margin-top:8px;">
+      <input id="editVorname" class="compact-input" placeholder="Vorname" style="margin-top:8px;">
+      <input id="editNachname" class="compact-input" placeholder="Nachname" style="margin-top:8px;">
+      <input id="editTelefon" class="compact-input" placeholder="Telefon" style="margin-top:8px;">
+      <input id="editEmail" class="compact-input" placeholder="E-Mail" style="margin-top:8px;">
+      <textarea id="editAdresse" class="compact-input compact-textarea" placeholder="Adresse" style="margin-top:8px;"></textarea>
+      <button class="login-btn" onclick="saveCustomerChanges()" style="margin-top:10px;">Kunde speichern</button>
+      <p id="customerSaveStatus" style="font-size:12px;opacity:0.7;margin:0;"></p>
+    </div>
+
+    <!-- BUTTON -->
+    <div class="button-row">
+      <button onclick="goToProjektAnlegen()" class="login-btn">
+        Projekt hinzuf&uuml;gen
+      </button>
+
+      <button onclick="deleteCustomer()" class="delete-btn" style="margin-top:0;">
+        Kunde l&ouml;schen
+      </button>
+    </div>
+
+    <div class="task-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <h3>Kundenakte</h3>
+        <button onclick="window.location.href='papierkorb.html'" class="login-btn" style="width:auto;margin:0;padding:10px 12px;background:#444;">Papierkorb</button>
+      </div>
+      <div id="akteStats" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;"></div>
+    </div>
+
+    <div class="task-card">
+      <h3>Letzte Aktionen</h3>
+      <div id="activityList" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="task-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <h3>Stundennachweise</h3>
+        <button onclick="openCustomerReportCreate()" class="login-btn" style="width:auto;margin:0;padding:10px 12px;">Neu</button>
+      </div>
+      <div id="stundenList" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- LISTE -->
+    <div id="projektList" style="margin-top:10px;"></div>
+
+  </div>
+
+  <!-- NAV -->
+  <nav class="bottom-nav">
+    <a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+
+    <a href="kunden.html" class="active"><span>&#128101;</span><small>Kunden</small></a>
+
+    <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+
+    <a href="profil.html"><span>&#128100;</span><small>Profil</small></a>
+  </nav>
+
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="project-documents.js"></script>
+<script src="auto-textareas.js"></script>
+<script src="trash-utils.js"></script>
+<script src="notifications.js"></script>
+
+<script>
+
+// =======================
+// ID
+// =======================
+const kundeId =
+  new URLSearchParams(
+    window.location.search
+  ).get("id");
+
+let currentCustomer = null;
+
+// =======================
+// CREATE QUEUE
+// =======================
+function getCreateQueue() {
+
+  return JSON.parse(
+    localStorage.getItem("createQueue")
+  ) || [];
+}
+
+function saveCreateQueue(q) {
+
+  localStorage.setItem(
+    "createQueue",
+    JSON.stringify(q)
+  );
+}
+
+// =======================
+// UPDATE QUEUE
+// =======================
+function getUpdateQueue() {
+
+  return JSON.parse(
+    localStorage.getItem("updateQueue")
+  ) || [];
+}
+
+function saveUpdateQueue(q) {
+
+  localStorage.setItem(
+    "updateQueue",
+    JSON.stringify(q)
+  );
+}
+
+// =======================
+// DELETE QUEUE
+// =======================
+function getDeleteQueue() {
+
+  return JSON.parse(
+    localStorage.getItem("deleteQueue")
+  ) || [];
+}
+
+function saveDeleteQueue(q) {
+
+  localStorage.setItem(
+    "deleteQueue",
+    JSON.stringify(q)
+  );
+}
+
+// =======================
+// SYNC ALLES
+// =======================
+async function syncAll() {
+
+  if (!navigator.onLine) return;
+
+  // =======================
+  // CREATE SYNC
+  // =======================
+  let createQ = getCreateQueue();
+
+  let syncedIds = [];
+
+  for (let p of createQ) {
+
+    // ?? nur offline projekte
+    if (
+      !String(p.id).startsWith("offline_")
+    ) {
+      continue;
+    }
+
+    const { data, error } = await db
+      .from("projects")
+      .insert([{
+        customer_id: p.customer_id,
+        name: p.name,
+        ort: p.ort,
+        datum: p.datum,
+        beschreibung: p.beschreibung || ""
+      }])
+      .select()
+      .single();
+
+    if (error) {
+
+      console.log(error);
+      continue;
+    }
+
+    const newId = data.id;
+
+    syncedIds.push(p.id);
+
+    // =======================
+    // UPDATE QUEUE FIX
+    // =======================
+    let updates =
+      getUpdateQueue();
+
+    updates = updates.map(u => {
+
+      if (
+        String(u.id) === String(p.id)
+      ) {
+
+        return {
+          ...u,
+          id: newId
+        };
+      }
+
+      return u;
+    });
+
+    saveUpdateQueue(updates);
+
+    // =======================
+    // IMAGE QUEUE FIX
+    // =======================
+    let uploads =
+      JSON.parse(
+        localStorage.getItem(
+          "offlineUploads"
+        )
+      ) || [];
+
+    uploads = uploads.map(img => {
+
+      if (
+        String(img.project_id)
+        === String(p.id)
+      ) {
+
+        return {
+          ...img,
+          project_id: newId
+        };
+      }
+
+      return img;
+    });
+
+    localStorage.setItem(
+      "offlineUploads",
+      JSON.stringify(uploads)
+    );
+
+    if (window.BaudokuDocuments) {
+      await window.BaudokuDocuments.migrateProjectId(
+        p.id,
+        newId
+      );
+    }
+
+    // =======================
+    // CACHE FIX
+    // =======================
+    let cached =
+      JSON.parse(
+        localStorage.getItem(
+          "projects_" + kundeId
+        )
+      ) || [];
+
+    cached = cached.map(project => {
+
+      if (
+        String(project.id)
+        === String(p.id)
+      ) {
+
+        return {
+          ...project,
+          id: newId
+        };
+      }
+
+      return project;
+    });
+
+    localStorage.setItem(
+      "projects_" + kundeId,
+      JSON.stringify(cached)
+    );
+  }
+
+  // ?? nur synchronisierte entfernen
+  createQ = createQ.filter(p => {
+
+    return !syncedIds.includes(p.id);
+  });
+
+  saveCreateQueue(createQ);
+
+  // =======================
+  // UPDATE SYNC
+  // =======================
+  let updateQ =
+    getUpdateQueue();
+
+  const remainingUpdates = [];
+
+  for (let u of updateQ) {
+
+    const { data, error } =
+      await db
+      .from("projects")
+      .update({
+        [u.field]: u.value
+      })
+      .eq("id", u.id)
+      .select("id")
+      .maybeSingle();
+
+    if (error || !data) {
+
+      console.log(error);
+
+      remainingUpdates.push(u);
+    }
+  }
+
+  saveUpdateQueue(remainingUpdates);
+
+  if (window.BaudokuDocuments) {
+    await window.BaudokuDocuments.syncAll();
+  }
+
+  // =======================
+  // DELETE SYNC
+  // =======================
+  let deleteQ =
+    getDeleteQueue();
+
+  for (let id of deleteQ) {
+
+    await db
+      .from("projects")
+      .delete()
+      .eq("id", id);
+  }
+
+  localStorage.removeItem(
+    "deleteQueue"
+  );
+
+  console.log(
+    "Alles synchronisiert ?"
+  );
+}
+
+// =======================
+// KUNDE LADEN
+// =======================
+async function loadCustomer() {
+
+  // ?? OFFLINE
+  if (!navigator.onLine) {
+
+    const cached =
+      JSON.parse(
+        localStorage.getItem(
+          "customer_" + kundeId
+        )
+      );
+
+    if (cached) {
+
+      fillCustomer(cached);
+      return;
+    }
+  }
+
+  // ?? ONLINE
+  const { data, error } = await db
+    .from("customers")
+    .select("*")
+    .eq("id", kundeId)
+    .single();
+
+  if (error) {
+
+    console.log(error);
+    return;
+  }
+
+  // ?? CACHE
+  localStorage.setItem(
+    "customer_" + kundeId,
+    JSON.stringify(data)
+  );
+
+  fillCustomer(data);
+}
+
+// =======================
+// KUNDE ANZEIGEN
+// =======================
+function fillCustomer(kunde) {
+
+  currentCustomer = kunde;
+
+  const name =
+    kunde.firma ||
+    (
+      kunde.vorname &&
+      kunde.nachname
+        ? kunde.vorname +
+          " " +
+          kunde.nachname
+        : "Unbekannt"
+    );
+
+  document.getElementById(
+    "kundeName"
+  ).textContent = name;
+
+  document.getElementById(
+    "kundeInfo"
+  ).innerHTML = `
+    ${kunde.adresse || ""}<br>
+    ${kunde.telefon || ""}<br>
+    ${kunde.email || ""}<br>
+    ${
+      kunde.ansprechpartner
+        ? "Ansprechpartner: " +
+          kunde.ansprechpartner
+        : ""
+    }
+  `;
+
+  document.getElementById("editFirma").value =
+    kunde.firma || "";
+
+  document.getElementById("editAnsprechpartner").value =
+    kunde.ansprechpartner || "";
+
+  document.getElementById("editVorname").value =
+    kunde.vorname || "";
+
+  document.getElementById("editNachname").value =
+    kunde.nachname || "";
+
+  document.getElementById("editTelefon").value =
+    kunde.telefon || "";
+
+  document.getElementById("editEmail").value =
+    kunde.email || "";
+
+  document.getElementById("editAdresse").value =
+    kunde.adresse || "";
+
+  if (window.BaudokuAutoTextareas) {
+    window.BaudokuAutoTextareas.init();
+  }
+}
+
+async function saveCustomerChanges() {
+
+  const status =
+    document.getElementById(
+      "customerSaveStatus"
+    );
+
+  const payload = {
+    firma: document.getElementById("editFirma").value.trim(),
+    ansprechpartner: document.getElementById("editAnsprechpartner").value.trim(),
+    vorname: document.getElementById("editVorname").value.trim(),
+    nachname: document.getElementById("editNachname").value.trim(),
+    telefon: document.getElementById("editTelefon").value.trim(),
+    email: document.getElementById("editEmail").value.trim(),
+    adresse: document.getElementById("editAdresse").value.trim()
+  };
+
+  if (!payload.firma && (!payload.vorname || !payload.nachname)) {
+    status.textContent =
+      "Bitte Firma oder Vor- und Nachname eintragen.";
+    status.style.color = "#ff3b3b";
+    return;
+  }
+
+  const { data, error } =
+    await db
+    .from("customers")
+    .update(payload)
+    .eq("id", kundeId)
+    .select()
+    .single();
+
+  if (error) {
+    console.log(error);
+    status.textContent =
+      "Kunde konnte nicht gespeichert werden.";
+    status.style.color = "#ff3b3b";
+    return;
+  }
+
+  localStorage.setItem(
+    "customer_" + kundeId,
+    JSON.stringify(data)
+  );
+
+  fillCustomer(data);
+
+  status.textContent =
+    "Kunde gespeichert.";
+
+  status.style.color =
+    "#4caf50";
+}
+
+async function buildCustomerTrashPayload() {
+
+  const customer =
+    currentCustomer;
+
+  const { data: projects } =
+    await db
+      .from("projects")
+      .select("*")
+      .eq("customer_id", kundeId);
+
+  const projectIds =
+    (projects || []).map(project => project.id);
+
+  const { data: jobs } =
+    await db
+      .from("auftraege")
+      .select("*")
+      .eq("customer_id", kundeId);
+
+  const jobIds =
+    (jobs || []).map(job => job.id);
+
+  const [
+    materialResult,
+    imagesResult,
+    documentsResult,
+    foldersResult,
+    audioResult
+  ] = await Promise.all([
+    jobIds.length
+      ? db.from("auftrag_material").select("*").in("auftrag_id", jobIds)
+      : Promise.resolve({ data: [] }),
+    projectIds.length
+      ? db.from("project_images").select("*").in("project_id", projectIds)
+      : Promise.resolve({ data: [] }),
+    projectIds.length
+      ? db.from("project_documents").select("*").in("project_id", projectIds)
+      : Promise.resolve({ data: [] }),
+    projectIds.length
+      ? db.from("project_folders").select("*").in("project_id", projectIds)
+      : Promise.resolve({ data: [] }),
+    projectIds.length
+      ? db.from("project_audio").select("*").in("project_id", projectIds)
+      : Promise.resolve({ data: [] })
+  ]);
+
+  return {
+    customer,
+    projects: projects || [],
+    jobs: jobs || [],
+    material: materialResult.data || [],
+    images: imagesResult.data || [],
+    documents: documentsResult.data || [],
+    folders: foldersResult.data || [],
+    audio: audioResult.data || []
+  };
+}
+
+async function buildProjectTrashPayload(projectId) {
+
+  const { data: project } =
+    await db
+      .from("projects")
+      .select("*")
+      .eq("id", projectId)
+      .single();
+
+  const { data: jobs } =
+    await db
+      .from("auftraege")
+      .select("*")
+      .eq("project_id", projectId);
+
+  const jobIds =
+    (jobs || []).map(job => job.id);
+
+  const [
+    materialResult,
+    imagesResult,
+    documentsResult,
+    foldersResult,
+    audioResult
+  ] = await Promise.all([
+    jobIds.length
+      ? db.from("auftrag_material").select("*").in("auftrag_id", jobIds)
+      : Promise.resolve({ data: [] }),
+    db.from("project_images").select("*").eq("project_id", projectId),
+    db.from("project_documents").select("*").eq("project_id", projectId),
+    db.from("project_folders").select("*").eq("project_id", projectId),
+    db.from("project_audio").select("*").eq("project_id", projectId)
+  ]);
+
+  return {
+    project,
+    jobs: jobs || [],
+    material: materialResult.data || [],
+    images: imagesResult.data || [],
+    documents: documentsResult.data || [],
+    folders: foldersResult.data || [],
+    audio: audioResult.data || []
+  };
+}
+
+async function deleteCustomer() {
+
+  const typed =
+    prompt(
+      "Zum Löschen bitte BESTÄTIGEN eingeben."
+    );
+
+  if (
+    typed !== "BESTAETIGEN" &&
+    typed !== "BESTÄTIGEN"
+  ) {
+    alert("Kunde wurde nicht geloescht.");
+    return;
+  }
+
+  const snapshot =
+    await buildCustomerTrashPayload();
+
+  const projectIds =
+    (snapshot.projects || [])
+    .map(project => project.id);
+
+  const jobIds =
+    (snapshot.jobs || [])
+    .map(job => job.id);
+
+  if (window.BaudokuTrash) {
+    await window.BaudokuTrash.archiveItem({
+      item_type: "customer",
+      source_id: kundeId,
+      title: document.getElementById("kundeName").textContent || "Kunde",
+      payload: snapshot
+    });
+  }
+
+  if (jobIds.length) {
+    await db
+      .from("auftrag_material")
+      .delete()
+      .in("auftrag_id", jobIds);
+  }
+
+  if (projectIds.length) {
+    await db
+      .from("project_audio")
+      .delete()
+      .in("project_id", projectIds);
+
+    await db
+      .from("project_documents")
+      .delete()
+      .in("project_id", projectIds);
+
+    await db
+      .from("project_images")
+      .delete()
+      .in("project_id", projectIds);
+
+    await db
+      .from("project_folders")
+      .delete()
+      .in("project_id", projectIds);
+  }
+
+  await db
+    .from("auftraege")
+    .delete()
+    .eq("customer_id", kundeId);
+
+  await db
+    .from("projects")
+    .delete()
+    .eq("customer_id", kundeId);
+
+  const { error } =
+    await db
+    .from("customers")
+    .delete()
+    .eq("id", kundeId);
+
+  if (error) {
+    console.log(error);
+    alert(error.message);
+    return;
+  }
+
+  localStorage.removeItem(
+    "customer_" + kundeId
+  );
+
+  localStorage.removeItem(
+    "projects_" + kundeId
+  );
+
+  window.location.href =
+    "kunden.html";
+}
+
+// =======================
+// PROJEKTE LADEN
+// =======================
+async function loadProjects() {
+
+  let data = [];
+
+  // =======================
+  // OFFLINE
+  // =======================
+  if (!navigator.onLine) {
+
+    const cached =
+      JSON.parse(
+        localStorage.getItem(
+          "projects_" + kundeId
+        )
+      ) || [];
+
+    const offline =
+      getCreateQueue()
+      .filter(
+        p =>
+          p.customer_id === kundeId
+      );
+
+    const deleted =
+      getDeleteQueue();
+
+    data = [
+      ...offline,
+      ...cached
+    ];
+
+    // ?? doppelte entfernen
+    data = data.filter(
+      (project, index, self) => {
+
+        return index ===
+          self.findIndex(p =>
+            String(p.id)
+            === String(project.id)
+          );
+      }
+    );
+
+    // ?? gel&ouml;schte ausblenden
+    data = data.filter(
+      p =>
+        !deleted.includes(p.id)
+    );
+
+    renderProjects(data);
+    loadCustomerDossier();
+
+    return;
+  }
+
+  // =======================
+  // ONLINE
+  // =======================
+  await syncAll();
+
+  const {
+    data: dbData,
+    error
+  } = await db
+    .from("projects")
+    .select("*")
+    .eq(
+      "customer_id",
+      kundeId
+    )
+    .order(
+      "created_at",
+      {
+        ascending: false
+      }
+    );
+
+  if (error) {
+
+    console.log(error);
+    return;
+  }
+
+  data = dbData || [];
+
+  // ?? offline projekte behalten
+  const offline =
+    getCreateQueue()
+    .filter(
+      p =>
+        p.customer_id === kundeId
+    );
+
+  offline.forEach(p => {
+
+    const exists =
+      data.find(d =>
+        String(d.id)
+        === String(p.id)
+      );
+
+    if (!exists) {
+
+      data.unshift(p);
+    }
+  });
+
+  // ?? doppelte entfernen
+  data = data.filter(
+    (project, index, self) => {
+
+      return index ===
+        self.findIndex(p =>
+          String(p.id)
+          === String(project.id)
+        );
+    }
+  );
+
+  // ?? CACHE
+  localStorage.setItem(
+    "projects_" + kundeId,
+    JSON.stringify(data)
+  );
+
+  renderProjects(data);
+  loadCustomerDossier();
+  loadCustomerReports();
+}
+
+// =======================
+// DELETE PROJECT
+// =======================
+async function deleteProject(id) {
+
+  // ?? OFFLINE
+  if (!navigator.onLine) {
+
+    let q =
+      getDeleteQueue();
+
+    q.push(id);
+
+    saveDeleteQueue(q);
+
+    alert(
+      "Offline geloescht"
+    );
+
+    loadProjects();
+
+    return;
+  }
+
+  const snapshot =
+    await buildProjectTrashPayload(id);
+
+  if (window.BaudokuTrash) {
+    await window.BaudokuTrash.archiveItem({
+      item_type: "project",
+      source_id: id,
+      title: snapshot.project && snapshot.project.name
+        ? snapshot.project.name
+        : "Projekt",
+      payload: snapshot
+    });
+  }
+
+  const jobIds =
+    (snapshot.jobs || []).map(job => job.id);
+
+  if (jobIds.length) {
+    await db
+      .from("auftrag_material")
+      .delete()
+      .in("auftrag_id", jobIds);
+  }
+
+  await db
+    .from("project_audio")
+    .delete()
+    .eq("project_id", id);
+
+  await db
+    .from("project_documents")
+    .delete()
+    .eq("project_id", id);
+
+  await db
+    .from("project_images")
+    .delete()
+    .eq("project_id", id);
+
+  await db
+    .from("project_folders")
+    .delete()
+    .eq("project_id", id);
+
+  await db
+    .from("auftraege")
+    .delete()
+    .eq("project_id", id);
+
+  // ?? ONLINE
+  await db
+    .from("projects")
+    .delete()
+    .eq("id", id);
+
+  loadProjects();
+  loadCustomerDossier();
+}
+
+// =======================
+// PROJEKTE ANZEIGEN
+// =======================
+function renderProjects(projects) {
+
+  const list =
+    document.getElementById(
+      "projektList"
+    );
+
+  list.innerHTML = "";
+
+  projects.forEach(p => {
+    const isOfflineOnly =
+      String(p.id || "").startsWith("offline_");
+
+    const pendingUpdates =
+      getUpdateQueue().some(item => String(item.id) === String(p.id));
+
+    const pendingDelete =
+      getDeleteQueue().some(id => String(id) === String(p.id));
+
+    const offlineLabel =
+      pendingDelete
+        ? "Wird geloescht"
+        : isOfflineOnly
+          ? "Nur lokal"
+          : pendingUpdates
+            ? "Aenderungen offen"
+            : "Synchron";
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "task-card";
+
+    div.style.cursor =
+      "pointer";
+
+    div.innerHTML = `
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:10px;
+      ">
+
+        <div style="flex:1;">
+          <strong>${p.name}</strong><br>
+          <small>${p.ort || ""}</small><br>
+          <small style="opacity:0.7;">${offlineLabel}</small>
+        </div>
+
+        <button
+          onclick="
+            event.stopPropagation();
+            deleteProject('${p.id}')
+          "
+          style="
+            background:#ff3b3b;
+            color:white;
+            border:none;
+            border-radius:8px;
+            padding:6px 10px;
+            cursor:pointer;
+          "
+        >
+          X
+        </button>
+
+      </div>
+    `;
+
+    div.onclick = () => {
+
+      window.location.href =
+        "projekt-detail.html?id="
+        + p.id;
+    };
+
+    list.appendChild(div);
+  });
+}
+
+function renderAkteStats(stats) {
+
+  const target =
+    document.getElementById("akteStats");
+
+  if (!target) return;
+
+  const items = [
+    { label: "Projekte", value: stats.projects },
+    { label: "Auftraege", value: stats.jobs },
+    { label: "Dateien", value: stats.documents },
+    { label: "Bilder", value: stats.images }
+  ];
+
+  target.innerHTML =
+    items.map(item => `
+      <div class="info-box" style="margin-top:0;">
+        <small>${item.label}</small>
+        <div class="text" style="font-size:20px;font-weight:700;">${item.value}</div>
+      </div>
+    `).join("");
+}
+
+function renderActivity(items) {
+
+  const list =
+    document.getElementById("activityList");
+
+  if (!list) return;
+
+  if (!items.length) {
+    list.innerHTML =
+      "<p style='opacity:0.7;'>Noch keine Aktionen gefunden.</p>";
+    return;
+  }
+
+  list.innerHTML =
+    items.map(item => `
+      <div class="info-box" style="margin-top:0;margin-bottom:8px;min-height:0;">
+        <small>${item.type}</small>
+        <div class="text">${item.label}</div>
+        <small>${new Date(item.created_at).toLocaleString("de-DE")}</small>
+      </div>
+    `).join("");
+}
+
+async function loadCustomerDossier() {
+
+  if (!navigator.onLine) {
+    renderAkteStats({
+      projects: 0,
+      jobs: 0,
+      documents: 0,
+      images: 0
+    });
+    renderActivity([]);
+    return;
+  }
+
+  const { data: projects } =
+    await db
+      .from("projects")
+      .select("id, name, created_at")
+      .eq("customer_id", kundeId);
+
+  const projectIds =
+    (projects || []).map(project => project.id);
+
+  const { data: jobs } =
+    await db
+      .from("auftraege")
+      .select("id, project, customer, created_at, erledigt_am")
+      .eq("customer_id", kundeId);
+
+  const [documentsResult, imagesResult, audioResult] =
+    await Promise.all([
+      projectIds.length
+        ? db.from("project_documents").select("file_name, created_at, project_id").in("project_id", projectIds)
+        : Promise.resolve({ data: [] }),
+      projectIds.length
+        ? db.from("project_images").select("created_at, project_id").in("project_id", projectIds)
+        : Promise.resolve({ data: [] }),
+      projectIds.length
+        ? db.from("project_audio").select("created_at, project_id").in("project_id", projectIds)
+        : Promise.resolve({ data: [] })
+    ]);
+
+  renderAkteStats({
+    projects: (projects || []).length,
+    jobs: (jobs || []).length,
+    documents: (documentsResult.data || []).length + (audioResult.data || []).length,
+    images: (imagesResult.data || []).length
+  });
+
+  const projectMap = new Map(
+    (projects || []).map(project => [String(project.id), project.name || "Projekt"])
+  );
+
+  const activity = [];
+
+  (projects || []).forEach(project => {
+    activity.push({
+      type: "Projekt",
+      label: project.name || "Projekt angelegt",
+      created_at: project.created_at
+    });
+  });
+
+  (jobs || []).forEach(job => {
+    activity.push({
+      type: job.erledigt_am ? "Auftrag erledigt" : "Auftrag",
+      label: (job.project || "Auftrag") + " - " + (job.customer || ""),
+      created_at: job.erledigt_am || job.created_at
+    });
+  });
+
+  (documentsResult.data || []).forEach(file => {
+    activity.push({
+      type: "Dokument",
+      label: (file.file_name || "Dokument") + " - " + (projectMap.get(String(file.project_id)) || "Projekt"),
+      created_at: file.created_at
+    });
+  });
+
+  (imagesResult.data || []).forEach(image => {
+    activity.push({
+      type: "Bild",
+      label: "Bild hochgeladen - " + (projectMap.get(String(image.project_id)) || "Projekt"),
+      created_at: image.created_at
+    });
+  });
+
+  (audioResult.data || []).forEach(audio => {
+    activity.push({
+      type: "Audio",
+      label: "Sprachtext gespeichert - " + (projectMap.get(String(audio.project_id)) || "Projekt"),
+      created_at: audio.created_at
+    });
+  });
+
+  activity.sort((a, b) =>
+    new Date(b.created_at) - new Date(a.created_at)
+  );
+
+  renderActivity(activity.slice(0, 10));
+}
+
+async function loadCustomerReports() {
+
+  const list =
+    document.getElementById("stundenList");
+
+  if (!list) return;
+
+  if (!navigator.onLine) {
+    list.innerHTML =
+      "<p style='opacity:0.7;'>Stundennachweise werden online geladen.</p>";
+    return;
+  }
+
+  const { data, error } =
+    await db
+      .from("stundennachweise")
+      .select("*")
+      .eq("customer_id", kundeId)
+      .order("created_at", { ascending: false })
+      .limit(6);
+
+  if (error) {
+    console.log(error);
+    list.innerHTML =
+      "<p style='opacity:0.7;'>Stundennachweise konnten nicht geladen werden.</p>";
+    return;
+  }
+
+  if (!(data || []).length) {
+    list.innerHTML =
+      "<p style='opacity:0.7;'>Noch keine Stundennachweise vorhanden.</p>";
+    return;
+  }
+
+  list.innerHTML =
+    (data || []).map(item => `
+      <div class="info-box" style="margin-top:0;margin-bottom:8px;min-height:0;">
+        <small>${item.arbeitsdatum || "-"}</small>
+        <div class="text">${item.objekt || "Objekt"} - ${item.project || ""}</div>
+        <small>${item.stunden || 0} Std. | ${item.unterschrift_name || "ohne Name"}</small>
+      </div>
+    `).join("");
+}
+
+// =======================
+// EVENTS
+// =======================
+window.addEventListener(
+  "online",
+  async () => {
+
+    await syncAll();
+
+    setTimeout(() => {
+
+      loadProjects();
+
+    }, 1000);
+  }
+);
+
+// =======================
+// NAVIGATION
+// =======================
+function goToProjektAnlegen() {
+
+  window.location.href =
+    "projekt-anlegen.html?id="
+    + kundeId;
+}
+
+function openCustomerReportCreate() {
+
+  window.location.href =
+    "stunden-nachweis.html?customer_id="
+    + encodeURIComponent(kundeId);
+}
+
+function goBack() {
+
+  window.location.href =
+    "kunden.html";
+}
+
+// =======================
+// START
+// =======================
+loadCustomer();
+
+loadProjects();
+loadCustomerDossier();
+loadCustomerReports();
+
+</script>
+
+<script src="pwa.js"></script>
+</body>
+</html>
+

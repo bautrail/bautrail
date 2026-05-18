@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Baudoku offline</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <h1 class="app-name">BAUDOKU</h1>
+      <p class="company-name">Offline</p>
+    </header>
+
+    <div class="task-card">
+      <h3>Keine Verbindung</h3>
+      <p style="opacity:0.8;margin-top:8px;">Die App ist geoeffnet, aber fuer aktuelle Daten wird wieder Internet benoetigt.</p>
+      <button class="login-btn" style="margin-top:12px;margin-bottom:0;" onclick="window.location.href='index.html'">Zur Uebersicht</button>
+    </div>
+  </div>
+</div>
+<script src="pwa.js"></script>
+</body>
+</html>

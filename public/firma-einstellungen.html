@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firma Einstellungen</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <button class="back-btn" onclick="window.location.href='chef-dashboard.html'">&#8592;</button>
+      <h1 class="app-name">Firma Einstellungen</h1>
+      <p class="company-name">Firmendaten und Dokumente</p>
+    </header>
+
+    <div class="task-card">
+      <h3>Firmendaten</h3>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
+        <img id="logoPreview" alt="Logo" style="width:64px;height:64px;border-radius:12px;object-fit:cover;background:#2a2a2a;display:none;">
+        <input id="logoInput" type="file" accept="image/*" class="compact-input">
+      </div>
+      <input id="nameInput" class="compact-input" placeholder="Firmenname" style="margin-top:8px;">
+      <input id="ownerInput" class="compact-input" placeholder="Inhaber / Ansprechpartner" style="margin-top:8px;">
+      <input id="adresseInput" class="compact-input" placeholder="Adresse" style="margin-top:8px;">
+      <div class="button-row" style="margin-top:8px;">
+        <input id="plzInput" class="compact-input" placeholder="PLZ">
+        <input id="ortInput" class="compact-input" placeholder="Ort">
+      </div>
+      <div class="button-row" style="margin-top:8px;">
+        <input id="telefonInput" class="compact-input" placeholder="Telefon">
+        <input id="emailInput" class="compact-input" placeholder="E-Mail">
+      </div>
+      <input id="websiteInput" class="compact-input" placeholder="Website" style="margin-top:8px;">
+      <div class="button-row" style="margin-top:8px;">
+        <input id="steuerInput" class="compact-input" placeholder="Steuernummer">
+        <input id="ustInput" class="compact-input" placeholder="USt-ID">
+      </div>
+      <textarea id="rechtlichesInput" class="compact-input compact-textarea" placeholder="Rechtliche Angaben" style="margin-top:8px;"></textarea>
+      <button class="login-btn" onclick="saveCompany()">Speichern</button>
+      <p id="saveStatus" style="font-size:12px;opacity:0.95;min-height:18px;margin-top:4px;">&nbsp;</p>
+    </div>
+
+    <div class="task-card">
+      <h3>Firmendokumente</h3>
+      <input id="docInput" type="file" class="compact-input">
+      <button class="login-btn" style="margin-top:8px;" onclick="uploadDocument()">Dokument hochladen</button>
+      <p id="docStatus" style="font-size:12px;opacity:0.75;"></p>
+      <div id="docList" style="margin-top:10px;"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script>
+let authContext = null;
+let company = null;
+let companyLogoData = "";
+
+function setStatus(id, text, ok) {
+  const el = document.getElementById(id);
+  el.textContent = text || "\u00A0";
+  el.style.color = ok ? "#6bd86b" : "#ff6b3d";
+
+  if (text && ok) {
+    setTimeout(() => {
+      if (el.textContent === text) {
+        el.textContent = "\u00A0";
+      }
+    }, 2500);
+  }
+}
+
+function showLogo(value) {
+  const img = document.getElementById("logoPreview");
+  if (!value) {
+    img.style.display = "none";
+    img.removeAttribute("src");
+    return;
+  }
+  img.src = value;
+  img.style.display = "block";
+}
+
+function bindLogoInput() {
+  const input = document.getElementById("logoInput");
+  input.addEventListener("change", event => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function() {
+      companyLogoData = String(reader.result || "");
+      showLogo(companyLogoData);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function loadCompany() {
+  const { data, error } = await db
+    .from("companies")
+    .select("*")
+    .eq("id", authContext.company_id)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.log(error);
+    setStatus("saveStatus", "Firma konnte nicht geladen werden.", false);
+    return;
+  }
+
+  company = data;
+  companyLogoData = company.logo_url || "";
+  showLogo(companyLogoData);
+  document.getElementById("nameInput").value = company.name || "";
+  document.getElementById("ownerInput").value = company.company_owner || "";
+  document.getElementById("adresseInput").value = company.adresse || "";
+  document.getElementById("plzInput").value = company.plz || "";
+  document.getElementById("ortInput").value = company.ort || "";
+  document.getElementById("telefonInput").value = company.telefon || "";
+  document.getElementById("emailInput").value = company.email || "";
+  document.getElementById("websiteInput").value = company.website || "";
+  document.getElementById("steuerInput").value = company.steuernummer || "";
+  document.getElementById("ustInput").value = company.ust_id || "";
+  document.getElementById("rechtlichesInput").value = company.rechtliches || "";
+}
+
+async function saveCompany() {
+  setStatus("saveStatus", "Speichert...", true);
+
+  try {
+    const payload = {
+      name: document.getElementById("nameInput").value.trim(),
+      adresse: document.getElementById("adresseInput").value.trim(),
+      plz: document.getElementById("plzInput").value.trim(),
+      ort: document.getElementById("ortInput").value.trim(),
+      telefon: document.getElementById("telefonInput").value.trim(),
+      email: document.getElementById("emailInput").value.trim(),
+    website: document.getElementById("websiteInput").value.trim(),
+    steuernummer: document.getElementById("steuerInput").value.trim(),
+    ust_id: document.getElementById("ustInput").value.trim(),
+    company_owner: document.getElementById("ownerInput").value.trim(),
+      rechtliches: document.getElementById("rechtlichesInput").value.trim(),
+      logo_url: companyLogoData || null
+    };
+
+    let targetCompanyId =
+      (company && company.id) ||
+      (authContext && authContext.company_id) ||
+      null;
+
+    let error = null;
+
+    async function runWithSchemaFallback(runRequest, sourcePayload) {
+      let payload = { ...sourcePayload };
+      let result = await runRequest(payload);
+      let guard = 0;
+
+      while (result && result.error && guard < 20) {
+        const msg = String(result.error.message || "");
+        const match = msg.match(/column\s+"([^"]+)"/i) || msg.match(/column\s+'([^']+)'/i);
+        if (!match || !match[1]) break;
+        const badKey = match[1];
+        if (!(badKey in payload)) break;
+        delete payload[badKey];
+        result = await runRequest(payload);
+        guard += 1;
+      }
+
+      return result;
+    }
+
+    async function runUpdate(dataPayload) {
+      if (targetCompanyId) {
+        const result = await db
+          .from("companies")
+          .update(dataPayload)
+          .eq("id", targetCompanyId)
+          .select("*")
+          .maybeSingle();
+
+        return result;
+      }
+
+      return await db
+        .from("companies")
+        .insert([dataPayload])
+        .select("*")
+        .single();
+    }
+
+    if (targetCompanyId) {
+      const result = await runWithSchemaFallback(runUpdate, payload);
+      error = result.error;
+      if (!error && result.data) {
+        company = result.data;
+      }
+    } else {
+      const createResult = await runWithSchemaFallback(runUpdate, payload);
+      error = createResult.error;
+      if (!error && createResult.data) {
+        company = createResult.data;
+        targetCompanyId = createResult.data.id;
+      }
+    }
+
+    if (error) {
+      console.log(error);
+      setStatus("saveStatus", "Speichern fehlgeschlagen: " + (error.message || "Unbekannter Fehler"), false);
+      return;
+    }
+
+    setStatus("saveStatus", "Gespeichert", true);
+  } catch (err) {
+    console.log(err);
+    setStatus("saveStatus", "Speichern fehlgeschlagen: " + (err && err.message ? err.message : "Unbekannter Fehler"), false);
+  }
+}
+
+async function loadDocuments() {
+  const list = document.getElementById("docList");
+  list.innerHTML = "<p style='opacity:0.7;'>Lade Dokumente...</p>";
+
+  const { data, error } = await db
+    .from("company_documents")
+    .select("*")
+    .eq("company_id", authContext.company_id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.log(error);
+    list.innerHTML = "<p style='opacity:0.7;'>Dokumente konnten nicht geladen werden.</p>";
+    return;
+  }
+
+  if (!(data || []).length) {
+    list.innerHTML = "<p style='opacity:0.7;'>Noch keine Firmendokumente.</p>";
+    return;
+  }
+
+  list.innerHTML = "";
+  (data || []).forEach(item => {
+    const row = document.createElement("div");
+    row.className = "info-box";
+    row.style.marginBottom = "8px";
+    row.innerHTML = `
+      <strong>${item.title || "Dokument"}</strong><br>
+      <small>${item.file_type || ""}</small>
+      <div class="button-row" style="margin-top:8px;">
+        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="openDoc('${item.file_url || ""}')">Oeffnen</button>
+        <button class="delete-btn" style="margin:0;" onclick="deleteDoc('${item.id}')">Loeschen</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+window.openDoc = function(url) {
+  if (!url) return;
+  window.open(url, "_blank");
+};
+
+window.deleteDoc = async function(id) {
+  const typed = prompt("Zum Loeschen bitte BESTAETIGEN eingeben.");
+  if (typed !== "BESTAETIGEN") return;
+
+  const { error } = await db
+    .from("company_documents")
+    .delete()
+    .eq("id", id)
+    .eq("company_id", authContext.company_id);
+
+  if (error) {
+    console.log(error);
+    setStatus("docStatus", "Loeschen fehlgeschlagen.", false);
+    return;
+  }
+
+  setStatus("docStatus", "Dokument geloescht.", true);
+  await loadDocuments();
+};
+
+async function uploadDocument() {
+  const input = document.getElementById("docInput");
+  const file = input.files && input.files[0];
+  if (!file) {
+    setStatus("docStatus", "Bitte zuerst eine Datei auswaehlen.", false);
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = async function() {
+    const fileUrl = String(reader.result || "");
+    const payload = {
+      company_id: authContext.company_id,
+      title: file.name,
+      file_url: fileUrl,
+      file_type: file.type || "application/octet-stream"
+    };
+
+    const { error } = await db
+      .from("company_documents")
+      .insert([payload]);
+
+    if (error) {
+      console.log(error);
+      setStatus("docStatus", "Upload fehlgeschlagen.", false);
+      return;
+    }
+
+    setStatus("docStatus", "Dokument gespeichert.", true);
+    input.value = "";
+    await loadDocuments();
+  };
+
+  reader.readAsDataURL(file);
+}
+
+(async function() {
+  bindLogoInput();
+  authContext = await window.BaudokuAuthContext.loadAuthContext();
+  if (!authContext) {
+    window.location.href = "login.html";
+    return;
+  }
+  if (!window.BaudokuAuthContext.requireRole(authContext, ["chef"])) {
+    window.location.href = window.BaudokuAuthContext.dashboardPathForRole(authContext.role);
+    return;
+  }
+  await loadCompany();
+  await loadDocuments();
+})();
+</script>
+<script src="pwa.js"></script>
+</body>
+</html>

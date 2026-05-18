@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Papierkorb</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <button class="back-btn" onclick="window.location.href='kunden.html'">&#8592;</button>
+      <h1 class="app-name">Papierkorb</h1>
+      <p class="company-name">Kunden und Projekte wiederherstellen</p>
+    </header>
+
+    <div class="task-card">
+      <p style="opacity:0.75;line-height:1.4;">
+        Hier liegen geloeschte Kunden und Projekte. Wiederherstellen holt die zugehoerigen Daten zurueck.
+      </p>
+    </div>
+
+    <div id="trashList"></div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+    <a href="kunden.html" class="active"><span>&#128101;</span><small>Kunden</small></a>
+    <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+    <a href="profil.html"><span>&#128100;</span><small>Profil</small></a>
+  </nav>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="trash-utils.js"></script>
+<script>
+
+async function upsertRows(table, rows) {
+
+  if (!rows || !rows.length) return;
+
+  const { error } =
+    await db
+      .from(table)
+      .upsert(rows);
+
+  if (error) {
+    throw error;
+  }
+}
+
+async function restoreCustomerPayload(payload) {
+
+  if (!payload || !payload.customer) {
+    throw new Error("Kundendaten fehlen.");
+  }
+
+  await upsertRows("customers", [payload.customer]);
+  await upsertRows("projects", payload.projects || []);
+  await upsertRows("auftraege", payload.jobs || []);
+  await upsertRows("auftrag_material", payload.material || []);
+  await upsertRows("project_folders", payload.folders || []);
+  await upsertRows("project_documents", payload.documents || []);
+  await upsertRows("project_images", payload.images || []);
+  await upsertRows("project_audio", payload.audio || []);
+}
+
+async function restoreProjectPayload(payload) {
+
+  if (!payload || !payload.project) {
+    throw new Error("Projektdaten fehlen.");
+  }
+
+  await upsertRows("projects", [payload.project]);
+  await upsertRows("auftraege", payload.jobs || []);
+  await upsertRows("auftrag_material", payload.material || []);
+  await upsertRows("project_folders", payload.folders || []);
+  await upsertRows("project_documents", payload.documents || []);
+  await upsertRows("project_images", payload.images || []);
+  await upsertRows("project_audio", payload.audio || []);
+}
+
+async function restoreItem(item) {
+
+  try {
+    if (item.item_type === "customer") {
+      await restoreCustomerPayload(item.payload);
+    } else if (item.item_type === "project") {
+      await restoreProjectPayload(item.payload);
+    } else {
+      throw new Error("Unbekannter Papierkorb-Typ.");
+    }
+
+    await window.BaudokuTrash.removeItem(item.id);
+    await loadTrash();
+  } catch (err) {
+    console.log(err);
+    alert(err.message || "Wiederherstellen fehlgeschlagen.");
+  }
+}
+
+async function deleteForever(id) {
+
+  const typed =
+    prompt("Zum endgueltigen Loeschen bitte BESTAETIGEN eingeben.");
+
+  if (typed !== "BESTAETIGEN") {
+    return;
+  }
+
+  await window.BaudokuTrash.removeItem(id);
+  await loadTrash();
+}
+
+async function loadTrash() {
+
+  const list =
+    document.getElementById("trashList");
+
+  list.innerHTML = "";
+
+  const items =
+    window.BaudokuTrash
+      ? await window.BaudokuTrash.loadItems()
+      : [];
+
+  if (!items.length) {
+    list.innerHTML =
+      "<div class='task-card'><p style='opacity:0.75;'>Papierkorb ist leer.</p></div>";
+    return;
+  }
+
+  items.forEach(item => {
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "task-card";
+
+    const restoreUntil =
+      item.restore_until
+        ? new Date(item.restore_until)
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    const expired =
+      restoreUntil.getTime() <= Date.now();
+
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+        <div style="flex:1;">
+          <strong>${item.title}</strong><br>
+          <small style="opacity:0.7;">${item.item_type === "customer" ? "Kunde" : "Projekt"} - ${new Date(item.deleted_at).toLocaleString("de-DE")}</small>
+          <br>
+          <small style="opacity:0.7;">Wiederherstellbar bis: ${restoreUntil.toLocaleString("de-DE")}</small>
+        </div>
+      </div>
+      <div class="button-row" style="margin-top:12px;">
+        <button class="login-btn" style="margin-bottom:0;${expired ? "background:#555;" : ""}" ${expired ? "disabled" : ""} onclick="restoreItemById('${item.id}')">Wiederherstellen</button>
+        <button class="delete-btn" style="margin-top:0;" onclick="deleteForever('${item.id}')">Endgueltig loeschen</button>
+      </div>
+    `;
+
+    div.dataset.payload =
+      JSON.stringify(item);
+
+    list.appendChild(div);
+  });
+}
+
+window.restoreItemById = async function(id) {
+
+  const card =
+    Array.from(document.querySelectorAll("#trashList .task-card"))
+      .find(node => {
+        try {
+          return JSON.parse(node.dataset.payload).id === id;
+        } catch (err) {
+          return false;
+        }
+      });
+
+  if (!card) return;
+
+  await restoreItem(JSON.parse(card.dataset.payload));
+};
+
+loadTrash();
+
+</script>
+
+<script src="pwa.js"></script>
+</body>
+</html>

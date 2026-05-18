@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>📋 Aufträge</title>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+
+.top-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.add-btn{
+  width:56px;
+  height:56px;
+  min-width:56px;
+  border:none;
+  border-radius:18px;
+  background:#ff6b3d;
+  color:white;
+  font-size:32px;
+  font-weight:bold;
+  cursor:pointer;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  padding:0;
+
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.3);
+}
+
+.top-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:20px;
+}
+
+.job-card{
+  background:#1e1e1e;
+  border-radius:14px;
+  padding:14px;
+  margin-top:12px;
+  cursor:pointer;
+}
+.priority-urgent{
+  border-left:
+    5px solid #ff3b3b;
+}
+
+.priority-week{
+  border-left:
+    5px solid #ff9f43;
+}
+
+.priority-normal{
+  border-left:
+    5px solid #2ecc71;
+}
+
+.job-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+
+.done-btn{
+  width:38px;
+  height:38px;
+  border:none;
+  border-radius:10px;
+  background:#2ecc71;
+  color:white;
+  font-size:18px;
+  cursor:pointer;
+}
+
+.job-card small{
+  opacity:0.7;
+}
+
+.job-card{
+  color:white;
+}
+
+.job-card strong{
+  color:white;
+}
+
+.job-card small{
+  color:white;
+  opacity:0.7;
+}
+
+.filter-btn{
+  border:none;
+  border-radius:12px;
+  padding:10px 14px;
+  background:#2b2b2b;
+  color:white;
+  cursor:pointer;
+  white-space:nowrap;
+}
+
+.active-filter{
+  background:#ff6b3d;
+}
+
+.search-input{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  background:#2b2b2b;
+  color:white;
+  margin-top:14px;
+  box-sizing:border-box;
+  font-size:15px;
+}
+
+</style>
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+
+<div class="app-wrapper">
+
+<div class="app-content">
+  <div
+  style="
+    display:flex;
+    gap:8px;
+    overflow:auto;
+    margin-top:14px;
+    padding-bottom:4px;
+  "
+>
+
+  <button
+  class="filter-btn"
+  onclick="setFilter('all', event)"
+>
+  Alle
+</button>
+
+<button
+  class="filter-btn"
+  onclick="setFilter('urgent', event)"
+>
+  🔴 Dringend
+</button>
+
+<button
+  class="filter-btn"
+  onclick="setFilter('week', event)"
+>
+  🟠 Woche
+</button>
+
+<button
+  class="filter-btn"
+  onclick="setFilter('open', event)"
+>
+  🟢 Offen
+</button>
+
+<button
+  class="filter-btn"
+  onclick="setFilter('done', event)"
+>
+ ✅ Erledigt
+</button>
+
+<button
+  class="filter-btn"
+  onclick="setFilter('invoice', event)"
+>
+  Abgerechnet
+</button>
+
+</div>
+
+<input
+  type="text"
+  id="searchInput"
+  placeholder="🔎 Auftrag suchen..."
+  class="search-input"
+  oninput="loadJobs()"
+>
+
+<header class="app-header">
+<button class="back-btn" onclick="window.location.href='index.html'">&#8592;</button>
+
+<div class="top-row">
+
+<div>
+
+<h1 class="app-name">
+📋 Aufträge
+</h1>
+
+<p class="company-name">
+Offene Aufträge
+</p>
+
+</div>
+
+<button
+class="add-btn"
+onclick="openCreate()"
+>
++
+</button>
+
+</div>
+
+</header>
+
+<div id="jobList"></div>
+
+<!-- EMPTY STATE -->
+<div
+id="emptyState"
+class="task-card"
+style="
+  display:none;
+  margin-top:14px;
+  text-align:center;
+  padding:40px 20px;
+"
+>
+
+<div style="font-size:70px;">
+  📋
+</div>
+
+<h2 style="
+  margin-top:10px;
+  font-size:32px;
+">
+  Noch keine Aufträge
+</h2>
+
+<p style="
+  opacity:0.7;
+  margin-top:10px;
+  line-height:1.5;
+">
+  Hier werden alle offenen
+  Aufträge angezeigt.
+  <br><br>
+  Erstelle deinen ersten Auftrag
+  mit dem + Button.
+</p>
+
+<button
+class="add-btn"
+style="
+  width:100%;
+  margin-top:25px;
+  height:54px;
+  font-size:18px;
+"
+onclick="openCreate()"
+>
+  ➕ Neuen Auftrag erstellen
+</button>
+
+</div>
+
+</div>
+
+<!-- NAV -->
+<nav class="bottom-nav">
+
+<a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+
+<a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
+
+<a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+
+<a href="#" class="active">
+<span>📋</span>
+<small>Aufträge</small>
+</a>
+
+</nav>
+
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script src="company-context.js"></script>
+<script src="notifications.js"></script>
+<script>
+
+let currentFilter = "all";
+
+loadJobs();
+
+function setFilter(filter,event){
+
+  currentFilter = filter;
+
+  document
+    .querySelectorAll(".filter-btn")
+    .forEach(btn => {
+      btn.classList.remove(
+        "active-filter"
+      );
+    });
+
+  event.target.classList.add(
+    "active-filter"
+  );
+
+  loadJobs();
+}
+
+async function loadJobs(){
+
+  const list =
+    document.getElementById(
+      "jobList"
+    );
+
+  list.innerHTML = "";
+
+  const search =
+    document
+    .getElementById(
+      "searchInput"
+    )
+    .value
+    .toLowerCase();
+
+  // 🔥 SUPABASE LADEN
+  const { data: jobs, error } =
+    await window.BaudokuCompanyContext
+      .selectScoped("auftraege");
+
+  if(error){
+
+    console.log(error);
+    return;
+  }
+
+  const emptyState =
+  document.getElementById(
+    "emptyState"
+  );
+
+if(emptyState){
+
+  const openJobs =
+    jobs.filter(j => {
+      const statusValue =
+        j.status ||
+        (j.done ? "erledigt" : "offen");
+
+      return statusValue !== "erledigt" &&
+        statusValue !== "abgerechnet";
+    });
+
+  if(!openJobs.length){
+
+    emptyState.style.display =
+      "block";
+
+  } else {
+
+    emptyState.style.display =
+      "none";
+  }
+
+}
+
+  (jobs || [])
+  .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+
+  .filter(job => {
+
+    const matchesSearch =
+
+      (
+        job.customer || ""
+      )
+
+      .toLowerCase()
+
+      .includes(search)
+
+      ||
+
+      (
+        job.project || ""
+      )
+
+      .toLowerCase()
+
+      .includes(search)
+
+      ||
+
+      (
+        job.material || ""
+      )
+
+      .toLowerCase()
+
+      .includes(search)
+
+      ||
+
+      (
+        job.beschreibung || ""
+      )
+
+      .toLowerCase()
+
+      .includes(search);
+
+    if(!matchesSearch)
+      return false;
+
+    const statusValue =
+      job.status ||
+      (job.done ? "erledigt" : "offen");
+
+    if(currentFilter === "all")
+  return statusValue !== "erledigt" && statusValue !== "abgerechnet";
+
+if(currentFilter === "urgent")
+  return (
+    (job.priority || "normal")
+    === "urgent"
+    && statusValue !== "erledigt"
+    && statusValue !== "abgerechnet"
+  );
+
+if(currentFilter === "week")
+  return (
+    (job.priority || "normal")
+    === "week"
+    && statusValue !== "erledigt"
+    && statusValue !== "abgerechnet"
+  );
+
+if(currentFilter === "open")
+  return statusValue === "offen" ||
+    statusValue === "in_arbeit" ||
+    statusValue === "wartet_auf_material";
+
+if(currentFilter === "done")
+  return statusValue === "erledigt";
+
+if(currentFilter === "invoice")
+  return statusValue === "abgerechnet";
+
+return true;
+
+  })
+
+  .forEach(job => {
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "job-card priority-" +
+      (job.priority || "normal");
+
+    div.innerHTML = `
+
+      <div class="job-top">
+
+        <div>
+
+          <strong>
+            ${job.customer}
+          </strong>
+
+          ${
+            job.priority === "urgent"
+            ? `
+              <p style="margin-top:6px;">
+                🔴 Dringend
+              </p>
+            `
+
+            : job.priority === "week"
+            ? `
+              <p style="margin-top:6px;">
+                🟠 Diese Woche
+              </p>
+            `
+
+            : `
+              <p style="margin-top:6px;">
+                🟢 Normal
+              </p>
+            `
+          }
+
+          ${
+            job.faelligkeit
+            ? `
+              <p style="
+                margin-top:6px;
+                opacity:0.8;
+                font-size:13px;
+              ">
+                📅 ${
+                  new Date(
+                    job.faelligkeit
+                  ).toLocaleDateString(
+                    "de-DE"
+                  )
+                }
+              </p>
+            `
+            : ""
+          }
+
+          <small>
+            ${job.project}
+          </small>
+
+          <p style="margin-top:6px;opacity:0.75;font-size:12px;">
+            Status: ${job.status || (job.done ? "erledigt" : "offen")}
+          </p>
+
+        </div>
+
+        <button
+          class="done-btn"
+          onclick="
+            event.stopPropagation();
+            finishJob('${job.id}')
+          "
+        >
+          ✓
+        </button>
+
+      </div>
+
+    `;
+
+    div.onclick = () => {
+
+      window.location.href =
+        "auftrag-detail.html?id=" +
+        job.id;
+    };
+
+    list.appendChild(div);
+
+  });
+
+}
+
+async function finishJob(id){
+
+  await db
+    .from("auftraege")
+    .update({
+      done:true,
+      status:"erledigt"
+    })
+    .eq("id",id);
+
+  loadJobs();
+}
+
+function openCreate(){
+
+  window.location.href =
+    "auftrag-anlegen.html";
+}
+
+</script>
+
+<script src="pwa.js"></script>
+</body>
+</html>

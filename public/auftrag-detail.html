@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Auftrag</title>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+
+.top-actions{
+  display:flex;
+  gap:10px;
+}
+
+.done-btn{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:#2ecc71;
+  color:white;
+  font-size:15px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.delete-btn{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:#ff3b3b;
+  color:white;
+  font-size:15px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.info-box{
+  background:#1e1e1e;
+  border-radius:14px;
+  padding:14px;
+  margin-top:12px;
+}
+
+.info-box small{
+  opacity:0.7;
+}
+
+.text{
+  white-space:pre-wrap;
+  line-height:1.5;
+}
+
+.task-card,
+.task-card *{
+  color:white !important;
+}
+
+body,
+body *{
+  color:white !important;
+}
+
+.done-btn{
+  color:white !important;
+}
+
+.delete-btn{
+  color:white !important;
+}
+
+.image-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:14px;
+}
+
+.image-card{
+  background:#1f1f1f;
+  border-radius:18px;
+  padding:8px;
+  overflow:hidden;
+  position:relative;
+}
+
+.image-card img{
+  width:100%;
+  height:110px;
+  object-fit:cover;
+  border-radius:14px;
+  display:block;
+}
+
+.delete-image{
+  position:absolute;
+  top:12px;
+  right:12px;
+
+  width:30px;
+  height:30px;
+
+  border:none;
+  border-radius:50%;
+
+  background:rgba(255,59,59,0.95);
+
+  color:white;
+  font-size:14px;
+  font-weight:bold;
+
+  cursor:pointer;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  padding:0;
+  margin:0;
+
+  z-index:10;
+}
+
+.save-btn{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  background:#ff6b3d;
+  color:white !important;
+  font-size:15px;
+  font-weight:700;
+  cursor:pointer;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.25);
+}
+
+.save-btn:active{
+  transform:scale(0.98);
+}
+
+.result-item{
+  background:#2b2b2b;
+  border:none;
+  border-radius:12px;
+  color:white !important;
+  cursor:pointer;
+}
+
+.result-item,
+.result-item *{
+  color:white !important;
+}
+
+.search-input{
+  flex:1;
+  height:52px;
+
+  border:none;
+  border-radius:14px;
+
+  background:#2b2b2b;
+  color:white;
+
+  padding:0 16px;
+
+  font-size:15px;
+
+  outline:none;
+
+  box-sizing:border-box;
+}
+
+.search-input::placeholder{
+  color:rgba(255,255,255,0.5);
+}
+
+.material-item{
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+
+  background:#1f1f1f;
+
+  border-radius:14px;
+
+  padding:10px 12px;
+
+  margin-top:0;
+
+  min-height:48px;
+
+  box-sizing:border-box;
+}
+
+.material-left{
+  display:flex;
+  align-items:center;
+  gap:16px;
+
+  flex:1;
+}
+
+.material-left span{
+
+  font-size:15px;
+  color:white;
+
+  word-break:break-word;
+}
+
+.material-check{
+  appearance:none;
+
+  width:22px;
+height:22px;
+
+  min-width:30px;
+
+  border-radius:10px;
+
+  border:2px solid rgba(255,255,255,0.5);
+
+  background:#181818;
+
+  cursor:pointer;
+
+  position:relative;
+
+  transition:0.2s;
+}
+
+.material-check:checked{
+
+  background:#ff6b3d;
+  border-color:#ff6b3d;
+}
+
+.material-check:checked::after{
+
+  content:"✓";
+
+  position:absolute;
+
+  top:50%;
+  left:50%;
+
+  transform:
+    translate(-50%,-55%);
+
+  color:white;
+
+ font-size:15px;
+  font-weight:bold;
+}
+
+.material-done{
+  text-decoration:line-through;
+  opacity:0.45;
+}
+
+.material-delete{
+
+  width:32px;
+  height:32px;
+
+  border:none;
+  border-radius:10px;
+
+  background:#ff3b3b;
+
+  color:white;
+
+  font-size:18px;
+
+  cursor:pointer;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.material-delete:active{
+  transform:scale(0.92);
+}
+
+.image-section{
+  margin-top:16px;
+}
+
+.section-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:14px;
+}
+
+.image-add-btn{
+
+  border:none;
+
+  background:#ff6b3d;
+
+  color:white;
+
+  height:42px;
+
+  padding:0 18px;
+
+  border-radius:14px;
+
+  font-size:15px;
+  font-weight:700;
+
+  cursor:pointer;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.25);
+
+  transition:0.2s;
+}
+
+.image-add-btn:active{
+  transform:scale(0.96);
+}
+
+.image-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+.image-card{
+
+  position:relative;
+
+  background:#1f1f1f;
+
+  border-radius:22px;
+
+  overflow:hidden;
+
+  padding:8px;
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.04),
+    0 4px 12px rgba(0,0,0,0.25);
+}
+
+.image-card img{
+
+  width:100%;
+  height:140px;
+
+  object-fit:cover;
+
+  border-radius:16px;
+
+  display:block;
+}
+
+.delete-image{
+
+  position:absolute;
+
+  top:14px;
+  right:14px;
+
+  width:34px;
+  height:34px;
+
+  border:none;
+
+  border-radius:12px;
+
+  background:rgba(255,59,59,0.95);
+
+  color:white;
+
+  font-size:18px;
+  font-weight:bold;
+
+  cursor:pointer;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  padding:0;
+
+  backdrop-filter:blur(4px);
+}
+
+.delete-image:active{
+  transform:scale(0.92);
+}
+
+.app-content{
+  padding-bottom:140px;
+}
+
+html,
+body{
+  margin:0;
+  padding:0;
+  height:100%;
+}
+
+body{
+  background:#111;
+  overflow-x:hidden;
+}
+
+.app-wrapper{
+  min-height:100vh;
+}
+
+.app-content{
+  padding-bottom:140px;
+}
+
+#folderPath {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-bottom:10px;
+}
+
+.folder-path-btn,
+.document-action-btn {
+  border:none;
+  border-radius:10px;
+  background:#333;
+  color:white;
+  padding:8px 10px;
+  cursor:pointer;
+}
+
+.document-row {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+}
+
+.document-main {
+  flex:1;
+  min-width:0;
+}
+
+.document-title {
+  font-weight:600;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.document-meta {
+  color:#aaa !important;
+  font-size:12px;
+  margin-top:3px;
+}
+
+.folder-dialog-backdrop {
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.7);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  z-index:10000;
+}
+
+.folder-dialog {
+  width:100%;
+  max-width:360px;
+  background:#252525;
+  color:white;
+  border-radius:16px;
+  padding:18px;
+}
+
+.folder-dialog h3 {
+  margin-bottom:12px;
+}
+
+.folder-dialog input {
+  width:100%;
+  margin-bottom:12px;
+}
+
+.folder-dialog-actions {
+  display:flex;
+  gap:8px;
+}
+
+.folder-dialog-actions button {
+  flex:1;
+  margin-bottom:0;
+}
+
+.folder-choice-list {
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  max-height:300px;
+  overflow:auto;
+  margin-bottom:12px;
+}
+
+.folder-choice-list button {
+  width:100%;
+  text-align:left;
+  border:none;
+  border-radius:10px;
+  background:#333;
+  color:white;
+  padding:11px 12px;
+  cursor:pointer;
+}
+
+</style>
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+
+<div class="app-wrapper">
+
+<div class="app-content">
+
+<header class="app-header">
+
+<button
+class="back-btn"
+onclick="goBack()"
+>&#8592;</button>
+
+<h1 class="app-name">
+🛠️ Auftrag
+</h1>
+
+<p class="company-name">
+Details
+</p>
+
+</header>
+
+<div class="top-actions">
+
+<button
+class="done-btn"
+onclick="finishJob()"
+>
+✓ Erledigt
+</button>
+
+<button
+class="delete-btn"
+onclick="deleteJob()"
+>
+🗑 Löschen
+</button>
+
+</div>
+
+<div class="info-box">
+
+  <small>Kunde</small>
+
+  <div
+    id="customer"
+    class="text"
+  ></div>
+
+</div>
+
+<div class="info-box">
+
+  <small>Projekt</small>
+
+  <div
+    id="project"
+    class="text"
+  ></div>
+
+</div>
+
+<div class="info-box">
+
+  <small>Fälligkeit</small>
+
+  <div
+    id="faelligkeit"
+    class="text"
+  ></div>
+
+</div>
+
+<div class="task-card">
+  <h3>Status und Zuweisung</h3>
+  <select id="statusSelect" class="compact-input">
+    <option value="offen">offen</option>
+    <option value="in_arbeit">in Arbeit</option>
+    <option value="wartet_auf_material">wartet auf Material</option>
+    <option value="erledigt">erledigt</option>
+    <option value="abgerechnet">abgerechnet</option>
+  </select>
+  <select id="employeeSelect" class="compact-input" style="margin-top:8px;"></select>
+  <button class="save-btn" style="margin-top:10px;" onclick="saveJobMeta()">Status speichern</button>
+  <p id="jobMetaStatus" style="font-size:12px;opacity:0.75;margin-top:8px;"></p>
+</div>
+
+<div class="info-box">
+
+  <small>Erledigt am</small>
+
+  <div
+    id="erledigtAm"
+    class="text"
+  ></div>
+
+</div>
+
+<div class="info-box">
+
+  <small>Beschreibung</small>
+
+  <div
+    id="beschreibung"
+    class="text"
+  ></div>
+
+</div>
+
+<div class="task-card">
+
+  <div class="section-top">
+    <h3>🧱 Material</h3>
+  </div>
+
+  <div
+    style="
+      display:flex;
+      gap:10px;
+      margin-top:10px;
+    "
+  >
+
+    <input
+      type="text"
+      id="materialInput"
+      placeholder="Material hinzufügen..."
+      class="search-input"
+    >
+
+    <button
+      class="image-add-btn"
+      onclick="addMaterialItem()"
+    >
+      +
+    </button>
+
+  </div>
+
+  <div id="favoriteMaterialList" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
+
+  <button
+    class="save-btn"
+    style="background:#444;margin-top:10px;"
+    onclick="saveMaterialFavoriteFromJob()"
+  >
+    Material als Favorit speichern
+  </button>
+
+  <div
+    id="materialList"
+    style="
+      margin-top:12px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    "
+  ></div>
+
+</div>
+
+<!-- SPRACHNOTIZ -->
+<div class="task-card">
+
+  <h3>🎤 Sprachtext</h3>
+
+  <div
+    style="
+      display:flex;
+      gap:10px;
+      margin-top:12px;
+    "
+  >
+
+    <button
+      class="save-btn"
+      style="flex:1;"
+      onclick="startRecording()"
+    >
+      🎤 Start
+    </button>
+
+    <button
+      class="delete-btn"
+      style="
+        flex:1;
+        background:#444;
+      "
+      onclick="stopRecording()"
+    >
+      ⏹ Stop
+    </button>
+
+  </div>
+
+  <audio
+    id="audioPlayer"
+    controls
+    style="
+      width:100%;
+      margin-top:14px;
+      display:none;
+    "
+  ></audio>
+
+  <button
+    class="delete-btn"
+    style="
+      width:100%;
+      margin-top:10px;
+      display:none;
+    "
+    id="deleteAudioBtn"
+    onclick="deleteAudio()"
+  >
+    🗑 Sprachtext löschen
+  </button>
+
+</div>
+
+
+
+<!-- BILDER -->
+<!-- BILDER -->
+<div class="task-card image-section">
+
+  <div class="section-top">
+
+    <h3>📷 Bilder</h3>
+
+    <button
+      class="image-add-btn"
+      onclick="openImagePicker()"
+    >
+      + Bild
+    </button>
+
+  </div>
+
+  <input
+    type="file"
+    id="imageInput"
+    accept="image/*"
+    multiple
+    style="display:none"
+  >
+
+  <div
+    id="imageList"
+    class="image-grid"
+  ></div>
+
+</div>
+
+
+<!-- DOKUMENTE -->
+<div class="task-card image-section">
+
+  <div class="section-top">
+
+    <h3>Dokumente</h3>
+
+    <button
+      class="image-add-btn"
+      onclick="openDocumentPicker()"
+    >
+      + Datei
+    </button>
+
+  </div>
+
+  <input
+    type="file"
+    id="documentInput"
+    multiple
+    style="display:none"
+  >
+
+  <button
+    class="save-btn"
+    style="background:#444;margin-top:10px;"
+    onclick="createDocumentFolder()"
+  >
+    + Ordner
+  </button>
+
+  <p
+    id="documentStatus"
+    style="font-size:12px;opacity:0.7;margin-top:8px;"
+  ></p>
+
+  <div id="folderPath"></div>
+  <div id="documentList"></div>
+
+</div>
+
+
+
+<!-- NAV -->
+<nav class="bottom-nav">
+
+<a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+
+<a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
+
+<a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+
+<a href="auftraege.html" class="active"><span>&#128203;</span><small>Auftr&auml;ge</small></a>
+
+</nav>
+
+</div>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="project-documents.js"></script>
+<script src="work-presets.js"></script>
+<script src="auto-textareas.js"></script>
+<script src="notifications.js"></script>
+<script>
+
+const jobId =
+  new URLSearchParams(
+    window.location.search
+  ).get("id");
+
+let currentJob = null;
+let projektId = null;
+let employees = [];
+
+loadJob();
+renderFavoriteMaterials();
+loadEmployees();
+
+function renderFavoriteMaterials(){
+
+  const target =
+    document.getElementById("favoriteMaterialList");
+
+  if(!target || !window.BaudokuPresets) return;
+
+  const favorites =
+    window.BaudokuPresets.getMaterialFavorites();
+
+  target.innerHTML = "";
+
+  favorites.forEach(item => {
+    const button =
+      document.createElement("button");
+
+    button.type = "button";
+    button.className = "result-item";
+    button.style.margin = "0";
+    button.style.padding = "8px 10px";
+    button.style.width = "auto";
+    button.textContent = item;
+
+    button.onclick = () => {
+      const input =
+        document.getElementById("materialInput");
+
+      input.value = item;
+    };
+
+    target.appendChild(button);
+  });
+}
+
+function saveMaterialFavoriteFromJob(){
+
+  const value =
+    document.getElementById("materialInput").value.trim();
+
+  if(!value || !window.BaudokuPresets) return;
+
+  window.BaudokuPresets.saveMaterialFavorite(value);
+  renderFavoriteMaterials();
+}
+
+async function loadJob(){
+
+  const { data: job, error } =
+    await db
+    .from("auftraege")
+    .select("*")
+    .eq("id", jobId)
+    .single();
+
+  if(error || !job){
+
+    alert("Auftrag nicht gefunden");
+
+    window.location.href =
+      "auftraege.html";
+
+    return;
+  }
+
+  document.getElementById(
+  "project"
+).textContent =
+  job.project || "-";
+
+
+
+  currentJob = job;
+  projektId =
+    job.project_id || null;
+
+  document.getElementById("statusSelect").value =
+    job.status || (job.done ? "erledigt" : "offen");
+
+  if (job.assigned_to) {
+    document.getElementById("employeeSelect").value = job.assigned_to;
+  }
+
+  initProjectDocuments();
+
+  document.getElementById(
+    "customer"
+  ).textContent =
+    job.customer || "-";
+
+  document.getElementById(
+    "beschreibung"
+  ).textContent =
+    job.beschreibung || "-";
+
+  document.getElementById(
+    "faelligkeit"
+  ).textContent =
+
+  job.faelligkeit
+  ? new Date(
+      job.faelligkeit
+    ).toLocaleDateString(
+      "de-DE"
+    )
+  : "-";
+
+  document.getElementById(
+    "erledigtAm"
+  ).textContent =
+    job.erledigt_am
+    ? new Date(
+        job.erledigt_am
+      ).toLocaleDateString(
+        "de-DE"
+      )
+    : "-";
+
+  await loadImages();
+  await loadAudio();
+  await loadMaterialList();
+}
+
+async function loadEmployees() {
+  const select = document.getElementById("employeeSelect");
+  select.innerHTML = "<option value=''>Nicht zugewiesen</option>";
+
+  if (!navigator.onLine) return;
+
+  const { data, error } =
+    await db
+      .from("employees")
+      .select("*")
+      .order("name", { ascending: true });
+
+  if (error) {
+    console.log(error);
+    return;
+  }
+
+  employees = data || [];
+
+  employees.forEach(employee => {
+    const option = document.createElement("option");
+    option.value = employee.id;
+    option.textContent = employee.name || "Mitarbeiter";
+    select.appendChild(option);
+  });
+}
+
+async function saveJobMeta() {
+  const status = document.getElementById("statusSelect").value;
+  const assignedTo = document.getElementById("employeeSelect").value || null;
+  const statusEl = document.getElementById("jobMetaStatus");
+
+  const update = {
+    status,
+    assigned_to: assignedTo,
+    done: status === "erledigt" || status === "abgerechnet"
+  };
+
+  if (status === "erledigt" || status === "abgerechnet") {
+    update.erledigt_am = currentJob && currentJob.erledigt_am
+      ? currentJob.erledigt_am
+      : new Date().toISOString();
+  }
+
+  const { data, error } =
+    await db
+      .from("auftraege")
+      .update(update)
+      .eq("id", jobId)
+      .select()
+      .single();
+
+  if (error) {
+    console.log(error);
+    statusEl.textContent = "Status konnte nicht gespeichert werden.";
+    statusEl.style.color = "#ff6b3b";
+    return;
+  }
+
+  currentJob = data;
+  statusEl.textContent = "Status gespeichert.";
+  statusEl.style.color = "#9be15d";
+}
+
+function initProjectDocuments(){
+
+  if(
+    !projektId ||
+    !window.BaudokuDocuments
+  ){
+    return;
+  }
+
+  window.BaudokuDocuments.init({
+
+    getProjectId: () => projektId,
+
+    setStatus: (text, color="#aaa") => {
+
+      const status =
+        document.getElementById(
+          "documentStatus"
+        );
+
+      if(!status) return;
+
+      status.textContent =
+        text || "";
+
+      status.style.color =
+        color;
+    },
+
+    onFolderChange: () => {
+      loadImages();
+    }
+  });
+}
+
+async function finishJob(){
+
+  const completedAt =
+    new Date().toISOString();
+
+  const { error } =
+    await db
+    .from("auftraege")
+    .update({
+      done:true,
+      erledigt_am: completedAt
+    })
+    .eq("id", jobId);
+
+  if(error){
+
+    const { error:fallbackError } =
+      await db
+      .from("auftraege")
+      .update({
+        done:true
+      })
+      .eq("id", jobId);
+
+    if(fallbackError){
+
+      console.log(fallbackError);
+      alert("Fehler");
+      return;
+    }
+  }
+
+  if(projektId){
+
+    await db
+      .from("projects")
+      .update({
+        erledigt_am: completedAt
+      })
+      .eq("id", projektId);
+  }
+
+  window.location.href =
+    "auftraege.html";
+}
+
+async function deleteJob(){
+
+  const confirmDelete =
+    confirm(
+      "Auftrag wirklich löschen?"
+    );
+
+  if(!confirmDelete) return;
+
+  await db
+    .from("auftrag_material")
+    .delete()
+    .eq("auftrag_id", jobId);
+
+  const { error } =
+    await db
+    .from("auftraege")
+    .delete()
+    .eq("id", jobId);
+
+  if(error){
+
+    console.log(error);
+    alert(error.message);
+    return;
+  }
+
+  window.location.href =
+    "auftraege.html";
+}
+
+function goBack(){
+
+  window.history.back();
+}
+
+// =======================
+// IMAGE PICKER
+// =======================
+function openImagePicker(){
+
+  document
+    .getElementById("imageInput")
+    .click();
+}
+
+
+// =======================
+// LOAD IMAGES
+// =======================
+async function loadImages(){
+
+  const imageList =
+    document.getElementById(
+      "imageList"
+    );
+
+  imageList.innerHTML = "";
+
+  if(projektId){
+
+    const { data, error } =
+      await db
+      .from("project_images")
+      .select("*")
+      .eq("project_id", projektId)
+      .order("created_at", {
+        ascending:false
+      });
+
+    if(error){
+
+      console.log(error);
+      return;
+    }
+
+    (data || [])
+    .filter(img => {
+
+      if(!window.BaudokuDocuments){
+        return true;
+      }
+
+      return window.BaudokuDocuments
+        .imageBelongsToFolder(
+          projektId,
+          img.image_url,
+          window.BaudokuDocuments
+            .getCurrentFolderId()
+        );
+    })
+    .forEach(img => {
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "image-card";
+
+    div.innerHTML = `
+
+      <img
+        src="${img.image_url}"
+      >
+
+      <button
+        class="delete-image"
+        onclick="
+          event.stopPropagation();
+          deleteImage('${img.id}')
+        "
+      >
+        ✕
+      </button>
+
+      ${
+        window.BaudokuDocuments
+        ? `
+          <button
+            class="document-action-btn"
+            style="width:100%;margin-top:8px;"
+            onclick="
+              event.stopPropagation();
+              moveImageToFolder('${img.image_url}')
+            "
+          >
+            Verschieben
+          </button>
+        `
+        : ""
+      }
+
+    `;
+
+    imageList.appendChild(div);
+
+  });
+
+    return;
+  }
+
+  imageList.innerHTML =
+    "<p class='empty-hint'>Bilder werden erst nach dem Speichern des Projekts abgelegt.</p>";
+}
+
+
+
+// =======================
+// IMAGE UPLOAD
+// =======================
+document
+.getElementById("imageInput")
+
+.addEventListener(
+  "change",
+  async function(){
+
+  const files = this.files;
+
+  if(projektId){
+
+    for(let file of files){
+
+      const fileName =
+        [
+          projektId,
+          Date.now(),
+          Math.random()
+            .toString(36)
+            .slice(2)
+        ].join("_") + ".jpg";
+
+      const { error:uploadError } =
+        await db
+        .storage
+        .from("bilder")
+        .upload(fileName, file);
+
+      if(uploadError){
+
+        console.log(uploadError);
+        continue;
+      }
+
+      const { data } =
+        db.storage
+        .from("bilder")
+        .getPublicUrl(fileName);
+
+      if(!data || !data.publicUrl){
+        continue;
+      }
+
+      const { error:insertError } =
+        await db
+        .from("project_images")
+        .insert([{
+          project_id: projektId,
+          image_url: data.publicUrl,
+          folder_id:
+            window.BaudokuDocuments
+            ? window.BaudokuDocuments.getCurrentFolderId()
+            : null
+        }]);
+
+      if(insertError){
+        console.log(insertError);
+        continue;
+      }
+
+      if(window.BaudokuDocuments){
+        await window.BaudokuDocuments
+          .assignImageToFolder(
+            data.publicUrl,
+            projektId,
+            window.BaudokuDocuments
+              .getCurrentFolderId()
+          );
+      }
+    }
+
+    this.value = "";
+    loadImages();
+    return;
+  }
+
+  alert("Bitte den Auftrag zuerst mit einem Projekt verknuepfen.");
+
+});
+
+// =======================
+// DELETE IMAGE
+// =======================
+async function deleteImage(index){
+
+  if(projektId){
+
+    await db
+      .from("project_images")
+      .delete()
+      .eq("id", index);
+
+    loadImages();
+    return;
+  }
+
+  loadImages();
+}
+
+async function moveImageToFolder(imageUrl){
+
+  if(
+    !window.BaudokuDocuments ||
+    !projektId
+  ){
+    return;
+  }
+
+  await window.BaudokuDocuments
+    .moveImage(
+      imageUrl,
+      projektId
+    );
+}
+
+let mediaRecorder;
+let audioChunks = [];
+let currentAudioId = null;
+
+async function startRecording(){
+
+  const stream =
+    await navigator
+    .mediaDevices
+    .getUserMedia({
+      audio:true
+    });
+
+  mediaRecorder =
+    new MediaRecorder(stream);
+
+  audioChunks = [];
+
+  mediaRecorder.ondataavailable =
+    e => {
+
+    audioChunks.push(e.data);
+  };
+
+  mediaRecorder.onstop = async () => {
+
+    const audioBlob =
+      new Blob(audioChunks,{
+        type:"audio/webm"
+      });
+
+    const audioUrl =
+      URL.createObjectURL(audioBlob);
+
+    const player =
+      document.getElementById(
+        "audioPlayer"
+      );
+
+    player.src = audioUrl;
+
+    player.style.display =
+      "block";
+
+    document.getElementById(
+      "deleteAudioBtn"
+    ).style.display = "block";
+
+    // 💾 speichern
+    await saveAudioBlob(audioBlob);
+  };
+
+  mediaRecorder.start();
+}
+
+function stopRecording(){
+
+  if(mediaRecorder){
+
+    mediaRecorder.stop();
+  }
+}
+
+async function saveAudioBlob(audioBlob){
+
+  if(!projektId){
+    alert("Bitte den Auftrag zuerst mit einem Projekt verknuepfen.");
+    return;
+  }
+
+  const fileName =
+    [
+      "audio",
+      projektId,
+      jobId + "_" + Date.now() + ".webm"
+    ].join("/");
+
+  const { error:uploadError } =
+    await db
+    .storage
+    .from("bilder")
+    .upload(fileName, audioBlob, {
+      contentType:"audio/webm",
+      upsert:true
+    });
+
+  if(uploadError){
+    console.log(uploadError);
+    alert("Sprachaufnahme konnte nicht hochgeladen werden.");
+    return;
+  }
+
+  const { data } =
+    db.storage
+    .from("bilder")
+    .getPublicUrl(fileName);
+
+  if(!data || !data.publicUrl){
+    alert("Sprachaufnahme konnte nicht gespeichert werden.");
+    return;
+  }
+
+  const { data:record, error:insertError } =
+    await db
+    .from("project_audio")
+    .insert([{
+      project_id: projektId,
+      audio_url: data.publicUrl,
+      folder_id:
+        window.BaudokuDocuments
+        ? window.BaudokuDocuments.getCurrentFolderId()
+        : null
+    }])
+    .select()
+    .single();
+
+  if(insertError){
+    console.log(insertError);
+    alert("Sprachaufnahme konnte nicht in Supabase gespeichert werden.");
+    return;
+  }
+
+  currentAudioId =
+    record && record.id
+    ? record.id
+    : null;
+}
+
+async function deleteAudio(){
+
+  if(currentAudioId){
+    const { error } =
+      await db
+      .from("project_audio")
+      .delete()
+      .eq("id", currentAudioId);
+
+    if(error){
+      console.log(error);
+      alert("Sprachaufnahme konnte nicht geloescht werden.");
+      return;
+    }
+  }
+
+  currentAudioId = null;
+
+  const player =
+    document.getElementById(
+      "audioPlayer"
+    );
+
+  player.src = "";
+
+  player.style.display =
+    "none";
+
+  document.getElementById(
+    "deleteAudioBtn"
+  ).style.display = "none";
+}
+
+// =======================
+// AUDIO LADEN
+// =======================
+async function loadAudio(){
+
+  if(!projektId){
+    return;
+  }
+
+  const { data, error } =
+    await db
+    .from("project_audio")
+    .select("*")
+    .eq("project_id", projektId)
+    .order("created_at", {
+      ascending:false
+    })
+    .limit(1);
+
+  if(error){
+    console.log(error);
+    return;
+  }
+
+  const audio =
+    data && data.length
+    ? data[0]
+    : null;
+
+  if(!audio) return;
+
+  currentAudioId =
+    audio.id || null;
+
+  const player =
+    document.getElementById(
+      "audioPlayer"
+    );
+
+  player.src =
+    audio.audio_url;
+
+  player.style.display =
+    "block";
+
+  document.getElementById(
+    "deleteAudioBtn"
+  ).style.display = "block";
+}
+
+async function addMaterialItem(){
+
+  const input =
+    document.getElementById(
+      "materialInput"
+    );
+
+  const value =
+    input.value.trim();
+
+  if(!value) return;
+
+  const { error } =
+    await db
+    .from("auftrag_material")
+    .insert({
+
+      auftrag_id: jobId,
+
+      text:value,
+
+      done:false
+    });
+
+  if(error){
+
+    console.log(error);
+    return;
+  }
+
+  input.value = "";
+
+  await loadMaterialList();
+}
+
+async function loadMaterialList(){
+
+  const list =
+    document.getElementById(
+      "materialList"
+    );
+
+  list.innerHTML = "";
+
+  const { data: items, error } =
+    await db
+    .from("auftrag_material")
+    .select("*")
+    .eq("auftrag_id", jobId)
+    .order(
+      "created_at",
+      { ascending:false }
+    );
+
+  if(error){
+
+    console.log(error);
+    return;
+  }
+
+  items.forEach((item,index) => {
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "material-item";
+
+    div.innerHTML = `
+
+      <div class="material-left">
+
+        <input
+          type="checkbox"
+          class="material-check"
+          ${item.done ? "checked" : ""}
+          onchange="
+            toggleMaterial('${item.id}')
+          "
+        >
+
+        <span class="
+          ${
+            item.done
+            ? "material-done"
+            : ""
+          }
+        ">
+          ${item.text}
+        </span>
+
+      </div>
+
+      <button
+        class="delete-btn"
+        style="
+          width:40px;
+          height:40px;
+          padding:0;
+        "
+        onclick="
+          deleteMaterial('${item.id}')
+        "
+      >
+        ✕
+      </button>
+
+    `;
+
+    list.appendChild(div);
+
+  });
+
+  await updateProjectMaterialSummary(items);
+}
+
+async function updateProjectMaterialSummary(items){
+
+  if(!projektId) return;
+
+  const text =
+    (items || [])
+    .map(item =>
+      (item.done ? "[x] " : "[ ] ") +
+      item.text
+    )
+    .join("\n");
+
+  await db
+    .from("projects")
+    .update({
+      material:text
+    })
+    .eq("id", projektId);
+}
+
+async function toggleMaterial(id){
+
+  const { data } =
+    await db
+    .from("auftrag_material")
+    .select("done")
+    .eq("id", id)
+    .single();
+
+  await db
+    .from("auftrag_material")
+    .update({
+      done: !data.done
+    })
+    .eq("id", id);
+
+  await loadMaterialList();
+}
+
+async function deleteMaterial(id){
+
+  await db
+    .from("auftrag_material")
+    .delete()
+    .eq("id", id);
+
+  await loadMaterialList();
+}
+
+</script>
+
+<script src="pwa.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heutige Planung</title>
+
+<link rel="stylesheet" href="style.css">
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <div class="app-content">
+
+    <header class="app-header">
+      <button class="back-btn" onclick="goBack()">&#8592;</button>
+
+      <h1 class="app-name">
+        🚨 Dringend zu erledigen
+      </h1>
+
+      <p class="company-name">
+        Übersicht
+      </p>
+    </header>
+
+    <div class="task-card">
+
+      <textarea
+        placeholder="Dringende Aufgaben..."
+        style="
+          width:100%;
+          height:300px;
+          border:none;
+          border-radius:12px;
+          padding:12px;
+        "
+      ></textarea>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+function goBack() {
+  window.history.back();
+}
+
+</script>
+
+<script src="pwa.js"></script>
+</body>
+</html>

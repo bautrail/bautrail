@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrieren - Baudoku</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+
+<div class="app-wrapper">
+  <div class="app-content" style="display:flex;justify-content:center;align-items:center;height:100vh;">
+    <div class="task-card" style="width:100%;max-width:380px;">
+      <h2 style="text-align:center;margin-bottom:20px;">Registrieren</h2>
+
+      <input type="email" id="email" placeholder="E-Mail" style="width:100%;margin-bottom:10px;padding:12px;border-radius:10px;border:none;">
+      <input type="password" id="password" placeholder="Passwort" style="width:100%;margin-bottom:10px;padding:12px;border-radius:10px;border:none;">
+      <input type="text" id="fullName" placeholder="Name" style="width:100%;margin-bottom:10px;padding:12px;border-radius:10px;border:none;">
+
+      <div style="background:#2b2b2b;border-radius:10px;padding:10px;margin-bottom:10px;">
+        <p style="margin:0 0 8px 0;font-size:14px;opacity:0.85;">Rolle waehlen</p>
+        <label style="display:block;margin-bottom:6px;font-size:14px;"><input type="radio" name="registerRole" value="chef" checked onchange="handleRoleUi()"> Ich bin Chef / Firma erstellen</label>
+        <label style="display:block;margin-bottom:6px;font-size:14px;"><input type="radio" name="registerRole" value="buero" onchange="handleRoleUi()"> Ich bin Buero / Einladungscode eingeben</label>
+        <label style="display:block;font-size:14px;"><input type="radio" name="registerRole" value="angestellter" onchange="handleRoleUi()"> Ich bin Angestellter / Einladungscode eingeben</label>
+      </div>
+
+      <input type="text" id="companyName" placeholder="Firmenname" style="width:100%;margin-bottom:10px;padding:12px;border-radius:10px;border:none;">
+      <input type="text" id="inviteCode" placeholder="Einladungscode (z.B. BAU-8F3K-22)" style="width:100%;margin-bottom:10px;padding:12px;border-radius:10px;border:none;display:none;">
+
+      <p id="errorMsg" style="color:#ff3b3b;font-size:14px;text-align:center;margin-bottom:10px;display:none;"></p>
+
+      <button onclick="register()" style="width:100%;padding:12px;border:none;border-radius:10px;background:#ff6b3d;color:white;font-size:16px;cursor:pointer;">
+        Registrieren
+      </button>
+
+      <p style="margin-top:15px;text-align:center;font-size:14px;">
+        Schon ein Konto?
+        <a href="login.html" style="color:#ff6b3d;text-decoration:none;">Login</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script>
+const PENDING_SETUP_KEY = "baudokuPendingCompanySetup";
+
+function selectedRole() {
+  const checked = document.querySelector("input[name='registerRole']:checked");
+  return checked ? checked.value : "chef";
+}
+
+function handleRoleUi() {
+  const role = selectedRole();
+  const companyName = document.getElementById("companyName");
+  const inviteCode = document.getElementById("inviteCode");
+
+  if (role === "chef") {
+    companyName.style.display = "block";
+    inviteCode.style.display = "none";
+  } else {
+    companyName.style.display = "none";
+    inviteCode.style.display = "block";
+  }
+}
+
+function normalizeInviteCode(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function mapAuthError(error) {
+  if (!error || !error.message) return "Unbekannter Fehler.";
+  if (error.message.includes("User already registered")) return "Diese E-Mail ist bereits registriert.";
+  if (error.message.includes("Password")) return "Passwort muss mindestens 6 Zeichen haben.";
+  return error.message;
+}
+
+async function register() {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const fullName = document.getElementById("fullName").value.trim();
+  const role = selectedRole();
+  const companyName = document.getElementById("companyName").value.trim();
+  const inviteCode = normalizeInviteCode(document.getElementById("inviteCode").value);
+  const errorBox = document.getElementById("errorMsg");
+
+  errorBox.style.display = "none";
+  errorBox.textContent = "";
+
+  if (!email || !password || !fullName) {
+    errorBox.style.display = "block";
+    errorBox.textContent = "Bitte E-Mail, Passwort und Name ausfuellen.";
+    return;
+  }
+
+  if (role === "chef" && !companyName) {
+    errorBox.style.display = "block";
+    errorBox.textContent = "Bitte Firmenname eintragen.";
+    return;
+  }
+
+  if (role !== "chef" && !inviteCode) {
+    errorBox.style.display = "block";
+    errorBox.textContent = "Bitte Einladungscode eingeben.";
+    return;
+  }
+
+  let inviteRow = null;
+  if (role !== "chef") {
+    // Invite wird nach Login serverseitig via RPC konsumiert (sicher + RLS-konform).
+    inviteRow = { role, company_id: null };
+  }
+
+  const pendingSetup = {
+    email,
+    fullName,
+    role,
+    companyName: companyName || "",
+    inviteCode: inviteCode || "",
+    createdAt: new Date().toISOString()
+  };
+
+  const { data: signUpData, error } = await db.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: fullName
+      }
+    }
+  });
+
+  if (error) {
+    errorBox.style.display = "block";
+    errorBox.textContent = mapAuthError(error);
+    return;
+  }
+
+  const userId = signUpData && signUpData.user ? signUpData.user.id : null;
+  if (!userId) {
+    errorBox.style.display = "block";
+    errorBox.textContent = "Registrierung erstellt, aber Benutzer-ID fehlt. Bitte einloggen.";
+    return;
+  }
+
+  try {
+    let companyId = null;
+    let memberRole = role;
+
+    if (role === "chef") {
+      const { data: company, error: companyError } = await db
+        .from("companies")
+        .insert([{ name: companyName, email }])
+        .select("id")
+        .single();
+
+      if (companyError || !company) {
+        throw companyError || new Error("Firma konnte nicht erstellt werden.");
+      }
+
+      companyId = company.id;
+    } else {
+      throw new Error("Einladungs-Setup wird nach Login abgeschlossen.");
+    }
+
+    const { error: memberError } = await db
+      .from("company_members")
+      .insert([{
+        company_id: companyId,
+        user_id: userId,
+        role: memberRole,
+        name: fullName,
+        email,
+        active: true
+      }]);
+
+    if (memberError) throw memberError;
+
+  } catch (err) {
+    console.log(err);
+    localStorage.setItem(PENDING_SETUP_KEY, JSON.stringify(pendingSetup));
+    window.location.href = "login.html?setup=pending";
+    return;
+  }
+
+  const target =
+    window.BaudokuAuthContext
+      ? window.BaudokuAuthContext.dashboardPathForRole(role)
+      : "index.html";
+
+  window.location.href = target;
+}
+
+handleRoleUi();
+</script>
+
+<script src="pwa.js"></script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offene Leistungen</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <button class="back-btn" onclick="window.location.href='index.html'">&#8592;</button>
+      <h1 class="app-name">Offene Leistungen</h1>
+      <p class="company-name">Rechnungsgrundlage und Abrechnung</p>
+    </header>
+
+    <div class="task-card">
+      <strong>Uebersicht</strong>
+      <p id="summary" style="margin-top:8px;opacity:0.8;">Wird geladen...</p>
+    </div>
+
+    <div id="list"></div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+    <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
+    <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+    <a href="profil.html"><span>&#128100;</span><small>Profil</small></a>
+  </nav>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script>
+let cache = [];
+
+function euro(value) {
+  return Number(value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " EUR";
+}
+
+async function loadOpenServices() {
+  const { data, error } = await db
+    .from("stundennachweise")
+    .select("*")
+    .eq("abrechenbar", true)
+    .eq("abgerechnet", false)
+    .order("arbeitsdatum", { ascending: false });
+
+  if (error) {
+    console.log(error);
+    document.getElementById("summary").textContent = "Konnte offene Leistungen nicht laden.";
+    return;
+  }
+
+  cache = data || [];
+  const total = cache.reduce((sum, item) => sum + Number(item.netto_summe || 0), 0);
+  document.getElementById("summary").textContent = cache.length + " offene Positionen | Summe: " + euro(total);
+
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  if (!cache.length) {
+    list.innerHTML = "<div class='task-card'><p style='opacity:0.75;'>Keine offenen Leistungen.</p></div>";
+    return;
+  }
+
+  cache.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "task-card";
+    card.innerHTML = `
+      <strong>${item.customer || "Kunde"} - ${item.objekt || "Objekt"}</strong><br>
+      <small>${item.arbeitsdatum || "-"} | ${item.project || "-"}</small>
+      <p style="margin-top:8px;opacity:0.85;">Stunden: ${item.stunden || 0} | Satz: ${euro(item.stundensatz)} | Netto: ${euro(item.netto_summe)}</p>
+      <div class="button-row">
+        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="openSheet('${item.id}')">Oeffnen</button>
+        <button class="login-btn" style="margin-bottom:0;" onclick="markInvoiced('${item.id}')">Als abgerechnet markieren</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+window.openSheet = function(id) {
+  window.location.href = "stunden-nachweis.html?id=" + id;
+};
+
+window.markInvoiced = async function(id) {
+  const ref = prompt("Rechnungsnummer eingeben (optional):") || "";
+  const { error } = await db
+    .from("stundennachweise")
+    .update({ abgerechnet: true, invoice_reference: ref })
+    .eq("id", id);
+
+  if (error) {
+    console.log(error);
+    alert("Aktualisieren fehlgeschlagen.");
+    return;
+  }
+  await loadOpenServices();
+};
+
+loadOpenServices();
+</script>
+<script src="pwa.js"></script>
+</body>
+</html>

@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Planung</title>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+
+.plan-box{
+  margin-top:12px;
+}
+
+.plan-item{
+  background:#1e1e1e;
+  border-radius:14px;
+  padding:12px;
+  margin-bottom:10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.plan-item small{
+  opacity:0.7;
+}
+
+.input-row{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+}
+
+.input-row input{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:#2b2b2b;
+  color:white;
+}
+
+textarea{
+  width:100%;
+  height:220px;
+  border:none;
+  border-radius:12px;
+  padding:12px;
+  background:#2b2b2b;
+  color:white;
+  resize:none;
+  margin-top:10px;
+}
+
+.add-btn{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  margin-top:10px;
+  background:#ff6b3d;
+  color:white;
+  font-size:15px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.delete-btn{
+  background:#ff3b3b;
+  color:white;
+  border:none;
+  border-radius:8px;
+  padding:6px 10px;
+  cursor:pointer;
+}
+
+.planning-tabs{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+  overflow:auto;
+}
+
+.planning-tab-btn{
+  border:none;
+  border-radius:10px;
+  padding:9px 12px;
+  background:#2b2b2b;
+  color:white;
+  cursor:pointer;
+  white-space:nowrap;
+}
+
+.planning-tab-btn.active{
+  background:#ff6b3d;
+}
+
+</style>
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Baudoku">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <div class="app-content">
+
+    <!-- HEADER -->
+    <header class="app-header">
+
+      <button class="back-btn"
+      onclick="goBack()">&#8592;</button>
+
+      <h1 class="app-name">📅 Planung</h1>
+
+      <p class="company-name">Heute, Morgen und diese Woche</p>
+
+    </header>
+
+
+    <!-- KUNDE -->
+<div class="task-card">
+
+  <h3>👥 Kunde hinzufügen</h3>
+
+  <div class="input-row">
+
+    <input
+      type="text"
+      id="kundenSearch"
+      placeholder="Kunde suchen..."
+      oninput="filterKunden()"
+    >
+
+    <button
+      class="add-btn"
+      style="width:auto;padding:0 20px;"
+      onclick="createNewCustomer()"
+    >
+      +
+    </button>
+
+  </div>
+
+  <!-- SUCHERGEBNISSE -->
+  <div
+    id="kundenDropdown"
+    class="plan-box"
+  ></div>
+
+  <!-- AUSGEWÄHLTE -->
+  <div
+    id="kundenList"
+    class="plan-box"
+  ></div>
+
+</div>
+
+
+    
+ <!-- PROJEKT -->
+<div class="task-card">
+
+  <h3>📦 Projekt hinzufügen</h3>
+
+  <div
+    class="input-row"
+    id="projektRow"
+    style="display:none;"
+  >
+
+    <input
+      type="text"
+      id="projektSearch"
+      placeholder="Projekt suchen..."
+      oninput="filterProjekte()"
+    >
+
+    <button
+      class="add-btn"
+      style="width:auto;padding:0 20px;"
+      onclick="createNewProjekt()"
+    >
+      +
+    </button>
+
+  </div>
+
+  <!-- SUCHERGEBNISSE -->
+  <div
+    id="projektDropdown"
+    class="plan-box"
+  ></div>
+
+  <!-- AUSGEWÄHLTE -->
+  <div
+    id="projektList"
+    class="plan-box"
+  ></div>
+
+  <!-- NOTIZ -->
+<div class="task-card">
+
+  <h3>📝 Tagesnotizen</h3>
+
+  <textarea
+    id="notiz"
+    placeholder="Tagesplanung..."
+  ></textarea>
+
+  <p
+    id="saveStatus"
+    style="
+      margin-top:8px;
+      font-size:12px;
+      opacity:0.7;
+    "
+  ></p>
+
+</div>
+
+</div>
+
+<div class="task-card">
+  <h3>📅 Planung</h3>
+  <div class="planning-tabs">
+    <button class="planning-tab-btn active" onclick="setPlanningTab('today', event)">📅 Heute</button>
+    <button class="planning-tab-btn" onclick="setPlanningTab('tomorrow', event)">🌅 Morgen</button>
+    <button class="planning-tab-btn" onclick="setPlanningTab('week', event)">🗓️ Diese Woche</button>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+    <small id="planningCount" style="opacity:0.7;">0 Einträge</small>
+  </div>
+  <div id="planningList" style="margin-top:10px;"></div>
+</div>
+
+<!-- NAV -->
+<nav class="bottom-nav">
+
+  <a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+
+  <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
+
+  <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+
+  <a href="#" class="active">
+    <span>📅</span>
+    <small>Planung</small>
+  </a>
+
+</nav>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script>
+
+// =======================
+// STORAGE KEYS
+// =======================
+
+const kundenKey =
+  "planung_kunden";
+
+const projektKey =
+  "planung_projekte";
+
+const notizKey =
+  "planung_notiz";
+
+
+// =======================
+// ELEMENTE
+// =======================
+
+const kundenList =
+  document.getElementById("kundenList");
+
+const projektList =
+  document.getElementById("projektList");
+
+const notiz =
+  document.getElementById("notiz");
+
+const saveStatus =
+  document.getElementById("saveStatus");
+
+
+// =======================
+// LADEN
+// =======================
+
+loadKunden();
+loadProjekte();
+loadNotiz();
+// =======================
+// KUNDEN SUCHEN
+// =======================
+
+function filterKunden() {
+
+  const input =
+    document.getElementById("kundenSearch");
+
+  const dropdown =
+    document.getElementById("kundenDropdown");
+
+  const value =
+    input.value.toLowerCase();
+
+  dropdown.innerHTML = "";
+
+  if(!value) return;
+
+  const kunden =
+    JSON.parse(
+      localStorage.getItem("customers")
+    ) || [];
+
+  const filtered =
+    kunden.filter(kunde => {
+
+      const name =
+        (
+          kunde.firma ||
+          (
+            kunde.vorname + " " +
+            kunde.nachname
+          )
+        ).toLowerCase();
+
+      return name.includes(value);
+    });
+
+  filtered.forEach(kunde => {
+
+    const name =
+      kunde.firma ||
+      (
+        kunde.vorname + " " +
+        kunde.nachname
+      );
+
+    const div =
+      document.createElement("div");
+
+    div.className = "plan-item";
+
+    div.style.cursor = "pointer";
+
+    div.innerHTML = `
+      <div>
+        <strong>${name}</strong>
+      </div>
+    `;
+
+    div.onclick = () => {
+
+      addKunde(name, kunde.id);
+
+      dropdown.innerHTML = "";
+
+      input.value = "";
+
+      document.getElementById(
+  "projektRow"
+).style.display = "flex";
+    };
+
+    dropdown.appendChild(div);
+
+  });
+}
+
+
+
+// =======================
+// KUNDE HINZUFÜGEN
+// =======================
+
+function addKunde(name, kundeId) {
+
+  let kunden =
+    JSON.parse(
+      localStorage.getItem(kundenKey)
+    ) || [];
+
+  const exists =
+    kunden.find(
+      k => k.id === kundeId
+    );
+
+  if(exists) return;
+
+  kunden.push({
+    id: kundeId,
+    name: name
+  });
+
+  localStorage.setItem(
+    kundenKey,
+    JSON.stringify(kunden)
+  );
+
+  loadKunden();
+}
+
+
+// =======================
+// KUNDEN LADEN
+// =======================
+
+function loadKunden() {
+
+  kundenList.innerHTML = "";
+
+  const kunden =
+    JSON.parse(
+      localStorage.getItem(kundenKey)
+    ) || [];
+
+  kunden.forEach((kunde,index) => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "plan-item";
+
+    div.innerHTML = `
+      <div>
+        <strong>${kunde.name}</strong>
+      </div>
+
+      <button
+        class="delete-btn"
+        onclick="deleteKunde(${index})"
+      >
+        ✖
+      </button>
+    `;
+
+    kundenList.appendChild(div);
+
+  });
+}
+
+// =======================
+// KUNDE LÖSCHEN
+// =======================
+
+function deleteKunde(index) {
+
+  let kunden =
+    JSON.parse(
+      localStorage.getItem(kundenKey)
+    ) || [];
+
+  kunden.splice(index,1);
+
+  localStorage.setItem(
+    kundenKey,
+    JSON.stringify(kunden)
+  );
+
+  loadKunden();
+}
+
+// =======================
+// PROJEKTE SUCHEN
+// =======================
+
+function filterProjekte() {
+
+  const input =
+    document.getElementById("projektSearch");
+
+  const dropdown =
+    document.getElementById("projektDropdown");
+
+  const value =
+    input.value.toLowerCase();
+
+  dropdown.innerHTML = "";
+
+  if(!value) return;
+
+  const kunden =
+    JSON.parse(
+      localStorage.getItem(kundenKey)
+    ) || [];
+
+  if(!kunden.length) return;
+
+  const letzterKunde =
+    kunden[kunden.length - 1];
+
+  const projekte =
+    JSON.parse(
+      localStorage.getItem(
+        "projects_" + letzterKunde.id
+      )
+    ) || [];
+
+  const filtered =
+    projekte.filter(projekt => {
+
+      return (
+        projekt.name || ""
+      )
+      .toLowerCase()
+      .includes(value);
+
+    });
+
+  filtered.forEach(projekt => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "plan-item";
+
+    div.style.cursor = "pointer";
+
+    div.innerHTML = `
+      <div>
+        <strong>${projekt.name}</strong>
+      </div>
+    `;
+
+    div.onclick = () => {
+
+      addProjekt(
+        projekt.name,
+        projekt.id
+      );
+
+      dropdown.innerHTML = "";
+
+      input.value = "";
+    };
+
+    dropdown.appendChild(div);
+
+  });
+
+  document.getElementById(
+    "projektRow"
+  ).style.display = "flex";
+}
+
+
+// =======================
+// PROJEKT HINZUFÜGEN
+// =======================
+
+function addProjekt(name, projektId) {
+
+  let projekte =
+    JSON.parse(
+      localStorage.getItem(projektKey)
+    ) || [];
+
+  const exists =
+    projekte.find(
+      p => p.id === projektId
+    );
+
+  if(exists) return;
+
+  projekte.push({
+    id: projektId,
+    name: name
+  });
+
+  localStorage.setItem(
+    projektKey,
+    JSON.stringify(projekte)
+  );
+
+  loadProjekte();
+}
+
+
+// =======================
+// PROJEKTE LADEN
+// =======================
+
+function loadProjekte() {
+
+  projektList.innerHTML = "";
+
+  const projekte =
+    JSON.parse(
+      localStorage.getItem(projektKey)
+    ) || [];
+
+  projekte.forEach((projekt,index) => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "plan-item";
+
+    div.innerHTML = `
+      <div>
+        <strong>${projekt.name}</strong>
+      </div>
+
+      <button
+        class="delete-btn"
+        onclick="deleteProjekt(${index})"
+      >
+        ✖
+      </button>
+    `;
+
+    projektList.appendChild(div);
+
+  });
+}
+
+
+// =======================
+// PROJEKT LÖSCHEN
+// =======================
+
+function deleteProjekt(index) {
+
+  let projekte =
+    JSON.parse(
+      localStorage.getItem(projektKey)
+    ) || [];
+
+  projekte.splice(index,1);
+
+  localStorage.setItem(
+    projektKey,
+    JSON.stringify(projekte)
+  );
+
+  loadProjekte();
+}
+
+
+// =======================
+// NOTIZ LADEN
+// =======================
+
+function loadNotiz() {
+
+  const saved =
+    localStorage.getItem(notizKey);
+
+  if(saved){
+
+    notiz.value = saved;
+
+  }
+}
+
+
+// =======================
+// AUTOSAVE NOTIZ
+// =======================
+
+let timeout;
+
+notiz.addEventListener("input", () => {
+
+  clearTimeout(timeout);
+
+  saveStatus.textContent =
+    "Speichert...";
+
+  timeout = setTimeout(() => {
+
+    localStorage.setItem(
+      notizKey,
+      notiz.value
+    );
+
+    saveStatus.textContent =
+      "Gespeichert ✅";
+
+    setTimeout(() => {
+
+      saveStatus.textContent = "";
+
+    },1500);
+
+  },500);
+
+});
+
+
+// =======================
+// NAVIGATION
+// =======================
+
+function goBack() {
+
+  window.history.back();
+}
+
+// =======================
+// NEUEN KUNDEN ANLEGEN
+// =======================
+
+function createNewCustomer() {
+
+  window.location.href =
+    "kunde-anlegen.html";
+}
+
+// =======================
+// NEUES PROJEKT
+// =======================
+
+function createNewProjekt() {
+
+  const kunden =
+    JSON.parse(
+      localStorage.getItem(kundenKey)
+    ) || [];
+
+  if(!kunden.length){
+
+    alert(
+      "Erst Kunde auswählen"
+    );
+
+    return;
+  }
+
+  const letzterKunde =
+    kunden[kunden.length - 1];
+
+  window.location.href =
+    "projekt-anlegen.html?id=" +
+    letzterKunde.id;
+}
+
+let planningTab = "today";
+let planningTodayItems = [];
+let planningTomorrowItems = [];
+let planningWeekItems = [];
+
+function toDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return [year, month, day].join("-");
+}
+
+function renderPlanningTab() {
+  const list = document.getElementById("planningList");
+  const count = document.getElementById("planningCount");
+  if (!list || !count) return;
+
+  const items =
+    planningTab === "today"
+      ? planningTodayItems
+      : planningTab === "tomorrow"
+      ? planningTomorrowItems
+      : planningWeekItems;
+
+  count.textContent = items.length + " Einträge";
+
+  if (!items.length) {
+    list.innerHTML = "<p style='opacity:0.7;'>Nichts offen.</p>";
+    return;
+  }
+
+  list.innerHTML = "";
+  items.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "info-box";
+    div.style.cursor = "pointer";
+    div.style.marginBottom = "8px";
+    div.innerHTML = `
+      <small>${item.type}</small>
+      <div class="text">${item.title}</div>
+      <small>${item.subtitle || ""}</small>
+    `;
+    div.onclick = () => {
+      window.location.href = item.href;
+    };
+    list.appendChild(div);
+  });
+}
+
+function setPlanningTab(tab, event) {
+  planningTab = tab;
+  document.querySelectorAll(".planning-tab-btn").forEach(btn => btn.classList.remove("active"));
+  if (event && event.target) {
+    event.target.classList.add("active");
+  }
+  renderPlanningTab();
+}
+
+async function loadPlanningTimeline() {
+  const list = document.getElementById("planningList");
+
+  if (!navigator.onLine || !window.db) {
+    if (list) {
+      list.innerHTML = "<p style='opacity:0.7;'>Planung wird online geladen.</p>";
+    }
+    return;
+  }
+
+  const [{ data: jobs }, { data: projects }] = await Promise.all([
+    db.from("auftraege").select("*").order("faelligkeit", { ascending: true }),
+    db.from("projects").select("*").order("faelligkeit", { ascending: true })
+  ]);
+
+  const now = new Date();
+  const todayKey = toDateKey(now);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowKey = toDateKey(tomorrow);
+  const weekLimit = new Date(now);
+  weekLimit.setDate(weekLimit.getDate() + 7);
+
+  planningTodayItems = [];
+  planningTomorrowItems = [];
+  planningWeekItems = [];
+
+  (jobs || []).forEach(job => {
+    const statusValue = job.status || (job.done ? "erledigt" : "offen");
+    if (statusValue === "erledigt" || statusValue === "abgerechnet" || !job.faelligkeit) return;
+
+    const dueDate = new Date(job.faelligkeit);
+    const dueKey = toDateKey(dueDate);
+    const item = {
+      type: "Auftrag",
+      title: (job.customer || "Kunde") + " - " + (job.project || "Projekt"),
+      subtitle: job.beschreibung || "",
+      href: "auftrag-detail.html?id=" + job.id
+    };
+
+    if (dueKey === todayKey) planningTodayItems.push(item);
+    if (dueKey === tomorrowKey) planningTomorrowItems.push(item);
+    if (dueDate >= now && dueDate <= weekLimit) planningWeekItems.push(item);
+  });
+
+  (projects || []).forEach(project => {
+    if (!project.faelligkeit) return;
+
+    const dueDate = new Date(project.faelligkeit);
+    const dueKey = toDateKey(dueDate);
+    const item = {
+      type: "Projekt",
+      title: project.name || "Projekt",
+      subtitle: project.customer || "",
+      href: "projekt-detail.html?id=" + project.id
+    };
+
+    if (dueKey === todayKey) planningTodayItems.push(item);
+    if (dueKey === tomorrowKey) planningTomorrowItems.push(item);
+    if (dueDate >= now && dueDate <= weekLimit) planningWeekItems.push(item);
+  });
+
+  renderPlanningTab();
+}
+
+loadPlanningTimeline();
+
+async function initRolePlanningNew() {
+  if (!window.BaudokuAuthContext) return;
+  const ctx = await window.BaudokuAuthContext.loadAuthContext({ noCache: true });
+  if (!ctx) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const isManager = ctx.role === "chef" || ctx.role === "buero";
+  const appContent = document.querySelector(".app-content");
+  if (!appContent) return;
+
+  Array.from(appContent.querySelectorAll(".task-card")).forEach(card => {
+    card.style.display = "none";
+  });
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "task-card";
+  wrapper.id = "newPlanningCard";
+
+  if (isManager) {
+    wrapper.innerHTML = `
+      <h3>Mitarbeiter Planung</h3>
+      <small style="opacity:0.7;">Mitarbeiter auswaehlen und Kunde/Projekt zuweisen</small>
+      <select id="planEmployee" class="compact-input" style="margin-top:10px;"></select>
+      <select id="planCustomer" class="compact-input" style="margin-top:8px;"></select>
+      <select id="planProject" class="compact-input" style="margin-top:8px;"></select>
+      <input id="planDate" type="date" class="compact-input" style="margin-top:8px;">
+      <button class="login-btn" style="margin-top:8px;margin-bottom:0;" onclick="assignPlanEntry()">Zuweisen</button>
+      <p id="planStatus" style="font-size:12px;opacity:0.75;margin-top:8px;"></p>
+    `;
+  } else {
+    wrapper.innerHTML = `
+      <h3>Meine Planung</h3>
+      <small style="opacity:0.7;">Deine zugewiesenen Kunden und Projekte</small>
+      <p id="planStatus" style="font-size:12px;opacity:0.75;margin-top:8px;"></p>
+    `;
+  }
+
+  const listCard = document.createElement("div");
+  listCard.className = "task-card";
+  listCard.innerHTML = `
+    <h3>${isManager ? "Zugewiesene Planungen" : "Meine Eintraege"}</h3>
+    <div id="planningAssignedList" style="margin-top:10px;"></div>
+  `;
+
+  appContent.appendChild(wrapper);
+  appContent.appendChild(listCard);
+
+  await loadPlanningDataNew(ctx, isManager);
+}
+
+let planningCtx = null;
+let planningData = {
+  members: [],
+  customers: [],
+  projects: []
+};
+
+async function loadScopedRows(table, ctx) {
+  if (!(ctx && ctx.company_id)) return [];
+  const scoped = await db
+    .from(table)
+    .select("*")
+    .eq("company_id", ctx.company_id)
+    .order("created_at", { ascending: false });
+  if (scoped.error) {
+    console.log(scoped.error);
+    return [];
+  }
+  return scoped.data || [];
+}
+
+async function loadPlanningDataNew(ctx, isManager) {
+  planningCtx = ctx;
+  if (isManager) {
+    const [members, customers, projects] = await Promise.all([
+      db.from("company_members")
+        .select("id, user_id, name, email, role, active")
+        .eq("company_id", ctx.company_id)
+        .eq("active", true)
+        .eq("role", "angestellter")
+        .order("name", { ascending: true }),
+      loadScopedRows("customers", ctx),
+      loadScopedRows("projects", ctx)
+    ]);
+
+    planningData.members = (members.data || []);
+    planningData.customers = customers || [];
+    planningData.projects = projects || [];
+    fillPlanningSelects();
+  }
+  await loadAssignedListNew(ctx, isManager);
+}
+
+function fillPlanningSelects() {
+  const employeeSel = document.getElementById("planEmployee");
+  const customerSel = document.getElementById("planCustomer");
+  const projectSel = document.getElementById("planProject");
+  if (!employeeSel || !customerSel || !projectSel) return;
+
+  employeeSel.innerHTML =
+    "<option value=''>Mitarbeiter waehlen</option>" +
+    planningData.members.map(m => `<option value="${m.user_id}">${m.name || m.email || "Mitarbeiter"}</option>`).join("");
+
+  customerSel.innerHTML =
+    "<option value=''>Kunde waehlen</option>" +
+    planningData.customers.map(c => {
+      const label = c.firma || [c.vorname, c.nachname].filter(Boolean).join(" ") || "Kunde";
+      return `<option value="${c.id}">${label}</option>`;
+    }).join("");
+
+  customerSel.addEventListener("change", () => {
+    const id = customerSel.value;
+    let list = planningData.projects.filter(p => String(p.customer_id) === String(id));
+    if (!list.length) list = planningData.projects;
+    projectSel.innerHTML =
+      "<option value=''>Projekt waehlen</option>" +
+      list.map(p => `<option value="${p.id}">${p.name || "Projekt"}</option>`).join("");
+  });
+
+  projectSel.innerHTML =
+    "<option value=''>Projekt waehlen</option>" +
+    planningData.projects.map(p => `<option value="${p.id}">${p.name || "Projekt"}</option>`).join("");
+
+  const d = document.getElementById("planDate");
+  if (d) d.value = new Date().toISOString().slice(0, 10);
+}
+
+window.assignPlanEntry = async function() {
+  const status = document.getElementById("planStatus");
+  if (!planningCtx) return;
+  const assigned_to = (document.getElementById("planEmployee") || {}).value || "";
+  const customer_id = (document.getElementById("planCustomer") || {}).value || "";
+  const project_id = (document.getElementById("planProject") || {}).value || "";
+  const date = (document.getElementById("planDate") || {}).value || null;
+
+  if (!assigned_to || !customer_id || !project_id || !date) {
+    if (status) {
+      status.textContent = "Bitte Mitarbeiter, Kunde, Projekt und Datum auswaehlen.";
+      status.style.color = "#ff6b3d";
+    }
+    return;
+  }
+
+  const customer = planningData.customers.find(c => String(c.id) === String(customer_id));
+  const project = planningData.projects.find(p => String(p.id) === String(project_id));
+  const title = (customer ? (customer.firma || [customer.vorname, customer.nachname].filter(Boolean).join(" ")) : "Kunde")
+    + " - " + (project ? (project.name || "Projekt") : "Projekt");
+
+  const payload = {
+    company_id: planningCtx.company_id,
+    assigned_to,
+    project_id,
+    title,
+    description: "",
+    date,
+    created_by: planningCtx.user_id
+  };
+
+  const { error } = await db.from("planning_entries").insert([payload]);
+  if (error) {
+    console.log(error);
+    if (status) {
+      status.textContent = "Zuweisung fehlgeschlagen.";
+      status.style.color = "#ff6b3d";
+    }
+    return;
+  }
+
+  if (status) {
+    status.textContent = "Planung gespeichert.";
+    status.style.color = "#9be15d";
+  }
+  await loadAssignedListNew(planningCtx, true);
+};
+
+async function loadAssignedListNew(ctx, isManager) {
+  const host = document.getElementById("planningAssignedList");
+  if (!host) return;
+
+  let query = db.from("planning_entries").select("*").order("date", { ascending: true }).limit(100);
+  if (ctx.company_id) query = query.eq("company_id", ctx.company_id);
+  if (!isManager) query = query.eq("assigned_to", ctx.user_id);
+
+  const { data, error } = await query;
+  if (error) {
+    console.log(error);
+    host.innerHTML = "<p style='opacity:0.7;'>Planung konnte nicht geladen werden.</p>";
+    return;
+  }
+
+  const memberMap = new Map((planningData.members || []).map(m => [String(m.user_id), m.name || m.email || "Mitarbeiter"]));
+  if (!(data || []).length) {
+    host.innerHTML = "<p style='opacity:0.7;'>Keine Eintraege vorhanden.</p>";
+    return;
+  }
+
+  host.innerHTML = "";
+  (data || []).forEach(item => {
+    const card = document.createElement("div");
+    card.className = "info-box";
+    card.style.marginBottom = "8px";
+    const managerActions = isManager
+      ? `
+        <div class="button-row" style="margin-top:8px;">
+          <button class="login-btn" style="margin:0;background:#444;" onclick="editPlanEntry('${item.id}')">Bearbeiten</button>
+          <button class="delete-btn" style="margin:0;" onclick="deletePlanEntry('${item.id}')">Loeschen</button>
+        </div>
+      `
+      : "";
+    card.innerHTML = `
+      <strong>${item.title || "Planung"}</strong><br>
+      <small>${item.date || "-"}${isManager ? " | " + (memberMap.get(String(item.assigned_to)) || "Mitarbeiter") : ""}</small>
+      ${managerActions}
+    `;
+    host.appendChild(card);
+  });
+}
+
+window.editPlanEntry = async function(id) {
+  if (!planningCtx) return;
+  const list = await db
+    .from("planning_entries")
+    .select("*")
+    .eq("id", id)
+    .eq("company_id", planningCtx.company_id)
+    .maybeSingle();
+  if (list.error || !list.data) {
+    console.log(list.error);
+    return;
+  }
+  const row = list.data;
+  const newDate = prompt("Neues Datum (YYYY-MM-DD):", row.date || "") || "";
+  if (!newDate.trim()) return;
+  const newTitle = prompt("Titel / Einsatz:", row.title || "") || "";
+  if (!newTitle.trim()) return;
+
+  const { error } = await db
+    .from("planning_entries")
+    .update({
+      date: newDate.trim(),
+      title: newTitle.trim()
+    })
+    .eq("id", id)
+    .eq("company_id", planningCtx.company_id);
+
+  if (error) {
+    console.log(error);
+    const status = document.getElementById("planStatus");
+    if (status) {
+      status.textContent = "Aendern fehlgeschlagen.";
+      status.style.color = "#ff6b3d";
+    }
+    return;
+  }
+
+  const status = document.getElementById("planStatus");
+  if (status) {
+    status.textContent = "Eintrag aktualisiert.";
+    status.style.color = "#9be15d";
+  }
+  await loadAssignedListNew(planningCtx, true);
+};
+
+window.deletePlanEntry = async function(id) {
+  if (!planningCtx) return;
+  const ok = confirm("Planungseintrag wirklich loeschen?");
+  if (!ok) return;
+
+  const { error } = await db
+    .from("planning_entries")
+    .delete()
+    .eq("id", id)
+    .eq("company_id", planningCtx.company_id);
+
+  if (error) {
+    console.log(error);
+    const status = document.getElementById("planStatus");
+    if (status) {
+      status.textContent = "Loeschen fehlgeschlagen.";
+      status.style.color = "#ff6b3d";
+    }
+    return;
+  }
+
+  const status = document.getElementById("planStatus");
+  if (status) {
+    status.textContent = "Eintrag geloescht.";
+    status.style.color = "#9be15d";
+  }
+  await loadAssignedListNew(planningCtx, true);
+};
+
+initRolePlanningNew();
+
+</script>
+
+<script src="pwa.js"></script>
+</body>
+</html>
