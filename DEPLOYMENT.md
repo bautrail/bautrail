@@ -1,4 +1,4 @@
-# Baudoku online stellen
+# bautrail online stellen
 
 ## Ziel
 
@@ -55,7 +55,7 @@ REPORT_FROM_EMAIL=...
 `REPORT_FROM_EMAIL` sollte eine bestaetigte Absenderadresse sein, zum Beispiel:
 
 ```text
-Baudoku <nachweise@deine-domain.de>
+bautrail <nachweise@deine-domain.de>
 ```
 
 ## Domain verbinden

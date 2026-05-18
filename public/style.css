@@ -56,6 +56,21 @@ body {
   font-size: 1.4rem;
 }
 
+.app-logo {
+  display: block;
+  width: min(260px, 82%);
+  height: auto;
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  object-fit: contain;
+}
+
+.login-logo {
+  width: min(270px, 100%);
+  margin: 0 auto 18px;
+}
+
 .company-name {
   font-size: 0.85rem;
   color: #aaa;

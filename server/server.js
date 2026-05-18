@@ -121,5 +121,5 @@ app.get(/.*/, (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log("Baudoku laeuft auf Port " + PORT);
+  console.log("bautrail laeuft auf Port " + PORT);
 });

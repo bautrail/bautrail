@@ -1,4 +1,4 @@
-const CACHE_NAME = "baudoku-v1";
+const CACHE_NAME = "bautrail-v1";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -18,6 +18,10 @@ const APP_SHELL = [
   "/material-list-page.js",
   "/project-documents.js",
   "/pwa.js",
+  "/assets/bautrail-logo.png",
+  "/assets/bautrail-icon-192.png",
+  "/assets/bautrail-icon-512.png",
+  "/assets/bautrail-apple-touch-icon.png",
   "/assets/app-icon.svg",
   "/assets/app-icon-192.png",
   "/assets/app-icon-512.png",

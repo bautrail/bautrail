@@ -1,4 +1,4 @@
-# Baudoku Security Checklist
+# bautrail Security Checklist
 
 Nutze diese Liste bei jeder Aenderung, Migration oder vor einem Release.
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zeiten</title>
+  <title>Zeiten - bautrail</title>
   <link rel="stylesheet" href="style.css">
   <style>
     .time-form { display:grid; gap:8px; }
@@ -21,9 +21,9 @@
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#ff6b3d">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Baudoku">
-  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="bautrail">
+  <link rel="icon" href="assets/bautrail-icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/bautrail-apple-touch-icon.png">
 </head>
 <body>
 <div class="app-wrapper">
@@ -414,7 +414,7 @@ window.downloadMonthlyExportPdf = async function() {
     pdf.setTextColor(255, 255, 255);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(15);
-    pdf.text(c.name || "BAUDOKU", 16, 19);
+    pdf.text(c.name || "bautrail", 16, 19);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(9);
     const headRight = [

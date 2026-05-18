@@ -1,6 +1,6 @@
 {
-  "name": "Baudoku",
-  "short_name": "Baudoku",
+  "name": "bautrail",
+  "short_name": "bautrail",
   "description": "Baustellen, Zeiten, Nachweise und Teamdaten verwalten.",
   "start_url": "/index.html",
   "scope": "/",
@@ -11,22 +11,22 @@
   "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "/assets/app-icon-192.png",
+      "src": "/assets/bautrail-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/app-icon-512.png",
+      "src": "/assets/bautrail-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/app-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/assets/bautrail-logo.png",
+      "sizes": "1774x887",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
