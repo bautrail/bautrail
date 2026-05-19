@@ -861,6 +861,7 @@ onclick="deleteJob()"
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
 <script src="auth-context.js"></script>
+<script src="storage-quota.js"></script>
 <script src="role-nav.js"></script>
 <script src="project-documents.js"></script>
 <script src="work-presets.js"></script>
@@ -1311,7 +1312,15 @@ document
 
     for(let file of files){
 
-      const fileName =
+      if(window.BautrailStorageQuota && window.BAUDOKU_AUTH_CONTEXT){
+    const quota = await window.BaudokuStorageQuota.canUploadBytes(window.BAUDOKU_AUTH_CONTEXT, file.size || 0);
+    if(!quota.allowed){
+      alert("Speicherlimit erreicht. Bitte im Chef-Dashboard Speicher erweitern.");
+      return;
+    }
+  }
+
+  const fileName =
         [
           projektId,
           Date.now(),
@@ -1350,7 +1359,8 @@ document
           folder_id:
             window.BaudokuDocuments
             ? window.BaudokuDocuments.getCurrentFolderId()
-            : null
+            : null,
+          file_size: Number(file.size || 0)
         }]);
 
       if(insertError){
@@ -1483,6 +1493,14 @@ async function saveAudioBlob(audioBlob){
     return;
   }
 
+  if(window.BautrailStorageQuota && window.BAUDOKU_AUTH_CONTEXT){
+    const quota = await window.BaudokuStorageQuota.canUploadBytes(window.BAUDOKU_AUTH_CONTEXT, audioBlob.size || 0);
+    if(!quota.allowed){
+      alert("Speicherlimit erreicht. Bitte im Chef-Dashboard Speicher erweitern.");
+      return;
+    }
+  }
+
   const fileName =
     [
       "audio",
@@ -1521,6 +1539,7 @@ async function saveAudioBlob(audioBlob){
     .insert([{
       project_id: projektId,
       audio_url: data.publicUrl,
+      file_size: Number(audioBlob.size || 0),
       folder_id:
         window.BaudokuDocuments
         ? window.BaudokuDocuments.getCurrentFolderId()

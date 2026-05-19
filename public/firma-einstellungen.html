@@ -48,6 +48,27 @@
       <p id="saveStatus" style="font-size:12px;opacity:0.95;min-height:18px;margin-top:4px;">&nbsp;</p>
     </div>
 
+
+    <div class="task-card">
+      <h3>Tarif und Speicher</h3>
+      <div class="button-row" style="margin-top:8px;">
+        <select id="planInput" class="compact-input">
+          <option value="starter">Starter</option>
+          <option value="business">Business</option>
+          <option value="enterprise">Enterprise</option>
+        </select>
+        <input id="includedStorageInput" type="number" min="1" class="compact-input" placeholder="Inklusive MB">
+      </div>
+      <div class="button-row" style="margin-top:8px;">
+        <input id="extraStorageInput" type="number" min="0" class="compact-input" placeholder="Zusatzspeicher MB">
+        <input id="storageLimitInput" type="number" min="1" class="compact-input" placeholder="Limit MB">
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;font-size:12px;opacity:0.9;margin-top:10px;">
+        <input id="storageEnabledInput" type="checkbox" checked> Speicherlimit aktiv
+      </label>
+      <div id="storageStatusBox" class="info-box" style="margin-top:10px;"></div>
+    </div>
+
     <div class="task-card">
       <h3>Firmendokumente</h3>
       <input id="docInput" type="file" class="compact-input">
@@ -61,6 +82,7 @@
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
 <script src="auth-context.js"></script>
+<script src="storage-quota.js"></script>
 <script>
 let authContext = null;
 let company = null;
@@ -96,6 +118,7 @@ function bindLogoInput() {
   input.addEventListener("change", event => {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = function() {
       companyLogoData = String(reader.result || "");
@@ -132,6 +155,12 @@ async function loadCompany() {
   document.getElementById("steuerInput").value = company.steuernummer || "";
   document.getElementById("ustInput").value = company.ust_id || "";
   document.getElementById("rechtlichesInput").value = company.rechtliches || "";
+  document.getElementById("planInput").value = company.plan_code || "starter";
+  document.getElementById("includedStorageInput").value = company.included_storage_mb || 2048;
+  document.getElementById("extraStorageInput").value = company.extra_storage_mb || 0;
+  document.getElementById("storageLimitInput").value = company.storage_limit_mb || ((company.included_storage_mb || 2048) + (company.extra_storage_mb || 0));
+  document.getElementById("storageEnabledInput").checked = company.storage_limit_enabled !== false;
+  await renderStorageStatus();
 }
 
 async function saveCompany() {
@@ -145,12 +174,17 @@ async function saveCompany() {
       ort: document.getElementById("ortInput").value.trim(),
       telefon: document.getElementById("telefonInput").value.trim(),
       email: document.getElementById("emailInput").value.trim(),
-    website: document.getElementById("websiteInput").value.trim(),
-    steuernummer: document.getElementById("steuerInput").value.trim(),
-    ust_id: document.getElementById("ustInput").value.trim(),
-    company_owner: document.getElementById("ownerInput").value.trim(),
+      website: document.getElementById("websiteInput").value.trim(),
+      steuernummer: document.getElementById("steuerInput").value.trim(),
+      ust_id: document.getElementById("ustInput").value.trim(),
+      company_owner: document.getElementById("ownerInput").value.trim(),
       rechtliches: document.getElementById("rechtlichesInput").value.trim(),
-      logo_url: companyLogoData || null
+      logo_url: companyLogoData || null,
+      plan_code: document.getElementById("planInput").value || "starter",
+      included_storage_mb: Math.max(1, Number(document.getElementById("includedStorageInput").value || 2048)),
+      extra_storage_mb: Math.max(0, Number(document.getElementById("extraStorageInput").value || 0)),
+      storage_limit_mb: Math.max(1, Number(document.getElementById("storageLimitInput").value || 2048)),
+      storage_limit_enabled: document.getElementById("storageEnabledInput").checked
     };
 
     let targetCompanyId =
@@ -287,14 +321,37 @@ window.deleteDoc = async function(id) {
 
   setStatus("docStatus", "Dokument gelöscht.", true);
   await loadDocuments();
+  await renderStorageStatus();
 };
+
+async function renderStorageStatus() {
+  const box = document.getElementById("storageStatusBox");
+  if (!box || !window.BautrailStorageQuota || !authContext) return;
+  const status = await window.BautrailStorageQuota.loadStatus(authContext);
+  box.innerHTML = `
+    <strong>${window.BautrailStorageQuota.planLabel(status.plan_code)}</strong><br>
+    <small>${window.BautrailStorageQuota.formatBytes(status.used_bytes)} von ${window.BautrailStorageQuota.formatBytes(status.limit_bytes)} genutzt</small>
+    <div style="margin-top:8px;height:10px;border-radius:999px;background:#1f1f1f;overflow:hidden;">
+      <div style="height:100%;width:${status.percent}%;background:${status.percent >= 90 ? "#ff3b3b" : "#ff6b3d"};"></div>
+    </div>
+    <small style="display:block;margin-top:6px;opacity:0.75;">Inklusive: ${status.included_storage_mb} MB | Zusatz: ${status.extra_storage_mb} MB | Limit: ${status.storage_limit_mb} MB</small>
+  `;
+}
 
 async function uploadDocument() {
   const input = document.getElementById("docInput");
   const file = input.files && input.files[0];
   if (!file) {
-    setStatus("docStatus", "Bitte zuerst eine Datei auswählen.", false);
+    setStatus("docStatus", "Bitte zuerst eine Datei auswaehlen.", false);
     return;
+  }
+
+  if (window.BautrailStorageQuota) {
+    const quota = await window.BautrailStorageQuota.canUploadBytes(authContext, file.size || 0);
+    if (!quota.allowed) {
+      setStatus("docStatus", "Speicherlimit erreicht. Bitte Speicher erweitern.", false);
+      return;
+    }
   }
 
   const reader = new FileReader();
@@ -304,7 +361,8 @@ async function uploadDocument() {
       company_id: authContext.company_id,
       title: file.name,
       file_url: fileUrl,
-      file_type: file.type || "application/octet-stream"
+      file_type: file.type || "application/octet-stream",
+      file_size: Number(file.size || 0)
     };
 
     const { error } = await db
@@ -320,6 +378,7 @@ async function uploadDocument() {
     setStatus("docStatus", "Dokument gespeichert.", true);
     input.value = "";
     await loadDocuments();
+    await renderStorageStatus();
   };
 
   reader.readAsDataURL(file);
@@ -338,6 +397,7 @@ async function uploadDocument() {
   }
   await loadCompany();
   await loadDocuments();
+  await renderStorageStatus();
 })();
 </script>
 <script src="pwa.js"></script>

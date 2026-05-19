@@ -31,6 +31,16 @@
     </div>
 
     <div class="task-card">
+      <h3>&#128190; Speicher & Tarif</h3>
+      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Zeigt Modell, gebuchten Speicher und aktuellen Verbrauch der Firma.</p>
+      <div id="storageOverviewBox" style="margin-top:10px;"></div>
+      <div class="button-row" style="margin-top:10px;">
+        <button class="login-btn" style="margin-bottom:0;" onclick="loadStorageOverview()">Aktualisieren</button>
+        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="window.location.href='firma-einstellungen.html'">Speicher einstellen</button>
+      </div>
+    </div>
+
+    <div class="task-card">
       <h3>&#9993;&#65039; Einladungscode erstellen</h3>
       <div class="button-row" style="margin-top:8px;">
         <select id="inviteRole" class="compact-input">
@@ -141,6 +151,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="supabase.js"></script>
 <script src="auth-context.js"></script>
+<script src="storage-quota.js"></script>
 <script src="role-nav.js"></script>
 <script src="company-export.js"></script>
 <script src="chef-report-tools.js"></script>
@@ -401,6 +412,44 @@ async function loadCompany() {
   document.getElementById("companySubline").textContent = company.name || "Firmensteuerung";
   document.getElementById("roleInfo").textContent =
     "Angemeldet als " + (authContext.name || authContext.email || "Chef") + " | Firma: " + (company.name || "-");
+  await loadStorageOverview();
+}
+
+async function loadStorageOverview() {
+  const box = document.getElementById("storageOverviewBox");
+  if (!box) return;
+  if (!window.BautrailStorageQuota || !authContext) {
+    box.innerHTML = "<p style='opacity:0.7;'>Speicherdaten sind gerade nicht verfuegbar.</p>";
+    return;
+  }
+
+  box.innerHTML = "<p style='opacity:0.7;'>Lade Speicherdaten...</p>";
+  const status = await window.BautrailStorageQuota.loadStatus(authContext);
+  const percent = Number(status.percent || 0);
+  const color = percent >= 95 ? "#ff3b3b" : percent >= 80 ? "#ffb347" : "#ff6b3d";
+
+  box.innerHTML = [
+    '<div class="info-box" style="margin:0;">',
+    '  <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">',
+    '    <div>',
+    '      <strong>' + window.BautrailStorageQuota.planLabel(status.plan_code) + '</strong><br>',
+    '      <small>' + window.BautrailStorageQuota.formatBytes(status.used_bytes) + ' von ' + window.BautrailStorageQuota.formatBytes(status.limit_bytes) + ' belegt</small>',
+    '    </div>',
+    '    <div style="text-align:right;min-width:120px;">',
+    '      <strong>' + percent.toFixed(0) + '%</strong><br>',
+    '      <small>' + (status.storage_limit_enabled === false ? 'ohne Limit' : 'verfuegbar: ' + window.BautrailStorageQuota.formatBytes(status.remaining_bytes)) + '</small>',
+    '    </div>',
+    '  </div>',
+    '  <div style="margin-top:10px;height:12px;border-radius:999px;background:#1f1f1f;overflow:hidden;">',
+    '    <div style="height:100%;width:' + Math.min(100, percent) + '%;background:' + color + ';"></div>',
+    '  </div>',
+    '  <div style="display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:8px;margin-top:10px;">',
+    '    <div><small>Modell</small><br><strong>' + window.BautrailStorageQuota.planLabel(status.plan_code) + '</strong></div>',
+    '    <div><small>Inklusive</small><br><strong>' + status.included_storage_mb + ' MB</strong></div>',
+    '    <div><small>Zusatzspeicher</small><br><strong>' + status.extra_storage_mb + ' MB</strong></div>',
+    '  </div>',
+    '</div>'
+  ].join('');
 }
 
 async function createInvite() {

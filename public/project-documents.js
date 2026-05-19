@@ -309,7 +309,8 @@
       folder_id: normalizeId(file.folder_id),
       file_name: file.name,
       file_url: publicUrl,
-      file_type: file.type || "application/octet-stream"
+      file_type: file.type || "application/octet-stream",
+      file_size: Number(file.size || 0)
     };
 
     const { data, error } =
@@ -787,6 +788,13 @@
     const documents = getDocuments();
 
     for (let file of files) {
+      if (window.BaudokuStorageQuota && window.BAUDOKU_AUTH_CONTEXT) {
+        const quota = await window.BaudokuStorageQuota.canUploadBytes(window.BAUDOKU_AUTH_CONTEXT, file.size || 0);
+        if (!quota.allowed) {
+          setStatus("Speicherlimit erreicht: " + window.BaudokuStorageQuota.formatBytes(quota.status.used_bytes) + " von " + window.BaudokuStorageQuota.formatBytes(quota.status.limit_bytes), "red");
+          continue;
+        }
+      }
       const localFile = {
         id: makeId("doc"),
         project_id: String(projectId),
