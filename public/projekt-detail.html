@@ -276,7 +276,9 @@
 <script src="auth-context.js"></script>
 <script src="storage-quota.js"></script>
 <script src="role-nav.js"></script>
+<script src="storage-links.js"></script>
 <script src="project-documents.js"></script>
+<script src="project-pdf.js"></script>
 <script src="auto-textareas.js"></script>
 <script src="notifications.js"></script>
 
@@ -917,11 +919,20 @@ if (window.BaudokuAutoTextareas) {
     for (let file of exportData.documents) {
       let blob = file.blob;
 
-      if (!blob && file.public_url) {
+      if (!blob && (file.public_url || file.storage_path)) {
         try {
-          blob =
-            await fetch(file.public_url)
-            .then(response => response.blob());
+          const remoteUrl = window.BautrailStorageLinks
+            ? await window.BautrailStorageLinks.resolveRowUrl(file, {
+                urlField: "public_url",
+                pathField: "storage_path",
+                bucketField: "storage_bucket",
+                defaultBucket: "bilder",
+                expiresIn: 3600
+              })
+            : file.public_url;
+          if (remoteUrl) {
+            blob = await fetch(remoteUrl).then(response => response.blob());
+          }
         } catch (err) {
           console.log(err);
         }
@@ -957,8 +968,17 @@ if (window.BaudokuAutoTextareas) {
 
     for (let image of images || []) {
       try {
+        const signedUrl = window.BautrailStorageLinks
+          ? await window.BautrailStorageLinks.resolveRowUrl(image, {
+              urlField: "image_url",
+              pathField: "storage_path",
+              bucketField: "storage_bucket",
+              defaultBucket: "bilder",
+              expiresIn: 3600
+            })
+          : image.image_url;
         const blob =
-          await fetch(image.image_url)
+          await fetch(signedUrl)
           .then(response => response.blob());
 
         const imageFolder =
@@ -1033,12 +1053,21 @@ if (window.BaudokuAutoTextareas) {
 
     for (let image of images || []) {
       try {
+        const signedUrl = window.BautrailStorageLinks
+          ? await window.BautrailStorageLinks.resolveRowUrl(image, {
+              urlField: "image_url",
+              pathField: "storage_path",
+              bucketField: "storage_bucket",
+              defaultBucket: "bilder",
+              expiresIn: 3600
+            })
+          : image.image_url;
         const blob =
-          await fetch(image.image_url)
+          await fetch(signedUrl)
             .then(response => response.blob());
 
         result.push({
-          url: image.image_url,
+          url: signedUrl,
           dataUrl: await blobToDataUrl(blob)
         });
       } catch (err) {
@@ -1157,6 +1186,16 @@ if (window.BaudokuAutoTextareas) {
     );
   };
 
+
+  if (window.BautrailProjectPdf && window.BautrailProjectPdf.buildProjectPdfFactory) {
+    window.downloadProjectPdf = window.BautrailProjectPdf.buildProjectPdfFactory({
+      getProject: () => currentProject,
+      getProjectId: () => projektId,
+      getExportData: (id) => window.BaudokuDocuments && window.BaudokuDocuments.getProjectExportData
+        ? window.BaudokuDocuments.getProjectExportData(id)
+        : Promise.resolve({ documents: [] })
+    });
+  }
 
   // =====================================================
   // AUTOSAVE
@@ -1699,17 +1738,34 @@ if (oldCache) {
 
     if (!data && !pendingUploads.length) return;
 
-    (data || [])
-      .filter(img =>
+    const visibleImages =
+      (data || []).filter(img =>
         imageIsInCurrentFolder(img.image_url)
-      )
-      .forEach(img =>
-        appendImage(
-          img.image_url,
-          "",
-          img.image_url
-        )
       );
+
+    const resolvedImages =
+      window.BautrailStorageLinks
+        ? await Promise.all(
+            visibleImages.map(async img => ({
+              img,
+              url: await window.BautrailStorageLinks.resolveRowUrl(img, {
+                urlField: "image_url",
+                pathField: "storage_path",
+                bucketField: "storage_bucket",
+                defaultBucket: "bilder",
+                expiresIn: 3600
+              })
+            }))
+          )
+        : visibleImages.map(img => ({ img, url: img.image_url }));
+
+    resolvedImages.forEach(item =>
+      appendImage(
+        item.url || item.img.image_url,
+        "",
+        item.img.image_url
+      )
+    );
 
     pendingUploads
       .filter(img =>
@@ -1877,24 +1933,14 @@ img.src = e.target.result;
         continue;
       }
 
-      const { data } =
-        db.storage
-        .from("bilder")
-        .getPublicUrl(fileName);
-
-      if (!data || !data.publicUrl) {
-
-        console.log("Keine Bild-URL erhalten");
-
-        continue;
-      }
-
       const { error: insertError } =
         await db
         .from("project_images")
         .insert([{
           project_id: projektId,
-          image_url: data.publicUrl,
+          image_url: fileName,
+          storage_bucket: "bilder",
+          storage_path: fileName,
           folder_id: getCurrentFolderId(),
           file_size: Number(file.size || 0)
         }]);
@@ -1903,7 +1949,7 @@ img.src = e.target.result;
         console.log(insertError);
       } else if (window.BaudokuDocuments) {
         await window.BaudokuDocuments.assignImageToFolder(
-          data.publicUrl,
+          fileName,
           projektId,
           getCurrentFolderId()
         );
@@ -1964,26 +2010,14 @@ if (uploadError) {
   continue;
 }
 
-const { data } =
-  db.storage
-    .from("bilder")
-    .getPublicUrl(fileName);
-
-if (!data || !data.publicUrl) {
-
-  console.log("Keine Bild-URL erhalten");
-
-  remaining.push(item);
-
-  continue;
-}
-
        const { error: insertError } =
   await db
     .from("project_images")
     .insert([{
       project_id: item.project_id,
-      image_url: data.publicUrl,
+      image_url: fileName,
+      storage_bucket: "bilder",
+      storage_path: fileName,
       folder_id: item.folder_id || null,
       file_size: Number(item.file_size || 0)
     }]);
@@ -2001,7 +2035,7 @@ if (window.BaudokuDocuments) {
   window.BaudokuDocuments.migrateImageKey(
     item.project_id,
     getOfflineImageKey(item),
-    data.publicUrl,
+    fileName,
     item.folder_id
   );
 }

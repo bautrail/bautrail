@@ -36,6 +36,13 @@
         <input id="timesheetEnabled" type="checkbox" checked> Arbeitszeit-Erinnerung aktiv
       </label>
       <input id="timesheetTime" type="time" class="compact-input" style="margin-top:6px;">
+      <label style="display:flex;gap:8px;align-items:center;font-size:12px;opacity:0.9;margin-top:12px;">
+        <input id="dueOrderEnabled" type="checkbox" checked> Erinnerung bei faelligen Auftraegen aktiv
+      </label>
+      <input id="dueOrderTime" type="time" class="compact-input" style="margin-top:6px;">
+      <label style="display:flex;gap:8px;align-items:center;font-size:12px;opacity:0.9;margin-top:12px;">
+        <input id="newReportEnabled" type="checkbox" checked> Chef/Buero bei neuen Nachweisen informieren
+      </label>
       <button class="login-btn" style="margin-top:10px;" onclick="saveAlarmSettings()">Speichern</button>
       <button class="login-btn" style="background:#444;margin-top:0;" onclick="enableNotifications()">Benachrichtigungen erlauben</button>
       <p id="alarmStatus" style="font-size:12px;opacity:0.9;min-height:18px;">&nbsp;</p>
@@ -65,7 +72,7 @@ async function loadAlarmSettings() {
   if (!authContext || !authContext.company_id) return;
   const { data, error } = await db
     .from("companies")
-    .select("vehicle_time, order_time, customer_material_time, daily_report_time, timesheet_time, daily_report_reminder_enabled, timesheet_reminder_enabled")
+    .select("*")
     .eq("id", authContext.company_id)
     .maybeSingle();
 
@@ -80,8 +87,11 @@ async function loadAlarmSettings() {
   document.getElementById("customerMaterialTime").value = data.customer_material_time || "18:00";
   document.getElementById("dailyReportTime").value = data.daily_report_time || "17:30";
   document.getElementById("timesheetTime").value = data.timesheet_time || "17:45";
+  document.getElementById("dueOrderTime").value = data.due_order_time || "07:00";
   document.getElementById("dailyReportEnabled").checked = data.daily_report_reminder_enabled !== false;
   document.getElementById("timesheetEnabled").checked = data.timesheet_reminder_enabled !== false;
+  document.getElementById("dueOrderEnabled").checked = data.due_order_reminder_enabled !== false;
+  document.getElementById("newReportEnabled").checked = data.new_report_notification_enabled !== false;
 }
 
 async function saveAlarmSettings() {
@@ -95,14 +105,29 @@ async function saveAlarmSettings() {
     customer_material_time: document.getElementById("customerMaterialTime").value || "18:00",
     daily_report_time: document.getElementById("dailyReportTime").value || "17:30",
     timesheet_time: document.getElementById("timesheetTime").value || "17:45",
+    due_order_time: document.getElementById("dueOrderTime").value || "07:00",
     daily_report_reminder_enabled: document.getElementById("dailyReportEnabled").checked,
-    timesheet_reminder_enabled: document.getElementById("timesheetEnabled").checked
+    timesheet_reminder_enabled: document.getElementById("timesheetEnabled").checked,
+    due_order_reminder_enabled: document.getElementById("dueOrderEnabled").checked,
+    new_report_notification_enabled: document.getElementById("newReportEnabled").checked
   };
 
-  const { error } = await db
-    .from("companies")
-    .update(payload)
-    .eq("id", authContext.company_id);
+  async function updateWithFallback(source) {
+    let safe = { ...source };
+    let result = await db.from("companies").update(safe).eq("id", authContext.company_id);
+    let guard = 0;
+    while (result.error && guard < 10) {
+      const msg = String(result.error.message || "");
+      const match = msg.match(/column\s+"([^"]+)"/i) || msg.match(/column\s+'([^']+)'/i);
+      if (!match || !match[1] || !(match[1] in safe)) break;
+      delete safe[match[1]];
+      result = await db.from("companies").update(safe).eq("id", authContext.company_id);
+      guard += 1;
+    }
+    return result;
+  }
+
+  const { error } = await updateWithFallback(payload);
 
   if (error) {
     console.log(error);
@@ -116,8 +141,11 @@ async function saveAlarmSettings() {
       customerMaterialTime: payload.customer_material_time,
       dailyReportTime: payload.daily_report_time,
       timesheetTime: payload.timesheet_time,
+      dueOrderTime: payload.due_order_time,
       dailyReportReminderEnabled: payload.daily_report_reminder_enabled,
-      timesheetReminderEnabled: payload.timesheet_reminder_enabled
+      timesheetReminderEnabled: payload.timesheet_reminder_enabled,
+      dueOrderReminderEnabled: payload.due_order_reminder_enabled,
+      newReportNotificationEnabled: payload.new_report_notification_enabled
     });
   }
   setStatus("Gespeichert", true);

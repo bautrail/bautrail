@@ -17,6 +17,8 @@ const APP_SHELL = [
   "/register.js",
   "/material-list-page.js",
   "/project-documents.js",
+  "/project-pdf.js",
+  "/storage-links.js",
   "/pwa.js",
   "/assets/bautrail-logo.png",
   "/assets/bautrail-icon-192.png",

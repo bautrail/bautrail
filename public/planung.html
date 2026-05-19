@@ -98,6 +98,99 @@ textarea{
   background:#ff6b3d;
 }
 
+.week-toolbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-top:10px;
+  flex-wrap:wrap;
+}
+
+.week-nav-btn{
+  border:none;
+  border-radius:10px;
+  background:#2b2b2b;
+  color:white;
+  padding:9px 12px;
+  cursor:pointer;
+}
+
+.week-board{
+  display:grid;
+  grid-template-columns:repeat(7,minmax(220px,1fr));
+  gap:10px;
+  margin-top:12px;
+  overflow-x:auto;
+}
+
+.week-day{
+  background:#1f1f1f;
+  border:1px solid #303030;
+  border-radius:14px;
+  padding:10px;
+  min-height:280px;
+}
+
+.week-day-head{
+  margin-bottom:10px;
+}
+
+.week-day-head strong{
+  display:block;
+}
+
+.week-day-head small{
+  opacity:0.7;
+}
+
+.week-employee-slot{
+  background:#171717;
+  border:1px dashed #353535;
+  border-radius:12px;
+  padding:8px;
+  margin-bottom:8px;
+  min-height:64px;
+}
+
+.week-employee-slot.drag-over{
+  border-color:#ff6b3d;
+  background:#2a211d;
+}
+
+.week-employee-name{
+  font-size:12px;
+  opacity:0.75;
+  margin-bottom:6px;
+}
+
+.week-entry{
+  background:#2b2b2b;
+  border-radius:10px;
+  padding:8px;
+  margin-bottom:6px;
+  cursor:grab;
+}
+
+.week-entry:last-child{
+  margin-bottom:0;
+}
+
+.week-entry:active{
+  cursor:grabbing;
+}
+
+.week-entry small{
+  display:block;
+  opacity:0.72;
+  margin-top:4px;
+}
+
+.week-empty{
+  font-size:12px;
+  opacity:0.5;
+}
+
 </style>
 
   <link rel="manifest" href="manifest.webmanifest">
@@ -796,6 +889,7 @@ function renderPlanningTab() {
     };
     list.appendChild(div);
   });
+  renderPlanningWeekBoard();
 }
 
 function setPlanningTab(tab, event) {
@@ -915,23 +1009,71 @@ async function initRolePlanningNew() {
 
   const listCard = document.createElement("div");
   listCard.className = "task-card";
-  listCard.innerHTML = `
-    <h3>${isManager ? "Zugewiesene Planungen" : "Meine Einträge"}</h3>
+  listCard.innerHTML =     `
+    <h3>${isManager ? "Zugewiesene Planungen" : "Meine Eintraege"}</h3>
     <div id="planningAssignedList" style="margin-top:10px;"></div>
+  `;
+
+  const weekCard = document.createElement("div");
+  weekCard.className = "task-card";
+  weekCard.innerHTML =     `
+    <h3>${isManager ? "Wochenansicht und Drag and Drop" : "Meine Woche"}</h3>
+    <small style="opacity:0.7;">${isManager ? "Einsaetze zwischen Tagen und Mitarbeitern ziehen." : "Deine Einsaetze fuer die aktuelle Woche."}</small>
+    <div class="week-toolbar">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="week-nav-btn" onclick="shiftPlanningWeek(-7)">Zurueck</button>
+        <button class="week-nav-btn" onclick="shiftPlanningWeek(0)">Diese Woche</button>
+        <button class="week-nav-btn" onclick="shiftPlanningWeek(7)">Weiter</button>
+      </div>
+      <strong id="planningWeekLabel">-</strong>
+    </div>
+    <div id="planningWeekBoard" class="week-board"></div>
   `;
 
   appContent.appendChild(wrapper);
   appContent.appendChild(listCard);
+  appContent.appendChild(weekCard);
 
   await loadPlanningDataNew(ctx, isManager);
 }
 
 let planningCtx = null;
+let planningAssignments = [];
+let planningIsManager = false;
+let planningWeekStart = startOfWeek(new Date());
 let planningData = {
   members: [],
   customers: [],
   projects: []
 };
+
+function startOfWeek(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function addDays(date, days) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function formatDateInputValue(date) {
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+}
+
+function formatWeekLabel(start) {
+  const endDate = addDays(start, 6);
+  return start.toLocaleDateString("de-DE") + " bis " + endDate.toLocaleDateString("de-DE");
+}
+
+function weekDates() {
+  return Array.from({ length: 7 }, (_, idx) => addDays(planningWeekStart, idx));
+}
 
 async function loadScopedRows(table, ctx) {
   if (!(ctx && ctx.company_id)) return [];
@@ -949,6 +1091,7 @@ async function loadScopedRows(table, ctx) {
 
 async function loadPlanningDataNew(ctx, isManager) {
   planningCtx = ctx;
+  planningIsManager = !!isManager;
   if (isManager) {
     const [members, customers, projects] = await Promise.all([
       db.from("company_members")
@@ -965,6 +1108,8 @@ async function loadPlanningDataNew(ctx, isManager) {
     planningData.customers = customers || [];
     planningData.projects = projects || [];
     fillPlanningSelects();
+  } else {
+    planningData.members = [{ user_id: ctx.user_id, name: ctx.name || ctx.email || "Ich" }];
   }
   await loadAssignedListNew(ctx, isManager);
 }
@@ -1000,7 +1145,7 @@ function fillPlanningSelects() {
     planningData.projects.map(p => `<option value="${p.id}">${p.name || "Projekt"}</option>`).join("");
 
   const d = document.getElementById("planDate");
-  if (d) d.value = new Date().toISOString().slice(0, 10);
+  if (d) d.value = formatDateInputValue(new Date());
 }
 
 window.assignPlanEntry = async function() {
@@ -1066,6 +1211,7 @@ async function loadAssignedListNew(ctx, isManager) {
     return;
   }
 
+  planningAssignments = data || [];
   const memberMap = new Map((planningData.members || []).map(m => [String(m.user_id), m.name || m.email || "Mitarbeiter"]));
   if (!(data || []).length) {
     host.innerHTML = "<p style='opacity:0.7;'>Keine Einträge vorhanden.</p>";
@@ -1092,6 +1238,107 @@ async function loadAssignedListNew(ctx, isManager) {
     `;
     host.appendChild(card);
   });
+  renderPlanningWeekBoard();
+}
+
+function renderPlanningWeekBoard() {
+  const host = document.getElementById("planningWeekBoard");
+  const label = document.getElementById("planningWeekLabel");
+  if (!host || !label) return;
+  label.textContent = formatWeekLabel(planningWeekStart);
+
+  const dates = weekDates();
+  const members = planningIsManager
+    ? (planningData.members.length ? planningData.members : [])
+    : [{ user_id: planningCtx ? planningCtx.user_id : "", name: planningCtx ? (planningCtx.name || planningCtx.email || "Ich") : "Ich" }];
+
+  host.innerHTML = "";
+
+  dates.forEach(date => {
+    const dayKey = formatDateInputValue(date);
+    const day = document.createElement("div");
+    day.className = "week-day";
+    day.innerHTML = `<div class="week-day-head"><strong>${date.toLocaleDateString("de-DE", { weekday: "short" })}</strong><small>${date.toLocaleDateString("de-DE")}</small></div>`;
+
+    members.forEach(member => {
+      const slot = document.createElement("div");
+      slot.className = "week-employee-slot";
+      slot.dataset.date = dayKey;
+      slot.dataset.userId = member.user_id || "";
+      slot.innerHTML = `<div class="week-employee-name">${member.name || member.email || "Mitarbeiter"}</div>`;
+
+      const items = planningAssignments.filter(item => String(item.assigned_to || "") === String(member.user_id || "") && String(item.date || "") === dayKey);
+      if (!items.length) {
+        const empty = document.createElement("div");
+        empty.className = "week-empty";
+        empty.textContent = planningIsManager ? "Eintrag hierher ziehen" : "Frei";
+        slot.appendChild(empty);
+      } else {
+        items.forEach(item => {
+          const entry = document.createElement("div");
+          entry.className = "week-entry";
+          entry.draggable = planningIsManager;
+          entry.dataset.id = item.id;
+          entry.innerHTML = `<strong>${item.title || "Planung"}</strong><small>${item.description || item.date || ""}</small>`;
+          if (planningIsManager) {
+            entry.addEventListener("dragstart", ev => {
+              ev.dataTransfer.setData("text/plain", String(item.id));
+              ev.dataTransfer.effectAllowed = "move";
+            });
+          }
+          slot.appendChild(entry);
+        });
+      }
+
+      if (planningIsManager) {
+        slot.addEventListener("dragover", ev => {
+          ev.preventDefault();
+          slot.classList.add("drag-over");
+        });
+        slot.addEventListener("dragleave", () => slot.classList.remove("drag-over"));
+        slot.addEventListener("drop", async ev => {
+          ev.preventDefault();
+          slot.classList.remove("drag-over");
+          const entryId = ev.dataTransfer.getData("text/plain");
+          if (!entryId) return;
+          await movePlanningEntry(entryId, slot.dataset.userId, slot.dataset.date);
+        });
+      }
+
+      day.appendChild(slot);
+    });
+
+    host.appendChild(day);
+  });
+}
+
+window.shiftPlanningWeek = function(delta) {
+  if (!delta) planningWeekStart = startOfWeek(new Date());
+  else planningWeekStart = addDays(planningWeekStart, delta);
+  renderPlanningWeekBoard();
+};
+
+async function movePlanningEntry(id, assignedTo, date) {
+  if (!planningCtx || !planningIsManager) return;
+  const { error } = await db
+    .from("planning_entries")
+    .update({ assigned_to: assignedTo, date })
+    .eq("id", id)
+    .eq("company_id", planningCtx.company_id);
+  const status = document.getElementById("planStatus");
+  if (error) {
+    console.log(error);
+    if (status) {
+      status.textContent = "Verschieben fehlgeschlagen.";
+      status.style.color = "#ff6b3d";
+    }
+    return;
+  }
+  if (status) {
+    status.textContent = "Planung verschoben.";
+    status.style.color = "#9be15d";
+  }
+  await loadAssignedListNew(planningCtx, true);
 }
 
 window.editPlanEntry = async function(id) {

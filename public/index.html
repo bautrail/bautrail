@@ -32,6 +32,12 @@
     </div>
 
 <div class="task-card">
+  <h3 style="margin-bottom:8px;">Verbindung und Sync</h3>
+  <div id="syncStatusText" style="font-size:14px;font-weight:600;">Pruefe Verbindung...</div>
+  <p id="syncStatusHint" style="margin-top:6px;font-size:12px;opacity:0.75;">-</p>
+</div>
+
+<div class="task-card">
   <h3 style="margin-bottom:8px;">&#128269; Globale Suche</h3>
   <input
     id="globalSearchInput"
@@ -217,70 +223,145 @@ async function loadCompanyBranding() {
   });
 }
 
+const SEARCH_CACHE_KEY = "bautrailGlobalSearchCache";
+
+function readSearchCache() {
+  try { return JSON.parse(localStorage.getItem(SEARCH_CACHE_KEY) || "[]"); }
+  catch (err) { return []; }
+}
+
+function writeSearchCache(items) {
+  localStorage.setItem(SEARCH_CACHE_KEY, JSON.stringify(items || []));
+}
+
+function normalizeSearchText(parts) {
+  return parts.filter(Boolean).join(" ").toLowerCase();
+}
+
+function renderSearchResults(items, offlineMode) {
+  const list = document.getElementById("globalSearchList");
+  list.innerHTML = "";
+  if (!items.length) {
+    list.innerHTML = "<p style='opacity:0.7;'>Keine Treffer gefunden.</p>";
+    return;
+  }
+  items.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "info-box";
+    div.style.cursor = "pointer";
+    div.style.marginBottom = "8px";
+    div.innerHTML = "<small>" + (item.item_type || "Eintrag") + (offlineMode ? " | Offline" : "") + "</small>" +
+      "<div class=\"text\">" + (item.title || "-") + "</div>" +
+      "<small>" + (item.subtitle || "") + "</small>";
+    div.onclick = () => {
+      if (item.item_type === "customer") window.location.href = "kunde-detail.html?id=" + item.item_id;
+      else if (item.item_type === "project") window.location.href = "projekt-detail.html?id=" + item.item_id;
+      else if (item.item_type === "auftrag") window.location.href = "auftrag-detail.html?id=" + item.item_id;
+      else if (item.item_type === "nachweis") window.location.href = "stunden-nachweis.html";
+    };
+    list.appendChild(div);
+  });
+}
+
+function buildOfflineSearchItems() {
+  const items = [];
+  const customers = JSON.parse(localStorage.getItem("customers") || "[]");
+  customers.forEach(c => {
+    const title = c.firma || [c.vorname, c.nachname].filter(Boolean).join(" ") || "Kunde";
+    items.push({ item_type: "customer", item_id: c.id, title, subtitle: [c.telefon, c.email, c.adresse, c.plz, c.ort].filter(Boolean).join(" | "), search_text: normalizeSearchText([title, c.vorname, c.nachname, c.telefon, c.email, c.adresse, c.plz, c.ort]) });
+  });
+  Object.keys(localStorage).filter(key => key.startsWith("projects_")).forEach(key => {
+    try {
+      const projects = JSON.parse(localStorage.getItem(key) || "[]");
+      projects.forEach(project => {
+        items.push({ item_type: "project", item_id: project.id, title: project.name || "Projekt", subtitle: [project.customer, project.ort, project.adresse].filter(Boolean).join(" | "), search_text: normalizeSearchText([project.name, project.customer, project.ort, project.adresse, project.project_number]) });
+      });
+    } catch (err) { console.log(err); }
+  });
+  return items;
+}
+
+async function loadOnlineSearchItems() {
+  const queries = await Promise.all([
+    db.from("customers").select("*").order("created_at", { ascending: false }).limit(150),
+    db.from("projects").select("*").order("created_at", { ascending: false }).limit(150),
+    db.from("auftraege").select("*").order("created_at", { ascending: false }).limit(150),
+    db.from("stundennachweise").select("*").order("created_at", { ascending: false }).limit(150)
+  ]);
+  queries.forEach(result => result.error && console.log(result.error));
+  const customers = (queries[0].data || []).map(c => ({ item_type: "customer", item_id: c.id, title: c.firma || [c.vorname, c.nachname].filter(Boolean).join(" ") || "Kunde", subtitle: [c.telefon, c.email, c.adresse, c.plz, c.ort].filter(Boolean).join(" | "), search_text: normalizeSearchText([c.firma, c.vorname, c.nachname, c.telefon, c.email, c.adresse, c.plz, c.ort]) }));
+  const projects = (queries[1].data || []).map(p => ({ item_type: "project", item_id: p.id, title: p.name || "Projekt", subtitle: [p.customer, p.ort, p.adresse, p.project_number].filter(Boolean).join(" | "), search_text: normalizeSearchText([p.name, p.customer, p.ort, p.adresse, p.project_number]) }));
+  const orders = (queries[2].data || []).map(o => ({ item_type: "auftrag", item_id: o.id, title: [o.customer || "Kunde", o.project || o.objekt || "Auftrag"].join(" - "), subtitle: [o.faelligkeit, o.objekt, o.auftragsnummer, o.beschreibung].filter(Boolean).join(" | "), search_text: normalizeSearchText([o.customer, o.project, o.objekt, o.auftragsnummer, o.beschreibung, o.faelligkeit]) }));
+  const reports = (queries[3].data || []).map(r => ({ item_type: "nachweis", item_id: r.id, title: [r.customer || "Kunde", r.objekt || "Nachweis"].join(" - "), subtitle: [r.arbeitsdatum, r.project, r.report_number, r.gefahrene_kilometer ? (r.gefahrene_kilometer + " km") : ""].filter(Boolean).join(" | "), search_text: normalizeSearchText([r.customer, r.objekt, r.project, r.arbeitsdatum, r.report_number]) }));
+  const items = customers.concat(projects, orders, reports);
+  writeSearchCache(items);
+  return items;
+}
+
 async function runGlobalSearch() {
   const value = document.getElementById("globalSearchInput").value.trim().toLowerCase();
   const list = document.getElementById("globalSearchList");
   list.innerHTML = "";
   if (!value) return;
-
-  if (!navigator.onLine) {
-    list.innerHTML = "<p style='opacity:0.7;'>Globale Suche ist offline nicht verfügbar.</p>";
+  let items = [];
+  let offlineMode = !navigator.onLine;
+  if (navigator.onLine) {
+    try { items = await loadOnlineSearchItems(); }
+    catch (error) { console.log(error); offlineMode = true; }
+  }
+  if (!items.length) {
+    items = readSearchCache().concat(buildOfflineSearchItems());
+    offlineMode = true;
+  }
+  const seen = new Set();
+  const filtered = items.filter(item => {
+    const key = String(item.item_type || "") + ":" + String(item.item_id || item.title || "");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return String(item.search_text || normalizeSearchText([item.title, item.subtitle])).includes(value);
+  }).slice(0, 20);
+  if (!filtered.length && offlineMode) {
+    list.innerHTML = "<p style='opacity:0.7;'>Offline keine passenden Treffer im lokalen Cache gefunden.</p>";
     return;
   }
-
-  const { data, error } =
-    await db
-      .from("global_search_items")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(120);
-
-  if (error) {
-    console.log(error);
-    list.innerHTML = "<p style='opacity:0.7;'>Suche aktuell nicht verfügbar.</p>";
-    return;
-  }
-
-  const filtered =
-    (data || []).filter(item =>
-      String(item.title || "").toLowerCase().includes(value) ||
-      String(item.subtitle || "").toLowerCase().includes(value)
-    ).slice(0, 20);
-
-  if (!filtered.length) {
-    list.innerHTML = "<p style='opacity:0.7;'>Keine Treffer gefunden.</p>";
-    return;
-  }
-
-  filtered.forEach(item => {
-    const div = document.createElement("div");
-    div.className = "info-box";
-    div.style.cursor = "pointer";
-    div.style.marginBottom = "8px";
-    div.innerHTML = `
-      <small>${item.item_type}</small>
-      <div class="text">${item.title || "-"}</div>
-      <small>${item.subtitle || ""}</small>
-    `;
-
-    div.onclick = () => {
-      if (item.item_type === "customer") {
-        window.location.href = "kunde-detail.html?id=" + item.item_id;
-      } else if (item.item_type === "project") {
-        window.location.href = "projekt-detail.html?id=" + item.item_id;
-      } else if (item.item_type === "auftrag") {
-        window.location.href = "auftrag-detail.html?id=" + item.item_id;
-      } else if (item.item_type === "nachweis") {
-        window.location.href = "stunden-nachweis.html";
-      }
-    };
-
-    list.appendChild(div);
-  });
+  renderSearchResults(filtered, offlineMode);
 }
 
+function pendingSyncCount() {
+  const keys = ["offlineUploads", "deleteQueue", "projectUpdateQueue", "projectDocumentFiles", "projectDocumentFolders", "projectImageFolders"];
+  return keys.reduce((sum, key) => {
+    try {
+      const value = JSON.parse(localStorage.getItem(key) || "[]");
+      if (!Array.isArray(value)) return sum;
+      if (key === "projectDocumentFiles" || key === "projectDocumentFolders") return sum + value.filter(item => item && item.synced !== true).length;
+      return sum + value.length;
+    } catch (err) {
+      return sum;
+    }
+  }, 0);
+}
 
-
+function updateSyncOverview() {
+  const text = document.getElementById("syncStatusText");
+  const hint = document.getElementById("syncStatusHint");
+  if (!text || !hint) return;
+  const pending = pendingSyncCount();
+  if (!navigator.onLine) {
+    text.textContent = "Offline";
+    text.style.color = "#ffb14a";
+    hint.textContent = pending ? (pending + " Aenderungen warten auf Synchronisierung.") : "Keine aktive Internetverbindung.";
+    return;
+  }
+  if (pending > 0) {
+    text.textContent = "Online - Synchronisierung offen";
+    text.style.color = "#ffb14a";
+    hint.textContent = pending + " lokale Aenderungen werden bei Verbindung abgeglichen.";
+    return;
+  }
+  text.textContent = "Online und synchron";
+  text.style.color = "#9be15d";
+  hint.textContent = "Alle lokalen Daten sind im Moment synchron.";
+}
 function openPlanung() {
   window.location.href = "planung.html";
 }
@@ -310,6 +391,10 @@ function openOffeneLeistungen() {
 }
 
 loadCompanyBranding();
+updateSyncOverview();
+window.addEventListener("online", updateSyncOverview);
+window.addEventListener("offline", updateSyncOverview);
+window.addEventListener("focus", updateSyncOverview);
 
 async function applyRoleOverviewVisibility() {
   if (!window.BaudokuAuthContext) return;

@@ -863,6 +863,7 @@ onclick="deleteJob()"
 <script src="auth-context.js"></script>
 <script src="storage-quota.js"></script>
 <script src="role-nav.js"></script>
+<script src="storage-links.js"></script>
 <script src="project-documents.js"></script>
 <script src="work-presets.js"></script>
 <script src="auto-textareas.js"></script>
@@ -1225,8 +1226,8 @@ async function loadImages(){
       return;
     }
 
-    (data || [])
-    .filter(img => {
+    const visibleImages =
+      (data || []).filter(img => {
 
       if(!window.BaudokuDocuments){
         return true;
@@ -1239,9 +1240,28 @@ async function loadImages(){
           window.BaudokuDocuments
             .getCurrentFolderId()
         );
-    })
-    .forEach(img => {
+    });
 
+    const resolvedImages =
+      window.BautrailStorageLinks
+        ? await Promise.all(
+            visibleImages.map(async img => ({
+              img,
+              url: await window.BautrailStorageLinks.resolveRowUrl(img, {
+                urlField: "image_url",
+                pathField: "storage_path",
+                bucketField: "storage_bucket",
+                defaultBucket: "bilder",
+                expiresIn: 3600
+              })
+            }))
+          )
+        : visibleImages.map(img => ({ img, url: img.image_url }));
+
+    resolvedImages.forEach(item => {
+
+    const img = item.img;
+    const resolvedUrl = item.url || img.image_url;
     const div =
       document.createElement("div");
 
@@ -1251,7 +1271,7 @@ async function loadImages(){
     div.innerHTML = `
 
       <img
-        src="${img.image_url}"
+        src="${resolvedUrl}"
       >
 
       <button
@@ -1341,21 +1361,14 @@ document
         continue;
       }
 
-      const { data } =
-        db.storage
-        .from("bilder")
-        .getPublicUrl(fileName);
-
-      if(!data || !data.publicUrl){
-        continue;
-      }
-
       const { error:insertError } =
         await db
         .from("project_images")
         .insert([{
           project_id: projektId,
-          image_url: data.publicUrl,
+          image_url: fileName,
+          storage_bucket: "bilder",
+          storage_path: fileName,
           folder_id:
             window.BaudokuDocuments
             ? window.BaudokuDocuments.getCurrentFolderId()
@@ -1371,7 +1384,7 @@ document
       if(window.BaudokuDocuments){
         await window.BaudokuDocuments
           .assignImageToFolder(
-            data.publicUrl,
+            fileName,
             projektId,
             window.BaudokuDocuments
               .getCurrentFolderId()
@@ -1523,22 +1536,14 @@ async function saveAudioBlob(audioBlob){
     return;
   }
 
-  const { data } =
-    db.storage
-    .from("bilder")
-    .getPublicUrl(fileName);
-
-  if(!data || !data.publicUrl){
-    alert("Sprachaufnahme konnte nicht gespeichert werden.");
-    return;
-  }
-
   const { data:record, error:insertError } =
     await db
     .from("project_audio")
     .insert([{
       project_id: projektId,
-      audio_url: data.publicUrl,
+      audio_url: fileName,
+      storage_bucket: "bilder",
+      storage_path: fileName,
       file_size: Number(audioBlob.size || 0),
       folder_id:
         window.BaudokuDocuments
@@ -1633,7 +1638,15 @@ async function loadAudio(){
     );
 
   player.src =
-    audio.audio_url;
+    window.BautrailStorageLinks
+      ? await window.BautrailStorageLinks.resolveRowUrl(audio, {
+          urlField: "audio_url",
+          pathField: "storage_path",
+          bucketField: "storage_bucket",
+          defaultBucket: "bilder",
+          expiresIn: 3600
+        })
+      : audio.audio_url;
 
   player.style.display =
     "block";

@@ -145,10 +145,15 @@ async function register() {
     return;
   }
 
+  localStorage.setItem(PENDING_SETUP_KEY, JSON.stringify(pendingSetup));
+
   const userId = signUpData && signUpData.user ? signUpData.user.id : null;
   if (!userId) {
     errorBox.style.display = "block";
-    errorBox.textContent = "Registrierung erstellt, aber Benutzer-ID fehlt. Bitte einloggen.";
+    errorBox.textContent = "Registrierung erstellt. Bitte einloggen, damit die Firmen-Einrichtung abgeschlossen werden kann.";
+    setTimeout(() => {
+      window.location.href = "login.html?setup=pending";
+    }, 1200);
     return;
   }
 
@@ -187,10 +192,11 @@ async function register() {
 
   } catch (err) {
     console.log(err);
-    localStorage.setItem(PENDING_SETUP_KEY, JSON.stringify(pendingSetup));
     window.location.href = "login.html?setup=pending";
     return;
   }
+
+  localStorage.removeItem(PENDING_SETUP_KEY);
 
   const target =
     window.BaudokuAuthContext

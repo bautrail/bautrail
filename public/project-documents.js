@@ -124,6 +124,7 @@
       type: row.file_type || row.type || "application/octet-stream",
       size: row.file_size || row.size || 0,
       created_at: row.created_at || new Date().toISOString(),
+      storage_bucket: row.storage_bucket || STORAGE_BUCKET,
       storage_path: row.storage_path || "",
       public_url: row.file_url || row.public_url || "",
       synced: true
@@ -303,12 +304,14 @@
     return cacheFolderRow(projectId, data || folder);
   }
 
-  async function insertDocument(projectId, file, path, publicUrl) {
+  async function insertDocument(projectId, file, path) {
     const payload = {
       project_id: projectId,
       folder_id: normalizeId(file.folder_id),
       file_name: file.name,
-      file_url: publicUrl,
+      file_url: path,
+      storage_bucket: STORAGE_BUCKET,
+      storage_path: path,
       file_type: file.type || "application/octet-stream",
       file_size: Number(file.size || 0)
     };
@@ -324,6 +327,7 @@
 
     return {
       ...cacheDocumentRow(projectId, data || payload),
+      storage_bucket: STORAGE_BUCKET,
       storage_path: path
     };
   }
@@ -391,14 +395,8 @@
           continue;
         }
 
-        const { data } =
-          window.db
-            .storage
-            .from(STORAGE_BUCKET)
-            .getPublicUrl(path);
-
         const saved =
-          await insertDocument(projectId, file, path, data && data.publicUrl ? data.publicUrl : "");
+          await insertDocument(projectId, file, path);
 
         Object.assign(file, saved);
         changed = true;
@@ -446,7 +444,7 @@
     saveDocuments(
       getDocuments().map(file =>
         sameId(file.project_id, oldId)
-          ? { ...file, project_id: String(newId), synced: false, storage_path: "", public_url: "" }
+          ? { ...file, project_id: String(newId), synced: false, storage_bucket: STORAGE_BUCKET, storage_path: "", public_url: "" }
           : file
       )
     );
@@ -803,6 +801,7 @@
         type: file.type || "application/octet-stream",
         size: file.size || 0,
         created_at: new Date().toISOString(),
+        storage_bucket: STORAGE_BUCKET,
         storage_path: "",
         public_url: "",
         synced: false
@@ -822,18 +821,11 @@
 
           if (uploadError) throw uploadError;
 
-          const { data } =
-            window.db
-              .storage
-              .from(STORAGE_BUCKET)
-              .getPublicUrl(path);
-
           const saved =
             await insertDocument(
               projectId,
               localFile,
-              path,
-              data && data.publicUrl ? data.publicUrl : ""
+              path
             );
 
           documents.push(saved);
@@ -918,17 +910,28 @@
       console.log(err);
     }
 
-    if (file.public_url) {
+    let remoteUrl = file.public_url || "";
+    if (window.BautrailStorageLinks && (file.storage_path || file.public_url)) {
+      remoteUrl = await window.BautrailStorageLinks.resolveRowUrl(file, {
+        urlField: "public_url",
+        pathField: "storage_path",
+        bucketField: "storage_bucket",
+        defaultBucket: STORAGE_BUCKET,
+        expiresIn: 3600
+      });
+    }
+
+    if (remoteUrl) {
       if (target) {
-        target.location.href = file.public_url;
+        target.location.href = remoteUrl;
       } else {
-        window.open(file.public_url, "_blank");
+        window.open(remoteUrl, "_blank");
       }
       return;
     }
 
     if (target) {
-      target.document.body.textContent = "Dieses Dokument ist noch nicht verfügbar.";
+      target.document.body.textContent = "Dieses Dokument ist noch nicht verfuegbar.";
     }
   }
 
