@@ -1,4 +1,4 @@
-const CACHE_NAME = "bautrail-v1";
+const CACHE_NAME = "bautrail-v20260519";
 const APP_SHELL = [
   "/",
   "/index.html",

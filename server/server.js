@@ -10,6 +10,13 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(cors());
+app.use((req, res, next) => {
+  const requestPath = req.path || "";
+  if (requestPath === "/" || requestPath.endsWith(".html") || requestPath === "/sw.js") {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  }
+  next();
+});
 app.use(express.static(publicDir));
 
 const SECRET = "geheim123";
