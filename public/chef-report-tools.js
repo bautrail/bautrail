@@ -27,9 +27,46 @@
     return report.nachweis_nummer || report.id || "ohne Nummer";
   }
 
+  function addOneDay(dateValue) {
+    const date = new Date(dateValue + "T00:00:00");
+    date.setDate(date.getDate() + 1);
+    return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+  }
+
   function currentArchiveBounds() {
+    const startInput = document.getElementById("archiveStart");
+    const endInput = document.getElementById("archiveEnd");
+    if (startInput || endInput) {
+      const start = startInput ? startInput.value : "";
+      const endInclusive = endInput ? endInput.value : "";
+      if (!start || !endInclusive) return null;
+      if (endInclusive < start) return { invalid: true, message: "Das Bis-Datum darf nicht vor dem Von-Datum liegen." };
+      return {
+        start,
+        end: addOneDay(endInclusive),
+        endInclusive,
+        label: formatDateDe(start) + " bis " + formatDateDe(endInclusive)
+      };
+    }
     const input = document.getElementById("archiveMonth") || document.getElementById("adminExportMonth");
     return monthBounds(input ? input.value : "");
+  }
+
+  function requireArchiveBounds(target) {
+    const bounds = currentArchiveBounds();
+    if (!bounds) {
+      if (target) target.innerHTML = "<p style='opacity:0.7;'>Bitte zuerst einen Zeitraum wählen.</p>";
+      const summary = document.getElementById("archiveSummary");
+      if (summary) summary.innerHTML = "<p style='opacity:0.7;'>Bitte zuerst Von- und Bis-Datum eintragen.</p>";
+      return null;
+    }
+    if (bounds.invalid) {
+      if (target) target.innerHTML = "<p style='opacity:0.7;'>" + bounds.message + "</p>";
+      const summary = document.getElementById("archiveSummary");
+      if (summary) summary.innerHTML = "<p style='opacity:0.7;'>" + bounds.message + "</p>";
+      return null;
+    }
+    return bounds;
   }
 
   async function loadArchiveFilterOptions() {
@@ -110,11 +147,11 @@
           <strong>${escapeHtml(reportNumberLabel(report))}</strong>
         </div>
         <div class="button-row" style="margin-top:8px;">
-          <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="downloadChefReportPdf('${report.id}')">PDF</button>
-          <button class="login-btn" style="margin-bottom:0;" onclick="setReportReviewStatus('${report.id}','geprueft')">Prüfen</button>
-          <button class="login-btn" style="margin-bottom:0;background:#2e6b3f;" onclick="setReportReviewStatus('${report.id}','abgerechnet')">Abgerechnet</button>
-          <button class="delete-btn" style="margin:0;" onclick="setReportReviewStatus('${report.id}','abgelehnt')">Ablehnen</button>
-          ${customerId ? `<button class="login-btn" style="margin-bottom:0;background:#444;" onclick="window.location.href='kunde-detail.html?id=${customerId}'">Kundenakte</button>` : ""}
+          <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="downloadChefReportPdf('${report.id}')">📄 PDF</button>
+          <button class="login-btn" style="margin-bottom:0;" onclick="setReportReviewStatus('${report.id}','geprueft')">✅ Prüfen</button>
+          <button class="login-btn" style="margin-bottom:0;background:#2e6b3f;" onclick="setReportReviewStatus('${report.id}','abgerechnet')">💶 Abgerechnet</button>
+          <button class="delete-btn" style="margin:0;" onclick="rejectChefReport('${report.id}')">🗑️ Ablehnen</button>
+          ${customerId ? `<button class="login-btn" style="margin-bottom:0;background:#444;" onclick="window.location.href='kunde-detail.html?id=${customerId}'">👤 Kundenakte</button>` : ""}
         </div>
       `;
       list.appendChild(card);
@@ -123,8 +160,12 @@
 
   async function loadReportArchive() {
     if (!authContext || !authContext.company_id) return;
-    const bounds = currentArchiveBounds();
     const list = document.getElementById("reportArchiveList");
+    const bounds = requireArchiveBounds(list);
+    if (!bounds) {
+      reportArchiveCache = [];
+      return;
+    }
     if (list) list.innerHTML = "<p style='opacity:0.7;'>Lade Stundennachweise...</p>";
 
     let query = db.from("stundennachweise")
@@ -157,6 +198,10 @@
 
   async function setReportReviewStatus(reportId, status) {
     const label = reportStatusLabel(status);
+    if (status === "abgelehnt") {
+      await rejectChefReport(reportId);
+      return;
+    }
     const ok = confirm("Nachweis wirklich auf " + label + " setzen?");
     if (!ok) return;
     const { error } = await db.rpc("review_company_report", {
@@ -262,7 +307,8 @@
   async function loadEmployeeAnalysis() {
     const target = document.getElementById("employeeAnalysis");
     if (!target || !authContext || !authContext.company_id) return;
-    const bounds = currentArchiveBounds();
+    const bounds = requireArchiveBounds(target);
+    if (!bounds) return;
     target.innerHTML = "<p style='opacity:0.7;'>Lade Auswertung...</p>";
     const { data, error } = await db.from("stundennachweise")
       .select("*")
@@ -344,6 +390,8 @@
   async function prepareCustomerBilling() {
     const select = document.getElementById("billingCustomer");
     const customerId = select ? select.value : "";
+    const bounds = requireArchiveBounds(document.getElementById("billingPreview"));
+    if (!bounds) return;
     if (!reportArchiveCache.length) await loadReportArchive();
     window.currentBillingRows = billingRowsForCustomer(customerId);
     window.currentBillingCustomerId = customerId;
@@ -423,9 +471,105 @@
     await loadEmployeeAnalysis();
   }
 
+  async function rejectChefReport(reportId) {
+    if (!authContext || !authContext.company_id) return;
+    const ok = confirm("Nachweis wirklich ablehnen und löschen? Er verschwindet danach aus der normalen Liste.");
+    if (!ok) return;
+    const reason = prompt("Grund für die Ablehnung / Löschung:", "Vom Chef abgelehnt") || "Vom Chef abgelehnt";
+    const note = reason.trim() || "Vom Chef abgelehnt";
+    let success = false;
+    let lastError = null;
+
+    const rpcReject = await db.rpc("reject_company_report", {
+      p_report_id: reportId,
+      p_note: note
+    });
+    if (!rpcReject.error) {
+      success = true;
+    } else {
+      lastError = rpcReject.error;
+      console.log(rpcReject.error);
+    }
+
+    if (!success) {
+      const deleted = await updateRejectedReportWithFallback(reportId, {
+        deleted_at: new Date().toISOString(),
+        deleted_by: authContext.user_id,
+        delete_reason: note,
+        review_status: "abgelehnt",
+        reviewed_by: authContext.user_id,
+        reviewed_at: new Date().toISOString()
+      });
+      if (!deleted.error && deleted.data) {
+        success = true;
+      } else {
+        lastError = deleted.error || lastError;
+        if (deleted.error) console.log(deleted.error);
+      }
+    }
+
+    if (!success) {
+      const review = await db.rpc("review_company_report", {
+        p_report_id: reportId,
+        p_status: "abgelehnt",
+        p_note: note
+      });
+      if (!review.error) {
+        success = true;
+      } else {
+        lastError = review.error || lastError;
+        console.log(review.error);
+      }
+    }
+
+    if (!success) {
+      alert("Nachweis konnte nicht gelöscht werden: " + ((lastError && lastError.message) || "Fehler"));
+      return;
+    }
+
+    reportArchiveCache = (reportArchiveCache || []).filter(item => String(item.id) !== String(reportId));
+    const bounds = currentArchiveBounds();
+    if (bounds && !bounds.invalid) renderArchiveSummary(reportArchiveCache, bounds);
+    renderReportArchive(reportArchiveCache);
+    await loadReportArchive();
+    await loadEmployeeAnalysis();
+  }
+
+  async function updateRejectedReportWithFallback(reportId, payload) {
+    let safe = { ...payload };
+    let result = await db
+      .from("stundennachweise")
+      .update(safe)
+      .eq("id", reportId)
+      .eq("company_id", authContext.company_id)
+      .select("id")
+      .maybeSingle();
+    let guard = 0;
+    while (result.error && guard < 10) {
+      const msg = String(result.error.message || "");
+      const match =
+        msg.match(/column\s+"([^"]+)"/i) ||
+        msg.match(/column\s+'([^']+)'/i) ||
+        msg.match(/find the '([^']+)' column/i) ||
+        msg.match(/find the "([^"]+)" column/i);
+      if (!match || !match[1] || !(match[1] in safe)) break;
+      delete safe[match[1]];
+      result = await db
+        .from("stundennachweise")
+        .update(safe)
+        .eq("id", reportId)
+        .eq("company_id", authContext.company_id)
+        .select("id")
+        .maybeSingle();
+      guard += 1;
+    }
+    return result;
+  }
+
   window.loadArchiveFilterOptions = loadArchiveFilterOptions;
   window.loadReportArchive = loadReportArchive;
   window.setReportReviewStatus = setReportReviewStatus;
+  window.rejectChefReport = rejectChefReport;
   window.downloadChefReportPdf = downloadChefReportPdf;
   window.loadMissingToday = loadMissingToday;
   window.loadEmployeeAnalysis = loadEmployeeAnalysis;
@@ -436,7 +580,7 @@
     const select = document.getElementById("billingCustomer");
     const customerId = select ? select.value : "";
     if (!customerId) {
-      alert("Bitte zuerst einen Kunden ausw?hlen.");
+      alert("Bitte zuerst einen Kunden auswählen.");
       return;
     }
     window.location.href = "kunde-detail.html?id=" + encodeURIComponent(customerId);

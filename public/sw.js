@@ -1,4 +1,4 @@
-const CACHE_NAME = "bautrail-v20260519";
+const CACHE_NAME = "bautrail-v20260526a";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -8,7 +8,11 @@ const APP_SHELL = [
   "/style.css",
   "/supabase.js",
   "/auth-context.js",
+  "/role-nav.js",
   "/notifications.js",
+  "/info-help.js",
+  "/recurring-orders.js",
+  "/voice-notes.js",
   "/company-context.js",
   "/auto-textareas.js",
   "/trash-utils.js",
@@ -18,12 +22,14 @@ const APP_SHELL = [
   "/material-list-page.js",
   "/project-documents.js",
   "/project-pdf.js",
+  "/schaltplan-zeichner.js",
   "/storage-links.js",
   "/pwa.js",
   "/assets/bautrail-logo.png",
   "/assets/bautrail-icon-192.png",
   "/assets/bautrail-icon-512.png",
   "/assets/bautrail-apple-touch-icon.png",
+  "/assets/schaltplan-vorlage.png",
   "/assets/app-icon.svg",
   "/assets/app-icon-192.png",
   "/assets/app-icon-512.png",
@@ -36,6 +42,7 @@ const APP_SHELL = [
   "/dringend.html",
   "/fahrzeug-material.html",
   "/firma-einstellungen.html",
+  "/feedback.html",
   "/kunde-anlegen.html",
   "/kunde-detail.html",
   "/kunden.html",
@@ -48,9 +55,12 @@ const APP_SHELL = [
   "/profil.html",
   "/projekt-anlegen.html",
   "/projekt-detail.html",
+  "/schaltplan-zeichner.html",
+  "/schaltplan-editor.html",
   "/stunden-nachweis.html",
   "/system-rolle.html",
   "/wecker-einstellungen.html",
+  "/wiederkehrende-auftraege.html",
   "/zeiten.html"
 ];
 

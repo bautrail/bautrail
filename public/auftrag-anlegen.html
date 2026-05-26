@@ -223,6 +223,60 @@ Material als Favorit speichern
 
 </div>
 
+<!-- WIEDERHOLUNG -->
+<div class="task-card" id="recurringCard">
+
+<h3>Wiederkehrender Auftrag</h3>
+
+<label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px;">
+  <input type="checkbox" id="recurringEnabled" onchange="updateRecurringPreview()">
+  Diesen Auftrag wiederholen
+</label>
+
+<select id="recurringInterval" class="input" onchange="updateRecurringPreview()">
+  <option value="weekly">Woechentlich</option>
+  <option value="monthly" selected>Monatlich</option>
+  <option value="custom_months">Alle X Monate</option>
+  <option value="yearly">Jaehrlich</option>
+</select>
+
+<input
+  type="number"
+  id="recurringIntervalMonths"
+  class="input"
+  min="1"
+  step="1"
+  value="3"
+  style="display:none;"
+  oninput="updateRecurringPreview()"
+>
+
+<select id="recurringMode" class="input">
+  <option value="reminder">Als Erinnerung vorbereiten</option>
+  <option value="auto_create">Auftrag automatisch anlegen</option>
+</select>
+
+<input
+  type="number"
+  id="recurringReminderDays"
+  class="input"
+  min="0"
+  step="1"
+  value="30"
+  placeholder="Erinnerung Tage vorher"
+>
+
+<select id="recurringMember" class="input"></select>
+
+<label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px;">
+  <input type="checkbox" id="recurringNotifyAssignee">
+  Mitarbeiter ebenfalls benachrichtigen
+</label>
+
+<p id="recurringPreview" style="font-size:12px;opacity:0.75;margin-top:10px;">&nbsp;</p>
+
+</div>
+
 <button
 class="save-btn"
 onclick="saveJob()"
@@ -239,6 +293,7 @@ Speichern
 <script src="supabase.js"></script>
 <script src="auth-context.js"></script>
 <script src="company-context.js"></script>
+<script src="recurring-orders.js"></script>
 <script src="work-presets.js"></script>
 <script src="auto-textareas.js"></script>
 
@@ -251,6 +306,17 @@ let allCustomers = [];
 loadCustomerOptions();
 renderFavoriteMaterials();
 renderTemplates();
+initRecurringOptions();
+
+const dueInputForRecurring =
+  document.getElementById("faelligkeit");
+
+if(dueInputForRecurring){
+  dueInputForRecurring.addEventListener(
+    "input",
+    updateRecurringPreview
+  );
+}
 
 function renderFavoriteMaterials(){
 
@@ -388,6 +454,237 @@ function removeTemplate(id){
 
   window.BaudokuPresets.removeJobTemplate(id);
   renderTemplates();
+}
+
+async function initRecurringOptions(){
+
+  const card =
+    document.getElementById("recurringCard");
+
+  const memberSelect =
+    document.getElementById("recurringMember");
+
+  if(memberSelect){
+    memberSelect.innerHTML =
+      "<option value=''>Kein Mitarbeiter</option>";
+  }
+
+  if(!window.BaudokuAuthContext || !window.BautrailRecurringOrders){
+    updateRecurringPreview();
+    return;
+  }
+
+  const ctx =
+    await window.BaudokuAuthContext
+      .loadAuthContext({ noCache:true });
+
+  if(
+    card &&
+    !window.BautrailRecurringOrders
+      .isManager(ctx)
+  ){
+    card.style.display = "none";
+    return;
+  }
+
+  if(ctx && ctx.company_id && memberSelect){
+    const { data, error } =
+      await db
+        .from("company_members")
+        .select("user_id, name, email, role, active")
+        .eq("company_id", ctx.company_id)
+        .eq("active", true)
+        .order("name", { ascending:true });
+
+    if(error){
+      console.log(error);
+    }
+
+    (data || [])
+      .filter(member => member.role === "angestellter")
+      .forEach(member => {
+        const option =
+          document.createElement("option");
+
+        option.value =
+          member.user_id;
+
+        option.textContent =
+          member.name ||
+          member.email ||
+          "Mitarbeiter";
+
+        memberSelect.appendChild(option);
+      });
+  }
+
+  updateRecurringPreview();
+}
+
+function updateRecurringPreview(){
+
+  const enabled =
+    document.getElementById("recurringEnabled");
+
+  const interval =
+    document.getElementById("recurringInterval");
+
+  const months =
+    document.getElementById("recurringIntervalMonths");
+
+  const preview =
+    document.getElementById("recurringPreview");
+
+  if(!interval || !months || !preview) return;
+
+  months.style.display =
+    interval.value === "custom_months"
+      ? "block"
+      : "none";
+
+  if(!enabled || !enabled.checked){
+    preview.textContent =
+      "Keine Wiederholung aktiv.";
+    return;
+  }
+
+  const due =
+    document.getElementById("faelligkeit")
+      .value;
+
+  if(!due || !window.BautrailRecurringOrders){
+    preview.textContent =
+      "Bitte zuerst eine Faelligkeit setzen.";
+    return;
+  }
+
+  const rule = {
+    interval_type:
+      interval.value,
+    interval_months:
+      Number(months.value || 1)
+  };
+
+  const next =
+    window.BautrailRecurringOrders
+      .advanceDueDate(due, rule);
+
+  preview.textContent =
+    "Naechste automatische Faelligkeit: " +
+    window.BautrailRecurringOrders
+      .formatDateDe(next);
+}
+
+async function createRecurringFromSavedJob(savedJob){
+
+  const enabled =
+    document.getElementById("recurringEnabled");
+
+  if(!enabled || !enabled.checked) return;
+
+  if(!window.BaudokuAuthContext || !window.BautrailRecurringOrders){
+    return;
+  }
+
+  const ctx =
+    await window.BaudokuAuthContext
+      .loadAuthContext({ noCache:true });
+
+  if(
+    !ctx ||
+    !ctx.company_id ||
+    !window.BautrailRecurringOrders
+      .isManager(ctx)
+  ){
+    return;
+  }
+
+  const due =
+    document.getElementById("faelligkeit")
+      .value ||
+    window.BautrailRecurringOrders
+      .todayKey();
+
+  const intervalType =
+    document.getElementById("recurringInterval")
+      .value;
+
+  const intervalMonths =
+    Math.max(
+      1,
+      Number(
+        document.getElementById(
+          "recurringIntervalMonths"
+        ).value || 1
+      )
+    );
+
+  const nextDue =
+    window.BautrailRecurringOrders
+      .advanceDueDate(due, {
+        interval_type: intervalType,
+        interval_months: intervalMonths
+      });
+
+  const payload = {
+    company_id: ctx.company_id,
+    customer_id: selectedCustomer.id,
+    project_id: selectedProject.id,
+    template_auftrag_id:
+      savedJob && savedJob.id
+        ? savedJob.id
+        : null,
+    customer: selectedCustomer.name,
+    project: selectedProject.name,
+    beschreibung:
+      document.getElementById(
+        "beschreibung"
+      ).value,
+    priority:
+      document.getElementById(
+        "priority"
+      ).value,
+    interval_type: intervalType,
+    interval_months: intervalMonths,
+    next_due_date: nextDue,
+    last_created_due_date: due,
+    reminder_days_before:
+      Math.max(
+        0,
+        Number(
+          document.getElementById(
+            "recurringReminderDays"
+          ).value || 0
+        )
+      ),
+    mode:
+      document.getElementById(
+        "recurringMode"
+      ).value,
+    assigned_user_id:
+      document.getElementById(
+        "recurringMember"
+      ).value || null,
+    notify_assignee:
+      document.getElementById(
+        "recurringNotifyAssignee"
+      ).checked,
+    created_by:
+      ctx.user_id || null,
+    active:true
+  };
+
+  const { error } =
+    await db
+      .from("recurring_orders")
+      .insert([payload]);
+
+  if(error){
+    console.log(error);
+    alert(
+      "Auftrag gespeichert, aber die Wiederholung konnte nicht angelegt werden."
+    );
+  }
 }
 
 async function loadCustomerOptions(){
@@ -769,7 +1066,7 @@ try{
   return;
 }
 
-  const { error } =
+  const { data:savedJobData, error } =
   await window.BaudokuCompanyContext
   .insertScoped("auftraege", {
 
@@ -812,6 +1109,15 @@ if(error){
 
   return;
 }
+
+const savedJob =
+  Array.isArray(savedJobData)
+    ? savedJobData[0]
+    : savedJobData;
+
+await createRecurringFromSavedJob(
+  savedJob
+);
 
 window.location.href =
   "auftraege.html";

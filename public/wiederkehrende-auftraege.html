@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wiederkehrende Auftraege - bautrail</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="bautrail">
+  <link rel="icon" href="assets/bautrail-icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/bautrail-apple-touch-icon.png">
+  <style>
+    .mini-label {
+      display:block;
+      margin-top:10px;
+      font-size:12px;
+      opacity:0.75;
+    }
+
+    .status-pill {
+      display:inline-flex;
+      align-items:center;
+      min-height:28px;
+      border-radius:999px;
+      padding:4px 9px;
+      background:#333;
+      font-size:12px;
+      color:white;
+    }
+
+    .compact-actions {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    .compact-actions button {
+      flex:1;
+      min-width:130px;
+      margin:0;
+      padding:10px 12px;
+    }
+  </style>
+</head>
+<body>
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <button class="back-btn" onclick="window.location.href='auftraege.html'">&#8592;</button>
+      <h1 class="app-name">Wiederkehrende Auftraege</h1>
+      <p class="company-name">Automatische Folgeauftraege und Erinnerungen</p>
+    </header>
+
+    <div class="task-card">
+      <h3>Neue Wiederholung</h3>
+
+      <label class="mini-label">Kunde</label>
+      <select id="recurringCustomer" class="compact-input" onchange="onCustomerChange()"></select>
+      <input id="recurringCustomerText" class="compact-input" placeholder="Kundenname" style="margin-top:8px;">
+
+      <label class="mini-label">Projekt / Auftrag</label>
+      <select id="recurringProject" class="compact-input" onchange="onProjectChange()"></select>
+      <input id="recurringProjectText" class="compact-input" placeholder="Projekt oder Auftrag" style="margin-top:8px;">
+
+      <label class="mini-label">Beschreibung</label>
+      <textarea id="recurringDescription" class="compact-input compact-textarea" placeholder="z. B. Pruefung, Wartung, Kontrolle" style="margin-top:6px;"></textarea>
+
+      <label class="mini-label">Prioritaet</label>
+      <select id="recurringPriority" class="compact-input">
+        <option value="normal">Normal</option>
+        <option value="week">Diese Woche</option>
+        <option value="urgent">Dringend</option>
+      </select>
+
+      <label class="mini-label">Erste / naechste Faelligkeit</label>
+      <input id="recurringStartDate" type="date" class="compact-input" oninput="updatePreview()">
+
+      <label class="mini-label">Intervall</label>
+      <select id="recurringInterval" class="compact-input" onchange="updatePreview()">
+        <option value="weekly">Woechentlich</option>
+        <option value="monthly" selected>Monatlich</option>
+        <option value="custom_months">Alle X Monate</option>
+        <option value="yearly">Jaehrlich</option>
+      </select>
+
+      <input id="recurringIntervalMonths" type="number" min="1" step="1" class="compact-input" value="3" style="display:none;margin-top:8px;" oninput="updatePreview()">
+
+      <label class="mini-label">Verhalten</label>
+      <select id="recurringMode" class="compact-input">
+        <option value="reminder">Als Erinnerung vorbereiten</option>
+        <option value="auto_create">Auftrag automatisch anlegen</option>
+      </select>
+
+      <label class="mini-label">Erinnerung wie viele Tage vorher?</label>
+      <input id="recurringReminderDays" type="number" min="0" step="1" class="compact-input" value="30">
+
+      <label class="mini-label">Optional Mitarbeiter benachrichtigen</label>
+      <select id="recurringMember" class="compact-input"></select>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12px;opacity:0.9;">
+        <input id="recurringNotifyAssignee" type="checkbox"> Mitarbeiter ebenfalls informieren
+      </label>
+
+      <div class="info-box" style="margin-top:12px;">
+        <small>Vorschau</small>
+        <div id="recurringPreview" class="text">-</div>
+      </div>
+
+      <button class="login-btn" style="margin-top:10px;" onclick="saveRecurringOrder()">Wiederholung speichern</button>
+      <p id="recurringStatus" style="font-size:12px;opacity:0.85;min-height:18px;">&nbsp;</p>
+    </div>
+
+    <div class="task-card">
+      <h3>Offene Erinnerungen</h3>
+      <div id="reminderList" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="task-card">
+      <h3>Aktive Wiederholungen</h3>
+      <div id="recurringList" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html"><span>&#127968;</span><small>Uebersicht</small></a>
+    <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
+    <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+    <a href="auftraege.html" class="active"><span>&#128203;</span><small>Auftraege</small></a>
+  </nav>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script src="role-nav.js"></script>
+<script src="company-context.js"></script>
+<script src="recurring-orders.js"></script>
+<script>
+let authContext = null;
+let customersCache = [];
+let projectsCache = [];
+let membersCache = [];
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+function customerLabel(customer) {
+  return customer.firma || [customer.vorname, customer.nachname].filter(Boolean).join(" ") || "Kunde";
+}
+
+function setStatus(text, ok) {
+  const el = document.getElementById("recurringStatus");
+  el.textContent = text || "\u00A0";
+  el.style.color = ok ? "#6bd86b" : "#ff6b3d";
+}
+
+function setDefaultDate() {
+  const input = document.getElementById("recurringStartDate");
+  if (!input.value && window.BautrailRecurringOrders) {
+    input.value = window.BautrailRecurringOrders.todayKey();
+  }
+}
+
+function fillCustomerSelect() {
+  const select = document.getElementById("recurringCustomer");
+  select.innerHTML = "<option value=''>Kunde auswaehlen</option>";
+  customersCache.forEach(customer => {
+    const option = document.createElement("option");
+    option.value = customer.id;
+    option.textContent = customerLabel(customer);
+    select.appendChild(option);
+  });
+}
+
+function fillProjectSelect(customerId) {
+  const select = document.getElementById("recurringProject");
+  select.innerHTML = "<option value=''>Projekt auswaehlen</option>";
+  const list = customerId
+    ? projectsCache.filter(project => String(project.customer_id || "") === String(customerId))
+    : projectsCache;
+
+  list.forEach(project => {
+    const option = document.createElement("option");
+    option.value = project.id;
+    option.textContent = project.name || "Projekt";
+    select.appendChild(option);
+  });
+}
+
+function fillMemberSelect() {
+  const select = document.getElementById("recurringMember");
+  select.innerHTML = "<option value=''>Kein Mitarbeiter</option>";
+  membersCache.forEach(member => {
+    const option = document.createElement("option");
+    option.value = member.user_id;
+    option.textContent = member.name || member.email || "Mitarbeiter";
+    select.appendChild(option);
+  });
+}
+
+function onCustomerChange() {
+  const select = document.getElementById("recurringCustomer");
+  const customer = customersCache.find(item => String(item.id) === String(select.value));
+  document.getElementById("recurringCustomerText").value = customer ? customerLabel(customer) : "";
+  fillProjectSelect(select.value);
+}
+
+function onProjectChange() {
+  const select = document.getElementById("recurringProject");
+  const project = projectsCache.find(item => String(item.id) === String(select.value));
+  document.getElementById("recurringProjectText").value = project ? (project.name || "") : "";
+}
+
+function updatePreview() {
+  const startDate = document.getElementById("recurringStartDate").value;
+  const intervalType = document.getElementById("recurringInterval").value;
+  const monthsInput = document.getElementById("recurringIntervalMonths");
+  monthsInput.style.display = intervalType === "custom_months" ? "block" : "none";
+
+  if (!startDate || !window.BautrailRecurringOrders) {
+    document.getElementById("recurringPreview").textContent = "-";
+    return;
+  }
+
+  const rule = {
+    interval_type: intervalType,
+    interval_months: Number(monthsInput.value || 1)
+  };
+  const next = window.BautrailRecurringOrders.advanceDueDate(startDate, rule);
+  document.getElementById("recurringPreview").textContent =
+    "Erste Faelligkeit: " +
+    window.BautrailRecurringOrders.formatDateDe(startDate) +
+    " | danach: " +
+    window.BautrailRecurringOrders.formatDateDe(next);
+}
+
+async function saveRecurringOrder() {
+  if (!authContext || !authContext.company_id) {
+    setStatus("Keine Firmenzuordnung gefunden.", false);
+    return;
+  }
+
+  const customerSelect = document.getElementById("recurringCustomer");
+  const projectSelect = document.getElementById("recurringProject");
+  const customer = document.getElementById("recurringCustomerText").value.trim();
+  const project = document.getElementById("recurringProjectText").value.trim();
+  const nextDue = document.getElementById("recurringStartDate").value;
+
+  if (!customer || !project || !nextDue) {
+    setStatus("Bitte Kunde, Projekt und Faelligkeit eintragen.", false);
+    return;
+  }
+
+  const payload = {
+    company_id: authContext.company_id,
+    customer_id: customerSelect.value || null,
+    project_id: projectSelect.value || null,
+    customer,
+    project,
+    beschreibung: document.getElementById("recurringDescription").value.trim(),
+    priority: document.getElementById("recurringPriority").value,
+    interval_type: document.getElementById("recurringInterval").value,
+    interval_months: Math.max(1, Number(document.getElementById("recurringIntervalMonths").value || 1)),
+    next_due_date: nextDue,
+    reminder_days_before: Math.max(0, Number(document.getElementById("recurringReminderDays").value || 0)),
+    mode: document.getElementById("recurringMode").value,
+    assigned_user_id: document.getElementById("recurringMember").value || null,
+    notify_assignee: document.getElementById("recurringNotifyAssignee").checked,
+    created_by: authContext.user_id || null,
+    active: true
+  };
+
+  const { error } = await db.from("recurring_orders").insert([payload]);
+  if (error) {
+    console.log(error);
+    setStatus("Wiederholung konnte nicht gespeichert werden.", false);
+    return;
+  }
+
+  setStatus("Wiederholung gespeichert.", true);
+  document.getElementById("recurringDescription").value = "";
+  await refreshLists();
+}
+
+async function refreshLists() {
+  await window.BautrailRecurringOrders.processDueRecurrences();
+  await Promise.all([loadRecurringList(), loadReminderList()]);
+}
+
+async function loadRecurringList() {
+  const target = document.getElementById("recurringList");
+  target.innerHTML = "<p style='opacity:0.7;'>Lade Wiederholungen...</p>";
+
+  const { data, error } = await db
+    .from("recurring_orders")
+    .select("*")
+    .eq("company_id", authContext.company_id)
+    .eq("active", true)
+    .order("next_due_date", { ascending: true });
+
+  if (error) {
+    console.log(error);
+    target.innerHTML = "<p style='opacity:0.7;'>Wiederholungen konnten nicht geladen werden.</p>";
+    return;
+  }
+
+  if (!(data || []).length) {
+    target.innerHTML = "<p style='opacity:0.7;'>Noch keine Wiederholungen.</p>";
+    return;
+  }
+
+  target.innerHTML = "";
+  (data || []).forEach(rule => {
+    const card = document.createElement("div");
+    card.className = "info-box";
+    card.style.marginBottom = "8px";
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+        <div>
+          <small>${escapeHtml(window.BautrailRecurringOrders.intervalLabel(rule))} | ${rule.mode === "auto_create" ? "automatisch" : "Erinnerung"}</small>
+          <div class="text">${escapeHtml(rule.customer)} - ${escapeHtml(rule.project)}</div>
+          <small>Naechste Faelligkeit: ${window.BautrailRecurringOrders.formatDateDe(rule.next_due_date)}</small>
+        </div>
+        <span class="status-pill">${escapeHtml(rule.priority || "normal")}</span>
+      </div>
+      <div class="compact-actions">
+        <button class="login-btn" onclick="createRecurringOrderNow('${rule.id}')">Auftrag jetzt anlegen</button>
+        <button class="login-btn" style="background:#444;" onclick="pauseRecurringOrder('${rule.id}')">Pausieren</button>
+      </div>
+    `;
+    target.appendChild(card);
+  });
+}
+
+async function loadReminderList() {
+  const target = document.getElementById("reminderList");
+  target.innerHTML = "<p style='opacity:0.7;'>Lade Erinnerungen...</p>";
+  const reminders = await window.BautrailRecurringOrders.loadOpenReminders(30);
+
+  if (!reminders.length) {
+    target.innerHTML = "<p style='opacity:0.7;'>Keine offenen Erinnerungen.</p>";
+    return;
+  }
+
+  target.innerHTML = "";
+  reminders.forEach(reminder => {
+    const card = document.createElement("div");
+    card.className = "info-box";
+    card.style.marginBottom = "8px";
+    card.innerHTML = `
+      <small>${escapeHtml(reminder.status)} | faellig ${window.BautrailRecurringOrders.formatDateDe(reminder.due_date)}</small>
+      <div class="text">${escapeHtml(reminder.title)}</div>
+      <small>${escapeHtml(reminder.message || "")}</small>
+      <div class="compact-actions">
+        <button class="login-btn" onclick="createReminderOrder('${reminder.id}')">Auftrag anlegen</button>
+        <button class="login-btn" style="background:#444;" onclick="completeReminder('${reminder.id}')">Erledigt</button>
+      </div>
+    `;
+    target.appendChild(card);
+  });
+}
+
+async function createRecurringOrderNow(id) {
+  const result = await window.BautrailRecurringOrders.createOrderFromRecurring(id);
+  if (result.error) {
+    setStatus("Auftrag konnte nicht angelegt werden.", false);
+    return;
+  }
+  setStatus("Auftrag angelegt.", true);
+  await refreshLists();
+}
+
+async function createReminderOrder(id) {
+  const result = await window.BautrailRecurringOrders.createOrderFromReminder(id);
+  if (result.error) {
+    setStatus("Auftrag konnte nicht angelegt werden.", false);
+    return;
+  }
+  window.location.href = "auftrag-detail.html?id=" + result.data.id;
+}
+
+async function completeReminder(id) {
+  const result = await window.BautrailRecurringOrders.completeReminder(id);
+  if (result.error) {
+    setStatus("Erinnerung konnte nicht erledigt werden.", false);
+    return;
+  }
+  setStatus("Erinnerung erledigt.", true);
+  await refreshLists();
+}
+
+async function pauseRecurringOrder(id) {
+  const ok = confirm("Wiederholung pausieren?");
+  if (!ok) return;
+  const { error } = await db
+    .from("recurring_orders")
+    .update({ active: false, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("company_id", authContext.company_id);
+  if (error) {
+    console.log(error);
+    setStatus("Wiederholung konnte nicht pausiert werden.", false);
+    return;
+  }
+  setStatus("Wiederholung pausiert.", true);
+  await refreshLists();
+}
+
+(async function() {
+  authContext = await window.BaudokuAuthContext.loadAuthContext({ noCache: true });
+  if (!authContext) {
+    window.location.href = "login.html";
+    return;
+  }
+  if (!window.BautrailRecurringOrders.isManager(authContext)) {
+    window.location.href = window.BaudokuAuthContext.dashboardPathForRole(authContext.role);
+    return;
+  }
+
+  setDefaultDate();
+  updatePreview();
+
+  const [customersResult, projectsResult, membersResult] = await Promise.all([
+    db.from("customers").select("*").eq("company_id", authContext.company_id).order("created_at", { ascending: false }),
+    db.from("projects").select("*").eq("company_id", authContext.company_id).order("created_at", { ascending: false }),
+    db.from("company_members").select("user_id, name, email, role, active").eq("company_id", authContext.company_id).eq("active", true).order("name", { ascending: true })
+  ]);
+
+  if (customersResult.error) console.log(customersResult.error);
+  if (projectsResult.error) console.log(projectsResult.error);
+  if (membersResult.error) console.log(membersResult.error);
+
+  customersCache = customersResult.data || [];
+  projectsCache = projectsResult.data || [];
+  membersCache = (membersResult.data || []).filter(member => member.role === "angestellter");
+
+  fillCustomerSelect();
+  fillProjectSelect("");
+  fillMemberSelect();
+  await refreshLists();
+})();
+</script>
+<script src="pwa.js"></script>
+</body>
+</html>

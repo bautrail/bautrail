@@ -59,10 +59,34 @@
         <button onclick="window.location.href='papierkorb.html'" class="login-btn" style="width:auto;margin:0;padding:10px 12px;background:#444;">Papierkorb</button>
       </div>
       <div id="akteStats" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;"></div>
+      <div id="akteOverview" style="margin-top:10px;"></div>
     </div>
 
     <div class="task-card">
-      <h3>Letzte Aktionen</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <h3>&#9889; Schaltpl&auml;ne</h3>
+        <button onclick="openCustomerCircuitPlanCreate()" class="login-btn" style="width:auto;margin:0;padding:10px 12px;">Neu</button>
+      </div>
+      <div id="circuitPlanList" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="task-card">
+      <h3>Sprachaufnahme</h3>
+      <div class="button-row" style="margin-top:10px;">
+        <button class="login-btn" style="margin-bottom:0;" onclick="startCustomerRecording()">Start</button>
+        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="stopCustomerRecording()">Stop</button>
+      </div>
+      <audio id="customerAudioPlayer" controls style="display:none;width:100%;margin-top:10px;"></audio>
+      <textarea id="customerVoiceTranscript" class="compact-input compact-textarea" placeholder="Transkript / Notiz zum Kunden" style="margin-top:10px;"></textarea>
+      <p id="customerVoiceStatus" style="font-size:12px;opacity:0.75;margin-top:8px;"></p>
+      <div id="customerVoiceNoteList" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="task-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <h3>Kundenchronik</h3>
+        <div id="activityFilters" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      </div>
       <div id="activityList" style="margin-top:10px;"></div>
     </div>
 
@@ -97,6 +121,7 @@
 <script src="auth-context.js"></script>
 <script src="role-nav.js"></script>
 <script src="storage-links.js"></script>
+<script src="voice-notes.js"></script>
 <script src="project-documents.js"></script>
 <script src="auto-textareas.js"></script>
 <script src="trash-utils.js"></script>
@@ -113,6 +138,199 @@ const kundeId =
   ).get("id");
 
 let currentCustomer = null;
+let customerActivityItems = [];
+let customerActivityFilter = "all";
+let customerMediaRecorder = null;
+let customerAudioChunks = [];
+let customerVoiceSession = null;
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+function setCustomerVoiceStatus(text, ok) {
+  const el =
+    document.getElementById(
+      "customerVoiceStatus"
+    );
+
+  if(!el) return;
+
+  el.textContent =
+    text || "";
+
+  el.style.color =
+    ok === false
+      ? "#ff6b3d"
+      : "#9be15d";
+}
+
+async function startCustomerRecording() {
+  const transcript =
+    document.getElementById(
+      "customerVoiceTranscript"
+    );
+
+  if(transcript) transcript.value = "";
+
+  if(window.BautrailVoiceNotes) {
+    customerVoiceSession =
+      window.BautrailVoiceNotes
+        .startSpeechToText({
+          onText:text => {
+            const field =
+              document.getElementById(
+                "customerVoiceTranscript"
+              );
+            if(field) field.value = text;
+          },
+          onStatus:text => setCustomerVoiceStatus(text, true)
+        });
+  }
+
+  const stream =
+    await navigator.mediaDevices
+      .getUserMedia({ audio:true });
+
+  customerMediaRecorder =
+    new MediaRecorder(stream);
+
+  customerAudioChunks = [];
+
+  customerMediaRecorder.ondataavailable =
+    event => {
+      customerAudioChunks.push(event.data);
+    };
+
+  customerMediaRecorder.onstop =
+    async () => {
+      const audioBlob =
+        new Blob(customerAudioChunks, {
+          type:"audio/webm"
+        });
+
+      const player =
+        document.getElementById(
+          "customerAudioPlayer"
+        );
+
+      if(player) {
+        player.src =
+          URL.createObjectURL(audioBlob);
+        player.style.display = "block";
+      }
+
+      await saveCustomerVoiceNote(audioBlob);
+    };
+
+  customerMediaRecorder.start();
+}
+
+function stopCustomerRecording() {
+  if(customerVoiceSession) {
+    customerVoiceSession.stop();
+    customerVoiceSession = null;
+  }
+
+  if(customerMediaRecorder) {
+    customerMediaRecorder.stop();
+  }
+}
+
+async function saveCustomerVoiceNote(audioBlob) {
+  if(!window.BautrailVoiceNotes) return;
+
+  const transcript =
+    document.getElementById(
+      "customerVoiceTranscript"
+    );
+
+  const text =
+    transcript
+      ? transcript.value.trim()
+      : "";
+
+  const result =
+    await window.BautrailVoiceNotes
+      .saveVoiceNote({
+        audioBlob,
+        customer_id:kundeId,
+        transcript:text,
+        note_text:text,
+        filePrefix:"kunde-" + kundeId,
+        source:"customer-audio"
+      });
+
+  if(result.error) {
+    console.log(result.error);
+    setCustomerVoiceStatus(
+      "Sprachnotiz konnte nicht gespeichert werden.",
+      false
+    );
+    return;
+  }
+
+  setCustomerVoiceStatus(
+    "Sprachnotiz gespeichert.",
+    true
+  );
+
+  await loadCustomerVoiceNotes();
+  await loadCustomerDossier();
+}
+
+async function loadCustomerVoiceNotes() {
+  const list =
+    document.getElementById(
+      "customerVoiceNoteList"
+    );
+
+  if(!list || !window.BautrailVoiceNotes) return;
+
+  const notes =
+    await window.BautrailVoiceNotes
+      .loadVoiceNotes({
+        customer_id:kundeId,
+        limit:8
+      });
+
+  if(!notes.length) {
+    list.innerHTML =
+      "<p style='opacity:0.7;'>Noch keine Sprachnotizen.</p>";
+    return;
+  }
+
+  list.innerHTML = "";
+
+  for(const note of notes) {
+    const url =
+      await window.BautrailVoiceNotes
+        .resolveAudioUrl(note);
+
+    const div =
+      document.createElement("div");
+
+    div.className = "info-box";
+    div.style.marginBottom = "8px";
+    div.innerHTML = `
+      <small>${new Date(note.created_at).toLocaleString("de-DE")}</small>
+      <div class="text">${escapeHtml(note.note_text || note.transcript || "Ohne Text")}</div>
+      ${
+        url
+        ? `<audio controls style="width:100%;margin-top:8px;" src="${url}"></audio>`
+        : ""
+      }
+    `;
+
+    list.appendChild(div);
+  }
+}
 
 // =======================
 // CREATE QUEUE
@@ -787,6 +1005,7 @@ async function loadProjects() {
 
     renderProjects(data);
     loadCustomerDossier();
+    loadCustomerCircuitPlans();
 
     return;
   }
@@ -864,6 +1083,7 @@ async function loadProjects() {
   renderProjects(data);
   loadCustomerDossier();
   loadCustomerReports();
+  loadCustomerCircuitPlans();
 }
 
 // =======================
@@ -1043,19 +1263,64 @@ function renderAkteStats(stats) {
 
   const items = [
     { label: "Projekte", value: stats.projects },
-    { label: "Aufträge", value: stats.jobs },
+    { label: "Auftraege", value: stats.jobs },
+    { label: "Nachweise", value: stats.reports },
+    { label: "Bilder", value: stats.images },
     { label: "Dateien", value: stats.documents },
-    { label: "Bilder", value: stats.images }
+    { label: "Offen", value: stats.openJobs }
   ];
 
   target.innerHTML =
     items.map(item => `
-      <div class="info-box" style="margin-top:0;">
+      <div class="info-box" style="margin-top:0;min-height:0;">
         <small>${item.label}</small>
         <div class="text" style="font-size:20px;font-weight:700;">${item.value}</div>
       </div>
     `).join("");
+
+  const overview = document.getElementById("akteOverview");
+  if (!overview) return;
+  overview.innerHTML = `
+    <div class="info-box" style="margin-top:0;min-height:0;">
+      <small>Schnellueberblick</small>
+      <div class="text">${stats.lastAction || "Noch keine Aktivitaet"}</div>
+      <small>Letzter Einsatz: ${stats.lastWorkDate || "-"} | Letzter Nachweis: ${stats.lastReportDate || "-"}</small>
+    </div>
+  `;
 }
+
+function renderActivityFilters() {
+  const host = document.getElementById("activityFilters");
+  if (!host) return;
+  const filters = [
+    { key: "all", label: "Alles" },
+    { key: "report", label: "Nachweise" },
+    { key: "job", label: "Auftraege" },
+    { key: "project", label: "Projekte" },
+    { key: "document", label: "Dateien" },
+    { key: "image", label: "Bilder" },
+    { key: "note", label: "Notizen" }
+  ];
+
+  host.innerHTML =
+    filters.map(filter => {
+      const active = customerActivityFilter === filter.key;
+      return `<button class="login-btn" style="width:auto;margin:0;padding:8px 10px;background:${active ? "#ff6b3d" : "#444"};" onclick="setCustomerActivityFilter('${filter.key}')">${filter.label}</button>`;
+    }).join("");
+}
+
+window.setCustomerActivityFilter = function(filter) {
+  customerActivityFilter = filter || "all";
+  renderActivity(customerActivityItems);
+};
+
+window.openCustomerActivity = function(kind, id) {
+  if (!id) return;
+  if (kind === "project") window.location.href = "projekt-detail.html?id=" + id;
+  else if (kind === "job") window.location.href = "auftrag-detail.html?id=" + id;
+  else if (kind === "report") window.location.href = "stunden-nachweis.html";
+  else if (kind === "circuit") openCustomerCircuitPlan(id);
+};
 
 function renderActivity(items) {
 
@@ -1064,31 +1329,49 @@ function renderActivity(items) {
 
   if (!list) return;
 
-  if (!items.length) {
+  renderActivityFilters();
+
+  const visible =
+    (items || []).filter(item => customerActivityFilter === "all" || item.filterKey === customerActivityFilter);
+
+  if (!visible.length) {
     list.innerHTML =
-      "<p style='opacity:0.7;'>Noch keine Aktionen gefunden.</p>";
+      "<p style='opacity:0.7;'>Keine passenden Eintraege gefunden.</p>";
     return;
   }
 
   list.innerHTML =
-    items.map(item => `
-      <div class="info-box" style="margin-top:0;margin-bottom:8px;min-height:0;">
-        <small>${item.type}</small>
-        <div class="text">${item.label}</div>
-        <small>${new Date(item.created_at).toLocaleString("de-DE")}</small>
+    visible.map(item => {
+      const openAttr = item.hrefKind ? `onclick="openCustomerActivity('${item.hrefKind}', '${item.hrefId || ""}')"` : "";
+      const cursor = item.hrefKind ? "pointer" : "default";
+      return `
+      <div class="info-box" style="margin-top:0;margin-bottom:8px;min-height:0;cursor:${cursor};" ${openAttr}>
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+          <div>
+            <small>${escapeHtml(item.type)}</small>
+            <div class="text">${escapeHtml(item.label)}</div>
+            <small>${escapeHtml(item.meta || "")}</small>
+          </div>
+          <small style="white-space:nowrap;opacity:0.7;">${new Date(item.created_at).toLocaleString("de-DE")}</small>
+        </div>
       </div>
-    `).join("");
+    `;}).join("");
 }
-
 async function loadCustomerDossier() {
 
   if (!navigator.onLine) {
     renderAkteStats({
       projects: 0,
       jobs: 0,
+      reports: 0,
       documents: 0,
-      images: 0
+      images: 0,
+      openJobs: 0,
+      lastAction: "Offline nicht verfuegbar",
+      lastWorkDate: "-",
+      lastReportDate: "-"
     });
+    customerActivityItems = [];
     renderActivity([]);
     return;
   }
@@ -1096,7 +1379,7 @@ async function loadCustomerDossier() {
   const { data: projects } =
     await db
       .from("projects")
-      .select("id, name, created_at")
+      .select("id, name, created_at, beschreibung, ort, datum")
       .eq("customer_id", kundeId);
 
   const projectIds =
@@ -1105,72 +1388,175 @@ async function loadCustomerDossier() {
   const { data: jobs } =
     await db
       .from("auftraege")
-      .select("id, project, customer, created_at, erledigt_am")
+      .select("id, project, customer, created_at, erledigt_am, beschreibung, faelligkeit, status")
       .eq("customer_id", kundeId);
 
-  const [documentsResult, imagesResult, audioResult] =
+  const { data: reports } =
+    await db
+      .from("stundennachweise")
+      .select("id, project, customer, objekt, created_at, arbeitsdatum, stunden, gefahrene_kilometer")
+      .eq("customer_id", kundeId)
+      .is("deleted_at", null);
+
+  const [documentsResult, imagesResult, audioResult, voiceNotesResult, circuitPlansResult] =
     await Promise.all([
       projectIds.length
-        ? db.from("project_documents").select("file_name, created_at, project_id").in("project_id", projectIds)
+        ? db.from("project_documents").select("id, file_name, created_at, project_id").in("project_id", projectIds)
         : Promise.resolve({ data: [] }),
       projectIds.length
-        ? db.from("project_images").select("created_at, project_id").in("project_id", projectIds)
+        ? db.from("project_images").select("id, created_at, project_id").in("project_id", projectIds)
         : Promise.resolve({ data: [] }),
       projectIds.length
-        ? db.from("project_audio").select("created_at, project_id").in("project_id", projectIds)
-        : Promise.resolve({ data: [] })
+        ? db.from("project_audio").select("id, created_at, project_id").in("project_id", projectIds)
+        : Promise.resolve({ data: [] }),
+      db.from("voice_notes").select("id, created_at, customer_id, project_id, auftrag_id, note_text, transcript").eq("customer_id", kundeId),
+      db.from("circuit_plans").select("id,title,updated_at").eq("customer_id", kundeId)
     ]);
-
-  renderAkteStats({
-    projects: (projects || []).length,
-    jobs: (jobs || []).length,
-    documents: (documentsResult.data || []).length + (audioResult.data || []).length,
-    images: (imagesResult.data || []).length
-  });
 
   const projectMap = new Map(
     (projects || []).map(project => [String(project.id), project.name || "Projekt"])
   );
+
+  const openJobs = (jobs || []).filter(job => !job.erledigt_am && String(job.status || "").toLowerCase() !== "abgerechnet").length;
+  const latestAction = [
+    ...(projects || []).map(item => ({ label: "Projekt: " + (item.name || "Projekt"), at: item.created_at || item.datum })),
+    ...(jobs || []).map(item => ({ label: "Auftrag: " + (item.project || "Auftrag"), at: item.erledigt_am || item.created_at })),
+    ...(reports || []).map(item => ({ label: "Nachweis: " + (item.objekt || item.project || "Nachweis"), at: item.created_at || item.arbeitsdatum }))
+  ].filter(item => item.at).sort((a, b) => new Date(b.at) - new Date(a.at))[0];
+
+  renderAkteStats({
+    projects: (projects || []).length,
+    jobs: (jobs || []).length,
+    reports: (reports || []).length,
+    documents:
+      (documentsResult.data || []).length +
+      (audioResult.data || []).length +
+      (voiceNotesResult.data || []).length +
+      (circuitPlansResult.data || []).length,
+    images: (imagesResult.data || []).length,
+    openJobs,
+    lastAction: latestAction ? latestAction.label : "Noch keine Aktivitaet",
+    lastWorkDate: (jobs || []).map(item => item.faelligkeit).filter(Boolean).sort().reverse()[0] || "-",
+    lastReportDate: (reports || []).map(item => item.arbeitsdatum || String(item.created_at || "").slice(0, 10)).filter(Boolean).sort().reverse()[0] || "-"
+  });
 
   const activity = [];
 
   (projects || []).forEach(project => {
     activity.push({
       type: "Projekt",
+      filterKey: "project",
       label: project.name || "Projekt angelegt",
-      created_at: project.created_at
+      meta: [project.ort || "", project.datum || ""].filter(Boolean).join(" | "),
+      created_at: project.created_at || project.datum || new Date().toISOString(),
+      hrefKind: "project",
+      hrefId: project.id
     });
+    if (project.beschreibung) {
+      activity.push({
+        type: "Notiz",
+        filterKey: "note",
+        label: "Projektnotiz",
+        meta: project.beschreibung,
+        created_at: project.created_at || project.datum || new Date().toISOString(),
+        hrefKind: "project",
+        hrefId: project.id
+      });
+    }
   });
 
   (jobs || []).forEach(job => {
     activity.push({
       type: job.erledigt_am ? "Auftrag erledigt" : "Auftrag",
+      filterKey: "job",
       label: (job.project || "Auftrag") + " - " + (job.customer || ""),
-      created_at: job.erledigt_am || job.created_at
+      meta: [job.faelligkeit || "", job.status || "offen"].filter(Boolean).join(" | "),
+      created_at: job.erledigt_am || job.created_at || new Date().toISOString(),
+      hrefKind: "job",
+      hrefId: job.id
+    });
+    if (job.beschreibung) {
+      activity.push({
+        type: "Notiz",
+        filterKey: "note",
+        label: "Auftragsnotiz",
+        meta: job.beschreibung,
+        created_at: job.created_at || new Date().toISOString(),
+        hrefKind: "job",
+        hrefId: job.id
+      });
+    }
+  });
+
+  (reports || []).forEach(report => {
+    activity.push({
+      type: "Stundennachweis",
+      filterKey: "report",
+      label: (report.objekt || report.project || "Nachweis") + " - " + (report.customer || ""),
+      meta: [report.arbeitsdatum || "", (report.stunden || 0) + " Std.", report.gefahrene_kilometer ? (report.gefahrene_kilometer + " km") : ""].filter(Boolean).join(" | "),
+      created_at: report.created_at || report.arbeitsdatum || new Date().toISOString(),
+      hrefKind: "report",
+      hrefId: report.id
     });
   });
 
   (documentsResult.data || []).forEach(file => {
     activity.push({
       type: "Dokument",
+      filterKey: "document",
       label: (file.file_name || "Dokument") + " - " + (projectMap.get(String(file.project_id)) || "Projekt"),
-      created_at: file.created_at
+      meta: "PDF / Datei",
+      created_at: file.created_at || new Date().toISOString(),
+      hrefKind: "project",
+      hrefId: file.project_id
     });
   });
 
   (imagesResult.data || []).forEach(image => {
     activity.push({
       type: "Bild",
+      filterKey: "image",
       label: "Bild hochgeladen - " + (projectMap.get(String(image.project_id)) || "Projekt"),
-      created_at: image.created_at
+      meta: "Bilddokumentation",
+      created_at: image.created_at || new Date().toISOString(),
+      hrefKind: "project",
+      hrefId: image.project_id
     });
   });
 
   (audioResult.data || []).forEach(audio => {
     activity.push({
       type: "Audio",
+      filterKey: "document",
       label: "Sprachtext gespeichert - " + (projectMap.get(String(audio.project_id)) || "Projekt"),
-      created_at: audio.created_at
+      meta: "Audio",
+      created_at: audio.created_at || new Date().toISOString(),
+      hrefKind: "project",
+      hrefId: audio.project_id
+    });
+  });
+
+  (voiceNotesResult.data || []).forEach(note => {
+    activity.push({
+      type: "Sprachnotiz",
+      filterKey: "note",
+      label: note.note_text || note.transcript || "Sprachnotiz gespeichert",
+      meta: note.auftrag_id ? "Auftrag" : note.project_id ? "Projekt" : "Kunde",
+      created_at: note.created_at || new Date().toISOString(),
+      hrefKind: note.auftrag_id ? "job" : note.project_id ? "project" : "",
+      hrefId: note.auftrag_id || note.project_id || ""
+    });
+  });
+
+  (circuitPlansResult.data || []).forEach(plan => {
+    activity.push({
+      type: "Schaltplan",
+      filterKey: "document",
+      label: plan.title || "Schaltplan",
+      meta: "Zeichnung",
+      created_at: plan.updated_at || new Date().toISOString(),
+      hrefKind: "circuit",
+      hrefId: plan.id
     });
   });
 
@@ -1178,9 +1564,9 @@ async function loadCustomerDossier() {
     new Date(b.created_at) - new Date(a.created_at)
   );
 
-  renderActivity(activity.slice(0, 10));
+  customerActivityItems = activity;
+  renderActivity(activity);
 }
-
 async function loadCustomerReports() {
 
   const list =
@@ -1225,6 +1611,55 @@ async function loadCustomerReports() {
     `).join("");
 }
 
+async function loadCustomerCircuitPlans() {
+
+  const list =
+    document.getElementById("circuitPlanList");
+
+  if (!list) return;
+
+  if (!navigator.onLine) {
+    list.innerHTML =
+      "<p style='opacity:0.7;'>Schaltpl&auml;ne werden online geladen.</p>";
+    return;
+  }
+
+  const { data, error } =
+    await db
+      .from("circuit_plans")
+      .select("id,title,updated_at,plan_data")
+      .eq("customer_id", kundeId)
+      .order("updated_at", { ascending: false })
+      .limit(10);
+
+  if (error) {
+    console.log(error);
+    list.innerHTML =
+      "<p style='opacity:0.7;'>Schaltpl&auml;ne konnten nicht geladen werden.</p>";
+    return;
+  }
+
+  if (!(data || []).length) {
+    list.innerHTML =
+      "<p style='opacity:0.7;'>Noch keine Schaltpl&auml;ne f&uuml;r diesen Kunden.</p>";
+    return;
+  }
+
+  list.innerHTML =
+    (data || []).map(plan => {
+      const pages =
+        plan.plan_data && Array.isArray(plan.plan_data.pages)
+          ? plan.plan_data.pages.length
+          : 1;
+      return `
+      <div class="info-box" style="margin-top:0;margin-bottom:8px;min-height:0;cursor:pointer;" onclick="openCustomerCircuitPlan('${plan.id}')">
+        <small>${new Date(plan.updated_at || Date.now()).toLocaleString("de-DE")}</small>
+        <div class="text">${escapeHtml(plan.title || "Schaltplan")}</div>
+        <small>${pages} Blatt</small>
+      </div>
+    `;}).join("");
+}
+
 // =======================
 // EVENTS
 // =======================
@@ -1259,6 +1694,22 @@ function openCustomerReportCreate() {
     + encodeURIComponent(kundeId);
 }
 
+function openCustomerCircuitPlanCreate() {
+
+  window.location.href =
+    "schaltplan-zeichner.html?customer_id="
+    + encodeURIComponent(kundeId);
+}
+
+function openCustomerCircuitPlan(planId) {
+
+  window.location.href =
+    "schaltplan-zeichner.html?customer_id="
+    + encodeURIComponent(kundeId)
+    + "&plan_id="
+    + encodeURIComponent(planId);
+}
+
 function goBack() {
 
   window.location.href =
@@ -1273,6 +1724,8 @@ loadCustomer();
 loadProjects();
 loadCustomerDossier();
 loadCustomerReports();
+loadCustomerCircuitPlans();
+loadCustomerVoiceNotes();
 
 </script>
 

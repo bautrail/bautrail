@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schaltplan Editor - bautrail</title>
+  <link rel="stylesheet" href="style.css?v=20260523c">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="bautrail">
+  <link rel="icon" href="assets/bautrail-icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/bautrail-apple-touch-icon.png">
+  <style>
+    .schematic-toolbar {
+      display: grid;
+      gap: 8px;
+    }
+
+    .tool-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .tool-btn {
+      width: auto;
+      min-height: 40px;
+      padding: 9px 11px;
+      border: 1px solid #3a3a3a;
+      border-radius: 10px;
+      background: #303030;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tool-btn.active {
+      background: #ff6b3d;
+      border-color: #ff6b3d;
+    }
+
+    .tool-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: #2a2a2a;
+      color: #ddd;
+      font-size: 0.82rem;
+    }
+
+    .tool-chip input[type="color"] {
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      padding: 0;
+    }
+
+    .tool-chip input[type="range"] {
+      width: 96px;
+    }
+
+    .schematic-canvas-wrap {
+      width: 100%;
+      margin-top: 12px;
+      border: 1px solid #373737;
+      border-radius: 14px;
+      background: #111;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    #schematicCanvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: #f7f7f7;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    .schematic-hint {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #aaa;
+      line-height: 1.35;
+    }
+  </style>
+</head>
+<body>
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <button class="back-btn" onclick="window.location.href='index.html'">&#8592;</button>
+      <h1 class="app-name">&#9889; Schaltplan Editor</h1>
+      <p class="company-name">Foto aufnehmen und direkt markieren</p>
+    </header>
+
+    <div class="overview-note">
+      <strong>So funktioniert es</strong><br>
+      Foto vom Schaltplan aufnehmen oder hochladen, danach darüber zeichnen, Text setzen oder Elektro-Symbole einfügen.
+    </div>
+
+    <div class="task-card">
+      <div class="card-title-row">
+        <h3>&#128247; Zeichnung laden</h3>
+        <button type="button" class="info-dot" aria-label="Info zu Zeichnung laden" data-info="Am Handy öffnet die Kamera. Am PC kannst du ein Foto oder eine gescannte Zeichnung auswählen.">i</button>
+      </div>
+      <input id="imageInput" class="compact-input" type="file" accept="image/*" capture="environment">
+      <p class="schematic-hint">Tipp: Foto möglichst gerade aufnehmen. Danach kannst du Linien, Hinweise und Symbole ergänzen.</p>
+    </div>
+
+    <div class="task-card">
+      <div class="card-title-row">
+        <h3>&#9998;&#65039; Bearbeiten</h3>
+        <button type="button" class="info-dot" aria-label="Info zum Bearbeiten" data-info="Wähle ein Werkzeug und tippe oder ziehe direkt auf der Zeichnung. Text und Symbole werden an der getippten Stelle gesetzt.">i</button>
+      </div>
+
+      <div class="schematic-toolbar">
+        <div class="tool-row" aria-label="Werkzeuge">
+          <button class="tool-btn active" type="button" data-tool="pen" onclick="setTool('pen')">&#9998; Stift</button>
+          <button class="tool-btn" type="button" data-tool="line" onclick="setTool('line')">/ Linie</button>
+          <button class="tool-btn" type="button" data-tool="rect" onclick="setTool('rect')">&#9633; Rahmen</button>
+          <button class="tool-btn" type="button" data-tool="text" onclick="setTool('text')">T Text</button>
+          <button class="tool-btn" type="button" data-tool="symbol" onclick="setTool('symbol')">&#9889; Symbol</button>
+        </div>
+
+        <div class="tool-row">
+          <label class="tool-chip">Farbe <input id="colorInput" type="color" value="#ff3b3b"></label>
+          <label class="tool-chip">Stärke <input id="widthInput" type="range" min="2" max="14" value="5"></label>
+          <select id="symbolSelect" class="compact-input" style="width:auto;min-width:150px;">
+            <option value="socket">Steckdose</option>
+            <option value="switch">Schalter</option>
+            <option value="lamp">Lampe</option>
+            <option value="ls">LS</option>
+            <option value="rcd">FI/RCD</option>
+            <option value="terminal">Klemme</option>
+            <option value="ground">Erdung</option>
+          </select>
+        </div>
+
+        <div class="tool-row">
+          <button class="tool-btn" type="button" onclick="undo()">&#8630; Rückgängig</button>
+          <button class="tool-btn" type="button" onclick="saveDraft()">Entwurf speichern</button>
+          <button class="tool-btn" type="button" onclick="loadDraft()">Entwurf laden</button>
+          <button class="tool-btn" type="button" onclick="exportPng()">PNG speichern</button>
+          <button class="tool-btn" type="button" onclick="resetEditor()">Neu</button>
+        </div>
+      </div>
+
+      <div class="schematic-canvas-wrap">
+        <canvas id="schematicCanvas" width="1100" height="760"></canvas>
+      </div>
+      <p id="editorStatus" class="schematic-hint">Noch kein Foto geladen. Du kannst trotzdem auf der leeren Fläche zeichnen.</p>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html"><span>&#127968;</span><small>Übersicht</small></a>
+    <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
+    <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+    <a href="profil.html"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
+  </nav>
+</div>
+
+<script>
+const DRAFT_KEY = "bautrail_schematic_editor_draft";
+const canvas = document.getElementById("schematicCanvas");
+const ctx = canvas.getContext("2d");
+const imageInput = document.getElementById("imageInput");
+const colorInput = document.getElementById("colorInput");
+const widthInput = document.getElementById("widthInput");
+const symbolSelect = document.getElementById("symbolSelect");
+const statusEl = document.getElementById("editorStatus");
+
+let baseImage = null;
+let baseImageDataUrl = "";
+let annotations = [];
+let activeTool = "pen";
+let drawing = false;
+let startPoint = null;
+let currentStroke = null;
+let preview = null;
+
+function setStatus(text) {
+  statusEl.textContent = text || "";
+}
+
+function currentStyle() {
+  return {
+    color: colorInput.value || "#ff3b3b",
+    width: Number(widthInput.value || 5)
+  };
+}
+
+function setTool(tool) {
+  activeTool = tool;
+  Array.from(document.querySelectorAll("[data-tool]")).forEach(button => {
+    button.classList.toggle("active", button.dataset.tool === tool);
+  });
+}
+
+function canvasPoint(event) {
+  const rect = canvas.getBoundingClientRect();
+  const source = event.touches && event.touches[0] ? event.touches[0] : event;
+  return {
+    x: (source.clientX - rect.left) * (canvas.width / rect.width),
+    y: (source.clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+function fitCanvasToImage(img) {
+  const maxWidth = 1600;
+  let scale = img.naturalWidth > maxWidth ? maxWidth / img.naturalWidth : 1;
+  let width = img.naturalWidth * scale;
+  let height = img.naturalHeight * scale;
+  if (width < 640) {
+    scale = 640 / width;
+    width *= scale;
+    height *= scale;
+  }
+  canvas.width = Math.round(width);
+  canvas.height = Math.round(height);
+}
+
+function drawGrid() {
+  ctx.fillStyle = "#f7f7f7";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "#e3e3e3";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += 40) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += 40) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+}
+
+function redraw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (baseImage) {
+    ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
+  } else {
+    drawGrid();
+  }
+  annotations.forEach(drawAnnotation);
+  if (preview) drawAnnotation(preview);
+}
+
+function drawAnnotation(item) {
+  ctx.save();
+  ctx.strokeStyle = item.color || "#ff3b3b";
+  ctx.fillStyle = item.color || "#ff3b3b";
+  ctx.lineWidth = item.width || 5;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  if (item.type === "stroke") {
+    ctx.beginPath();
+    item.points.forEach((point, index) => {
+      if (index === 0) ctx.moveTo(point.x, point.y);
+      else ctx.lineTo(point.x, point.y);
+    });
+    ctx.stroke();
+  }
+
+  if (item.type === "line") {
+    ctx.beginPath();
+    ctx.moveTo(item.x1, item.y1);
+    ctx.lineTo(item.x2, item.y2);
+    ctx.stroke();
+  }
+
+  if (item.type === "rect") {
+    ctx.strokeRect(item.x, item.y, item.w, item.h);
+  }
+
+  if (item.type === "text") {
+    ctx.font = "bold " + Math.max(22, (item.width || 5) * 6) + "px Arial";
+    ctx.fillText(item.text, item.x, item.y);
+  }
+
+  if (item.type === "symbol") {
+    drawSymbol(item);
+  }
+
+  ctx.restore();
+}
+
+function drawSymbol(item) {
+  const x = item.x;
+  const y = item.y;
+  const size = Math.max(34, (item.width || 5) * 9);
+  ctx.strokeStyle = item.color;
+  ctx.fillStyle = item.color;
+  ctx.lineWidth = Math.max(3, item.width || 5);
+  ctx.font = "bold " + Math.round(size * 0.36) + "px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  if (item.symbol === "socket") {
+    ctx.beginPath();
+    ctx.arc(x, y, size * 0.32, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x - size * 0.12, y - size * 0.08);
+    ctx.lineTo(x - size * 0.12, y + size * 0.08);
+    ctx.moveTo(x + size * 0.12, y - size * 0.08);
+    ctx.lineTo(x + size * 0.12, y + size * 0.08);
+    ctx.stroke();
+    return;
+  }
+
+  if (item.symbol === "switch") {
+    ctx.beginPath();
+    ctx.moveTo(x - size * 0.38, y);
+    ctx.lineTo(x - size * 0.05, y);
+    ctx.lineTo(x + size * 0.34, y - size * 0.22);
+    ctx.stroke();
+    return;
+  }
+
+  if (item.symbol === "lamp") {
+    ctx.beginPath();
+    ctx.arc(x, y, size * 0.34, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x - size * 0.22, y - size * 0.22);
+    ctx.lineTo(x + size * 0.22, y + size * 0.22);
+    ctx.moveTo(x + size * 0.22, y - size * 0.22);
+    ctx.lineTo(x - size * 0.22, y + size * 0.22);
+    ctx.stroke();
+    return;
+  }
+
+  if (item.symbol === "terminal") {
+    ctx.strokeRect(x - size * 0.35, y - size * 0.2, size * 0.7, size * 0.4);
+    ctx.beginPath();
+    ctx.moveTo(x - size * 0.22, y);
+    ctx.lineTo(x + size * 0.22, y);
+    ctx.stroke();
+    return;
+  }
+
+  if (item.symbol === "ground") {
+    ctx.beginPath();
+    ctx.moveTo(x, y - size * 0.32);
+    ctx.lineTo(x, y + size * 0.08);
+    ctx.moveTo(x - size * 0.28, y + size * 0.08);
+    ctx.lineTo(x + size * 0.28, y + size * 0.08);
+    ctx.moveTo(x - size * 0.2, y + size * 0.2);
+    ctx.lineTo(x + size * 0.2, y + size * 0.2);
+    ctx.moveTo(x - size * 0.12, y + size * 0.32);
+    ctx.lineTo(x + size * 0.12, y + size * 0.32);
+    ctx.stroke();
+    return;
+  }
+
+  const label = item.symbol === "rcd" ? "FI" : "LS";
+  ctx.strokeRect(x - size * 0.42, y - size * 0.28, size * 0.84, size * 0.56);
+  ctx.fillText(label, x, y);
+}
+
+function addText(point) {
+  const text = prompt("Text auf dem Schaltplan:");
+  if (!text) return;
+  const style = currentStyle();
+  annotations.push({ type: "text", x: point.x, y: point.y, text, ...style });
+  redraw();
+}
+
+function addSymbol(point) {
+  const style = currentStyle();
+  annotations.push({ type: "symbol", x: point.x, y: point.y, symbol: symbolSelect.value, ...style });
+  redraw();
+}
+
+function pointerDown(event) {
+  event.preventDefault();
+  const point = canvasPoint(event);
+  const style = currentStyle();
+
+  if (activeTool === "text") {
+    addText(point);
+    return;
+  }
+
+  if (activeTool === "symbol") {
+    addSymbol(point);
+    return;
+  }
+
+  drawing = true;
+  startPoint = point;
+
+  if (activeTool === "pen") {
+    currentStroke = { type: "stroke", points: [point], ...style };
+    annotations.push(currentStroke);
+  }
+}
+
+function pointerMove(event) {
+  if (!drawing) return;
+  event.preventDefault();
+  const point = canvasPoint(event);
+  const style = currentStyle();
+
+  if (activeTool === "pen" && currentStroke) {
+    currentStroke.points.push(point);
+    redraw();
+    return;
+  }
+
+  if (activeTool === "line") {
+    preview = { type: "line", x1: startPoint.x, y1: startPoint.y, x2: point.x, y2: point.y, ...style };
+  }
+
+  if (activeTool === "rect") {
+    preview = { type: "rect", x: startPoint.x, y: startPoint.y, w: point.x - startPoint.x, h: point.y - startPoint.y, ...style };
+  }
+
+  redraw();
+}
+
+function pointerUp(event) {
+  if (!drawing) return;
+  event.preventDefault();
+  if (preview) {
+    annotations.push(preview);
+    preview = null;
+  }
+  drawing = false;
+  currentStroke = null;
+  startPoint = null;
+  redraw();
+}
+
+function undo() {
+  annotations.pop();
+  redraw();
+}
+
+function exportPng() {
+  redraw();
+  const link = document.createElement("a");
+  link.download = "bautrail-schaltplan-" + new Date().toISOString().slice(0, 10) + ".png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+  setStatus("PNG wurde erstellt.");
+}
+
+function saveDraft() {
+  const data = {
+    baseImageDataUrl,
+    width: canvas.width,
+    height: canvas.height,
+    annotations
+  };
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+  setStatus("Entwurf lokal gespeichert.");
+}
+
+function loadDraft() {
+  const raw = localStorage.getItem(DRAFT_KEY);
+  if (!raw) {
+    setStatus("Kein lokaler Entwurf gefunden.");
+    return;
+  }
+  const data = JSON.parse(raw);
+  canvas.width = data.width || 1100;
+  canvas.height = data.height || 760;
+  annotations = data.annotations || [];
+  baseImageDataUrl = data.baseImageDataUrl || "";
+
+  if (baseImageDataUrl) {
+    const img = new Image();
+    img.onload = function() {
+      baseImage = img;
+      redraw();
+      setStatus("Entwurf geladen.");
+    };
+    img.src = baseImageDataUrl;
+    return;
+  }
+
+  baseImage = null;
+  redraw();
+  setStatus("Entwurf geladen.");
+}
+
+function resetEditor() {
+  const ok = confirm("Schaltplan wirklich zurücksetzen?");
+  if (!ok) return;
+  baseImage = null;
+  baseImageDataUrl = "";
+  annotations = [];
+  canvas.width = 1100;
+  canvas.height = 760;
+  redraw();
+  setStatus("Editor zurückgesetzt.");
+}
+
+imageInput.addEventListener("change", event => {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function() {
+    baseImageDataUrl = String(reader.result || "");
+    const img = new Image();
+    img.onload = function() {
+      baseImage = img;
+      annotations = [];
+      fitCanvasToImage(img);
+      redraw();
+      setStatus("Foto geladen. Jetzt Werkzeug wählen und markieren.");
+    };
+    img.src = baseImageDataUrl;
+  };
+  reader.readAsDataURL(file);
+});
+
+canvas.addEventListener("pointerdown", pointerDown);
+canvas.addEventListener("pointermove", pointerMove);
+canvas.addEventListener("pointerup", pointerUp);
+canvas.addEventListener("pointerleave", pointerUp);
+canvas.addEventListener("pointercancel", pointerUp);
+redraw();
+</script>
+<script src="info-help.js?v=20260523c"></script>
+<script src="pwa.js"></script>
+</body>
+</html>

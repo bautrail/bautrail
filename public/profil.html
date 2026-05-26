@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Einstellungen - bautrail</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260522f">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#ff6b3d">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -21,32 +21,61 @@
       <p id="headerRoleBadge" style="display:inline-block;margin-top:8px;padding:6px 10px;border-radius:999px;background:#2b2b2b;color:#fff;font-size:12px;">Rolle: -</p>
     </header>
 
+    <div class="overview-note">
+      <strong>Was ist hier wichtig?</strong><br>
+      Hier findest du Konto, Firmenverwaltung, Benachrichtigungen und Feedback. Das kleine <strong>i</strong> erklärt dir jeden Bereich kurz.
+    </div>
+
     <div class="task-card" id="companySettingsCard" style="display:none;">
-      <h3>&#127970; Firma Einstellungen</h3>
+      <div class="card-title-row">
+        <h3>&#127970; Firmeneinstellungen</h3>
+        <button type="button" class="info-dot" aria-label="Info zu Firmeneinstellungen" data-info="Nur für Chef sichtbar. Hier liegen Firmendaten, Speicher & Tarif, Einladungscodes und die Mitarbeiterliste.">i</button>
+      </div>
       <p style="font-size:12px;opacity:0.75;margin-top:8px;">Firmendaten zentral verwalten</p>
       <button class="login-btn" style="margin-top:8px;" onclick="window.location.href='firma-einstellungen.html'">Öffnen</button>
     </div>
 
     <div class="task-card">
-      <h3>&#9200; Wecker Einstellungen</h3>
+      <div class="card-title-row">
+        <h3>&#9200; Wecker Einstellungen</h3>
+        <button type="button" class="info-dot" aria-label="Info zu Wecker Einstellungen" data-info="Hier stellst du Zeiten ein, zu denen die App dich oder das Büro erinnern soll.">i</button>
+      </div>
       <p style="font-size:12px;opacity:0.75;margin-top:8px;">Zeiten für Benachrichtigungen einstellen</p>
       <button class="login-btn" style="margin-top:8px;" onclick="window.location.href='wecker-einstellungen.html'">Öffnen</button>
     </div>
 
     <div class="task-card">
-      <h3>&#128273; System Rolle</h3>
+      <div class="card-title-row">
+        <h3>&#128273; System Rolle</h3>
+        <button type="button" class="info-dot" aria-label="Info zu System Rolle" data-info="Hier wird festgelegt, ob du Chef, Büro oder Mitarbeiter bist. Einladungscodes verbinden dich mit der Firma.">i</button>
+      </div>
       <p style="font-size:12px;opacity:0.75;margin-top:8px;">Rolle wählen und Einladungscode nutzen</p>
       <button class="login-btn" style="margin-top:8px;" onclick="window.location.href='system-rolle.html'">Öffnen</button>
     </div>
 
     <div class="task-card">
-      <h3>&#9997;&#65039; Dein Name</h3>
+      <div class="card-title-row">
+        <h3>&#128172; Feedback</h3>
+        <button type="button" class="info-dot" aria-label="Info zu Feedback" data-info="Hier können App-Benutzer Ideen, Fehler oder Wünsche direkt per E-Mail an bautrail senden.">i</button>
+      </div>
+      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Vorschläge schreiben und Status verfolgen</p>
+      <button class="login-btn" style="margin-top:8px;" onclick="window.location.href='feedback.html'">Öffnen</button>
+    </div>
+
+    <div class="task-card">
+      <div class="card-title-row">
+        <h3>&#9997;&#65039; Dein Name</h3>
+        <button type="button" class="info-dot" aria-label="Info zu Dein Name" data-info="Dieser Name wird zum Beispiel in Planung, Zeiten und Nachweisen angezeigt.">i</button>
+      </div>
       <input id="profileNameInput" class="compact-input" placeholder="Dein Name" style="margin-top:8px;">
       <button class="login-btn" style="margin-top:8px;" onclick="saveProfileName()">Namen speichern</button>
       <p id="nameStatus" style="font-size:12px;opacity:0.8;min-height:18px;">&nbsp;</p>
     </div>
     <div class="task-card">
-      <h3>&#128465;&#65039; Account löschen</h3>
+      <div class="card-title-row">
+        <h3>&#128465;&#65039; Account löschen</h3>
+        <button type="button" class="info-dot" aria-label="Info zu Account löschen" data-info="Achtung: Dieser Bereich löscht deinen Zugang dauerhaft. Als Chef kann das auch die Firma betreffen.">i</button>
+      </div>
       <p id="deleteAccountHint" style="font-size:12px;opacity:0.75;margin-top:8px;">Dein Login und deine Firmenzuordnung werden dauerhaft gelöscht.</p>
       <button class="delete-btn" style="margin-top:10px;" onclick="deleteOwnAccount()">Meinen Account löschen</button>
       <p id="deleteAccountStatus" style="font-size:12px;opacity:0.8;min-height:18px;">&nbsp;</p>
@@ -95,7 +124,7 @@ async function deleteOwnAccount() {
   const isChef = String(authContext.role || "").toLowerCase() === "chef";
 
   if (isChef && window.BautrailCompanyExport) {
-    const wantsBackup = confirm("Vor dem L?schen eine vollst?ndige Sicherung als ZIP herunterladen?");
+    const wantsBackup = confirm("Vor dem Löschen eine vollständige Sicherung als ZIP herunterladen?");
     if (wantsBackup) {
       try {
         await window.BautrailCompanyExport.downloadFullArchive(authContext, {
@@ -104,9 +133,9 @@ async function deleteOwnAccount() {
         });
       } catch (err) {
         console.log(err);
-        const keepGoing = confirm("Die Sicherung konnte nicht erstellt werden. Trotzdem mit dem L?schen fortfahren?");
+        const keepGoing = confirm("Die Sicherung konnte nicht erstellt werden. Trotzdem mit dem Löschen fortfahren?");
         if (!keepGoing) {
-          setDeleteAccountStatus("L?schung abgebrochen.", false);
+          setDeleteAccountStatus("Löschung abgebrochen.", false);
           return;
         }
       }
@@ -115,8 +144,8 @@ async function deleteOwnAccount() {
 
   const companyName = companyForDelete && companyForDelete.name ? String(companyForDelete.name).trim() : "";
   const confirmMessage = isChef
-    ? "Account wirklich dauerhaft l?schen? Als Chef l?schst du damit auch die komplette Firma mit allen Kunden, Projekten, Auftr?gen, Nachweisen, Dateien und Mitarbeiter-Accounts."
-    : "Account wirklich dauerhaft l?schen? Du wirst danach abgemeldet.";
+    ? "Account wirklich dauerhaft löschen? Als Chef löschst du damit auch die komplette Firma mit allen Kunden, Projekten, Aufträgen, Nachweisen, Dateien und Mitarbeiter-Accounts."
+    : "Account wirklich dauerhaft löschen? Du wirst danach abgemeldet.";
 
   const firstOk = confirm(confirmMessage);
   if (!firstOk) return;
@@ -124,24 +153,25 @@ async function deleteOwnAccount() {
   if (isChef && companyName) {
     const typedCompany = prompt("Bitte den Firmennamen eingeben, um die Firmenl\u00f6schung zu best\u00e4tigen:\n" + companyName);
     if (String(typedCompany || "").trim() !== companyName) {
-      setDeleteAccountStatus("Firmennamen-Best?tigung stimmt nicht. L?schung abgebrochen.", false);
+      setDeleteAccountStatus("Firmennamen-Bestätigung stimmt nicht. Löschung abgebrochen.", false);
       return;
     }
   }
 
-  const requiredText = isChef ? "FIRMA LOESCHEN" : "LOESCHEN";
-  const typed = prompt("Bitte " + requiredText + " eingeben, um den Vorgang zu best?tigen:");
-  if (String(typed || "").trim().toUpperCase() !== requiredText) {
-    setDeleteAccountStatus("L?schung abgebrochen.", false);
+  const requiredText = isChef ? "FIRMA LÖSCHEN" : "LÖSCHEN";
+  const fallbackText = isChef ? "FIRMA LOESCHEN" : "LOESCHEN";
+  const typed = String(prompt("Bitte " + requiredText + " eingeben, um den Vorgang zu bestätigen:") || "").trim().toUpperCase();
+  if (typed !== requiredText && typed !== fallbackText) {
+    setDeleteAccountStatus("Löschung abgebrochen.", false);
     return;
   }
 
-  setDeleteAccountStatus(isChef ? "Firma und Account werden gel?scht..." : "Account wird gel?scht...", true);
+  setDeleteAccountStatus(isChef ? "Firma und Account werden gelöscht..." : "Account wird gelöscht...", true);
   const { error } = await db.rpc("delete_current_user_account");
 
   if (error) {
     console.log(error);
-    setDeleteAccountStatus("Account konnte nicht gel?scht werden: " + (error.message || "Fehler"), false);
+    setDeleteAccountStatus("Account konnte nicht gelöscht werden: " + (error.message || "Fehler"), false);
     return;
   }
 
@@ -234,6 +264,7 @@ async function saveProfileName() {
   await loadProfileName();
 })();
 </script>
+<script src="info-help.js?v=20260522f"></script>
 <script src="pwa.js"></script>
 </body>
 </html>

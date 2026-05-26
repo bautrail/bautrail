@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>bautrail</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260524b">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#ff6b3d">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,72 +13,67 @@
   <link rel="apple-touch-icon" href="assets/bautrail-apple-touch-icon.png">
 </head>
 
-<body>
-
+<body class="home-overview">
 <div class="app-wrapper">
-
   <div class="app-content">
-
-    <!-- HEADER -->
     <header class="app-header">
       <img class="app-logo" src="assets/bautrail-logo.png" alt="bautrail">
       <p class="company-name" id="headerCompanyText">Firma<br>-</p>
     </header>
 
-    <!-- DATUM -->
-    <div class="task-card">
-      <small>Morgen</small>
+    <div class="task-card home-date-card">
+      <small>Heute</small>
       <h2 id="dateTime"></h2>
     </div>
 
-<div class="task-card">
-  <h3 style="margin-bottom:8px;">Verbindung und Sync</h3>
-  <div id="syncStatusText" style="font-size:14px;font-weight:600;">Pruefe Verbindung...</div>
-  <p id="syncStatusHint" style="margin-top:6px;font-size:12px;opacity:0.75;">-</p>
-</div>
+    <div class="task-card home-sync-card">
+      <h3>Verbindung und Sync</h3>
+      <div id="syncStatusText">Pr&uuml;fe Verbindung...</div>
+      <p id="syncStatusHint">-</p>
+    </div>
 
-<div class="task-card">
-  <h3 style="margin-bottom:8px;">&#128269; Globale Suche</h3>
-  <input
-    id="globalSearchInput"
-    type="text"
-    placeholder="Globale Suche: Kunde, Projekt, Auftrag, Nachweis"
-    class="compact-input"
-    oninput="runGlobalSearch()"
-  >
-  <div id="globalSearchList" style="margin-top:10px;"></div>
-</div>
+    <div class="task-card home-search-card">
+      <h3>&#128269; Globale Suche</h3>
+      <input
+        id="globalSearchInput"
+        type="text"
+        placeholder="Globale Suche: Kunde, Projekt, Auftrag, Nachweis"
+        class="compact-input"
+        oninput="runGlobalSearch()"
+      >
+      <div id="globalSearchList"></div>
+    </div>
 
-<div class="task-card" onclick="openPlanung()" style="cursor:pointer;">
-  <h3>&#128197; Planung</h3>
-</div>
+    <div class="home-menu-list">
+      <button class="home-menu-card" type="button" onclick="openPlanung()">
+        <span>&#128197;</span><strong>Planung</strong>
+      </button>
+      <button class="home-menu-card" type="button" onclick="openAuftraege()">
+        <span>&#128203;</span><strong>Auftr&auml;ge</strong>
+      </button>
+      <button class="home-menu-card" type="button" onclick="openFahrzeugMaterial()">
+        <span>&#128666;</span><strong>Fahrzeug Material ersetzen</strong>
+      </button>
+      <button class="home-menu-card" type="button" onclick="openMaterialBestellen()">
+        <span>&#128230;</span><strong>Material bestellen</strong>
+      </button>
+      <button class="home-menu-card" type="button" onclick="openStundennachweis()">
+        <span>&#128221;</span><strong>Stunden Nachweis</strong>
+      </button>
+      <button class="home-menu-card" type="button" onclick="openMitarbeiter()" data-manager-only="true">
+        <span>&#128101;</span><strong>Mitarbeiter &Uuml;bersicht</strong>
+      </button>
+      <button class="home-menu-card" type="button" onclick="openOffeneLeistungen()" data-manager-only="true">
+        <span>&#128176;</span><strong>Offene Leistungen</strong>
+      </button>
+      <button class="home-menu-card" type="button" onclick="openSchaltplanEditor()">
+        <span>&#9889;</span><strong>Schaltplan-Zeichner</strong>
+      </button>
+      <button class="home-menu-card" type="button" onclick="openFeedback()">
+        <span>&#128172;</span><strong>Feedback</strong>
+      </button>
+    </div>
 
-<div class="task-card" onclick="openAuftraege()" style="cursor:pointer;">
-  <h3>&#128203; Aufträge</h3>
-</div>
-
-<div class="task-card" onclick="openFahrzeugMaterial()" style="cursor:pointer;">
-  <h3>&#128666; Fahrzeug Material ersetzen</h3>
-</div>
-
-<div class="task-card" onclick="openMaterialBestellen()" style="cursor:pointer;">
-  <h3>&#128230; Material bestellen</h3>
-</div>
-
-<div class="task-card" onclick="openStundennachweis()" style="cursor:pointer;">
-  <h3>&#128221; Stunden Nachweis</h3>
-</div>
-
-<div class="task-card" onclick="openMitarbeiter()" style="cursor:pointer;">
-  <h3>&#128101; Mitarbeiter Übersicht</h3>
-</div>
-
-<div class="task-card" onclick="openOffeneLeistungen()" style="cursor:pointer;">
-  <h3>&#128176; Offene Leistungen</h3>
-</div>
-
-
-    <!-- FIRMA -->
     <div class="company-info">
       <p id="footerCompanyName">Firma</p>
       <p id="footerCompanyStreet">-</p>
@@ -86,39 +81,18 @@
       <p id="footerCompanyEmail">-</p>
       <p id="footerCompanyPhone">-</p>
     </div>
-
   </div>
 
-  <!-- NAV -->
   <nav class="bottom-nav">
-    <a href="index.html" class="active"><span>&#127968;</span><small>Übersicht</small></a>
-
+    <a href="index.html" class="active"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
     <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
-
     <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
-
     <a href="profil.html"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
   </nav>
-
 </div>
 
-<!-- LOGOUT BUTTON -->
-<button onclick="logout()" style="
-position:fixed;
-top:20px;
-right:20px;
-background:#ff3b3b;
-color:white;
-padding:10px 14px;
-border:none;
-border-radius:10px;
-z-index:9999;
-cursor:pointer;
-">
-Logout
-</button>
+<button class="logout-float" type="button" onclick="logout()">Logout</button>
 
-<!-- SUPABASE -->
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
 <script src="auth-context.js"></script>
@@ -126,14 +100,9 @@ Logout
 <script src="notifications.js"></script>
 
 <script>
-
-// STABILER LOGIN CHECK
 window.addEventListener("load", () => {
-
   setTimeout(async () => {
-
     const { data } = await db.auth.getSession();
-
     if (!data.session) {
       window.location.href = "login.html";
       return;
@@ -141,32 +110,21 @@ window.addEventListener("load", () => {
 
     if (window.BaudokuAuthContext) {
       const authContext = await window.BaudokuAuthContext.loadAuthContext();
-      // Kein harter Logout mehr bei Rollen-/Firmenkontext-Fehlern,
-      // damit keine Login-Schleife entsteht.
-      if (authContext) {
-        window.BAUDOKU_AUTH_CONTEXT = authContext;
-      }
+      if (authContext) window.BAUDOKU_AUTH_CONTEXT = authContext;
     }
-
   }, 300);
-
 });
 
-
-// LOGOUT
 async function logout() {
   await db.auth.signOut();
   window.location.href = "login.html";
 }
 
-
-// DATUM
 function updateDateTime() {
   const el = document.getElementById("dateTime");
   if (!el) return;
 
   const now = new Date();
-
   el.textContent = now.toLocaleString("de-DE", {
     weekday: "long",
     day: "numeric",
@@ -195,20 +153,12 @@ async function loadCompanyBranding() {
     return;
   }
 
-  const header =
-    document.getElementById("headerCompanyText");
+  const header = document.getElementById("headerCompanyText");
   if (header) {
-    header.innerHTML =
-      (data.name || "Firma") +
-      "<br>" +
-      (data.company_owner || "-");
+    header.innerHTML = (data.name || "Firma") + "<br>" + (data.company_owner || "-");
   }
 
-  const cityLine =
-    [data.plz || "", data.ort || ""]
-      .filter(Boolean)
-      .join(" ");
-
+  const cityLine = [data.plz || "", data.ort || ""].filter(Boolean).join(" ");
   const map = {
     footerCompanyName: data.name || "Firma",
     footerCompanyStreet: data.adresse || "-",
@@ -226,8 +176,11 @@ async function loadCompanyBranding() {
 const SEARCH_CACHE_KEY = "bautrailGlobalSearchCache";
 
 function readSearchCache() {
-  try { return JSON.parse(localStorage.getItem(SEARCH_CACHE_KEY) || "[]"); }
-  catch (err) { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(SEARCH_CACHE_KEY) || "[]");
+  } catch (err) {
+    return [];
+  }
 }
 
 function writeSearchCache(items) {
@@ -240,17 +193,21 @@ function normalizeSearchText(parts) {
 
 function renderSearchResults(items, offlineMode) {
   const list = document.getElementById("globalSearchList");
+  if (!list) return;
   list.innerHTML = "";
+
   if (!items.length) {
     list.innerHTML = "<p style='opacity:0.7;'>Keine Treffer gefunden.</p>";
     return;
   }
+
   items.forEach(item => {
     const div = document.createElement("div");
     div.className = "info-box";
     div.style.cursor = "pointer";
     div.style.marginBottom = "8px";
-    div.innerHTML = "<small>" + (item.item_type || "Eintrag") + (offlineMode ? " | Offline" : "") + "</small>" +
+    div.innerHTML =
+      "<small>" + (item.item_type || "Eintrag") + (offlineMode ? " | Offline" : "") + "</small>" +
       "<div class=\"text\">" + (item.title || "-") + "</div>" +
       "<small>" + (item.subtitle || "") + "</small>";
     div.onclick = () => {
@@ -266,18 +223,35 @@ function renderSearchResults(items, offlineMode) {
 function buildOfflineSearchItems() {
   const items = [];
   const customers = JSON.parse(localStorage.getItem("customers") || "[]");
+
   customers.forEach(c => {
     const title = c.firma || [c.vorname, c.nachname].filter(Boolean).join(" ") || "Kunde";
-    items.push({ item_type: "customer", item_id: c.id, title, subtitle: [c.telefon, c.email, c.adresse, c.plz, c.ort].filter(Boolean).join(" | "), search_text: normalizeSearchText([title, c.vorname, c.nachname, c.telefon, c.email, c.adresse, c.plz, c.ort]) });
+    items.push({
+      item_type: "customer",
+      item_id: c.id,
+      title,
+      subtitle: [c.telefon, c.email, c.adresse, c.plz, c.ort].filter(Boolean).join(" | "),
+      search_text: normalizeSearchText([title, c.vorname, c.nachname, c.telefon, c.email, c.adresse, c.plz, c.ort])
+    });
   });
+
   Object.keys(localStorage).filter(key => key.startsWith("projects_")).forEach(key => {
     try {
       const projects = JSON.parse(localStorage.getItem(key) || "[]");
       projects.forEach(project => {
-        items.push({ item_type: "project", item_id: project.id, title: project.name || "Projekt", subtitle: [project.customer, project.ort, project.adresse].filter(Boolean).join(" | "), search_text: normalizeSearchText([project.name, project.customer, project.ort, project.adresse, project.project_number]) });
+        items.push({
+          item_type: "project",
+          item_id: project.id,
+          title: project.name || "Projekt",
+          subtitle: [project.customer, project.ort, project.adresse].filter(Boolean).join(" | "),
+          search_text: normalizeSearchText([project.name, project.customer, project.ort, project.adresse, project.project_number])
+        });
       });
-    } catch (err) { console.log(err); }
+    } catch (err) {
+      console.log(err);
+    }
   });
+
   return items;
 }
 
@@ -288,31 +262,72 @@ async function loadOnlineSearchItems() {
     db.from("auftraege").select("*").order("created_at", { ascending: false }).limit(150),
     db.from("stundennachweise").select("*").order("created_at", { ascending: false }).limit(150)
   ]);
+
   queries.forEach(result => result.error && console.log(result.error));
-  const customers = (queries[0].data || []).map(c => ({ item_type: "customer", item_id: c.id, title: c.firma || [c.vorname, c.nachname].filter(Boolean).join(" ") || "Kunde", subtitle: [c.telefon, c.email, c.adresse, c.plz, c.ort].filter(Boolean).join(" | "), search_text: normalizeSearchText([c.firma, c.vorname, c.nachname, c.telefon, c.email, c.adresse, c.plz, c.ort]) }));
-  const projects = (queries[1].data || []).map(p => ({ item_type: "project", item_id: p.id, title: p.name || "Projekt", subtitle: [p.customer, p.ort, p.adresse, p.project_number].filter(Boolean).join(" | "), search_text: normalizeSearchText([p.name, p.customer, p.ort, p.adresse, p.project_number]) }));
-  const orders = (queries[2].data || []).map(o => ({ item_type: "auftrag", item_id: o.id, title: [o.customer || "Kunde", o.project || o.objekt || "Auftrag"].join(" - "), subtitle: [o.faelligkeit, o.objekt, o.auftragsnummer, o.beschreibung].filter(Boolean).join(" | "), search_text: normalizeSearchText([o.customer, o.project, o.objekt, o.auftragsnummer, o.beschreibung, o.faelligkeit]) }));
-  const reports = (queries[3].data || []).map(r => ({ item_type: "nachweis", item_id: r.id, title: [r.customer || "Kunde", r.objekt || "Nachweis"].join(" - "), subtitle: [r.arbeitsdatum, r.project, r.report_number, r.gefahrene_kilometer ? (r.gefahrene_kilometer + " km") : ""].filter(Boolean).join(" | "), search_text: normalizeSearchText([r.customer, r.objekt, r.project, r.arbeitsdatum, r.report_number]) }));
+
+  const customers = (queries[0].data || []).map(c => ({
+    item_type: "customer",
+    item_id: c.id,
+    title: c.firma || [c.vorname, c.nachname].filter(Boolean).join(" ") || "Kunde",
+    subtitle: [c.telefon, c.email, c.adresse, c.plz, c.ort].filter(Boolean).join(" | "),
+    search_text: normalizeSearchText([c.firma, c.vorname, c.nachname, c.telefon, c.email, c.adresse, c.plz, c.ort])
+  }));
+
+  const projects = (queries[1].data || []).map(p => ({
+    item_type: "project",
+    item_id: p.id,
+    title: p.name || "Projekt",
+    subtitle: [p.customer, p.ort, p.adresse, p.project_number].filter(Boolean).join(" | "),
+    search_text: normalizeSearchText([p.name, p.customer, p.ort, p.adresse, p.project_number])
+  }));
+
+  const orders = (queries[2].data || []).map(o => ({
+    item_type: "auftrag",
+    item_id: o.id,
+    title: [o.customer || "Kunde", o.project || o.objekt || "Auftrag"].join(" - "),
+    subtitle: [o.faelligkeit, o.objekt, o.auftragsnummer, o.beschreibung].filter(Boolean).join(" | "),
+    search_text: normalizeSearchText([o.customer, o.project, o.objekt, o.auftragsnummer, o.beschreibung, o.faelligkeit])
+  }));
+
+  const reports = (queries[3].data || []).map(r => ({
+    item_type: "nachweis",
+    item_id: r.id,
+    title: [r.customer || "Kunde", r.objekt || "Nachweis"].join(" - "),
+    subtitle: [r.arbeitsdatum, r.project, r.report_number, r.gefahrene_kilometer ? (r.gefahrene_kilometer + " km") : ""].filter(Boolean).join(" | "),
+    search_text: normalizeSearchText([r.customer, r.objekt, r.project, r.arbeitsdatum, r.report_number])
+  }));
+
   const items = customers.concat(projects, orders, reports);
   writeSearchCache(items);
   return items;
 }
 
 async function runGlobalSearch() {
-  const value = document.getElementById("globalSearchInput").value.trim().toLowerCase();
+  const input = document.getElementById("globalSearchInput");
   const list = document.getElementById("globalSearchList");
+  if (!input || !list) return;
+
+  const value = input.value.trim().toLowerCase();
   list.innerHTML = "";
   if (!value) return;
+
   let items = [];
   let offlineMode = !navigator.onLine;
+
   if (navigator.onLine) {
-    try { items = await loadOnlineSearchItems(); }
-    catch (error) { console.log(error); offlineMode = true; }
+    try {
+      items = await loadOnlineSearchItems();
+    } catch (error) {
+      console.log(error);
+      offlineMode = true;
+    }
   }
+
   if (!items.length) {
     items = readSearchCache().concat(buildOfflineSearchItems());
     offlineMode = true;
   }
+
   const seen = new Set();
   const filtered = items.filter(item => {
     const key = String(item.item_type || "") + ":" + String(item.item_id || item.title || "");
@@ -320,20 +335,32 @@ async function runGlobalSearch() {
     seen.add(key);
     return String(item.search_text || normalizeSearchText([item.title, item.subtitle])).includes(value);
   }).slice(0, 20);
+
   if (!filtered.length && offlineMode) {
     list.innerHTML = "<p style='opacity:0.7;'>Offline keine passenden Treffer im lokalen Cache gefunden.</p>";
     return;
   }
+
   renderSearchResults(filtered, offlineMode);
 }
 
 function pendingSyncCount() {
-  const keys = ["offlineUploads", "deleteQueue", "projectUpdateQueue", "projectDocumentFiles", "projectDocumentFolders", "projectImageFolders"];
+  const keys = [
+    "offlineUploads",
+    "deleteQueue",
+    "projectUpdateQueue",
+    "projectDocumentFiles",
+    "projectDocumentFolders",
+    "projectImageFolders"
+  ];
+
   return keys.reduce((sum, key) => {
     try {
       const value = JSON.parse(localStorage.getItem(key) || "[]");
       if (!Array.isArray(value)) return sum;
-      if (key === "projectDocumentFiles" || key === "projectDocumentFolders") return sum + value.filter(item => item && item.synced !== true).length;
+      if (key === "projectDocumentFiles" || key === "projectDocumentFolders") {
+        return sum + value.filter(item => item && item.synced !== true).length;
+      }
       return sum + value.length;
     } catch (err) {
       return sum;
@@ -345,23 +372,28 @@ function updateSyncOverview() {
   const text = document.getElementById("syncStatusText");
   const hint = document.getElementById("syncStatusHint");
   if (!text || !hint) return;
+
   const pending = pendingSyncCount();
+
   if (!navigator.onLine) {
     text.textContent = "Offline";
     text.style.color = "#ffb14a";
-    hint.textContent = pending ? (pending + " Aenderungen warten auf Synchronisierung.") : "Keine aktive Internetverbindung.";
+    hint.textContent = pending ? (pending + " \u00c4nderungen warten auf Synchronisierung.") : "Keine aktive Internetverbindung.";
     return;
   }
+
   if (pending > 0) {
     text.textContent = "Online - Synchronisierung offen";
     text.style.color = "#ffb14a";
-    hint.textContent = pending + " lokale Aenderungen werden bei Verbindung abgeglichen.";
+    hint.textContent = pending + " lokale \u00c4nderungen werden bei Verbindung abgeglichen.";
     return;
   }
+
   text.textContent = "Online und synchron";
   text.style.color = "#9be15d";
   hint.textContent = "Alle lokalen Daten sind im Moment synchron.";
 }
+
 function openPlanung() {
   window.location.href = "planung.html";
 }
@@ -390,34 +422,34 @@ function openOffeneLeistungen() {
   window.location.href = "offene-leistungen.html";
 }
 
-loadCompanyBranding();
-updateSyncOverview();
-window.addEventListener("online", updateSyncOverview);
-window.addEventListener("offline", updateSyncOverview);
-window.addEventListener("focus", updateSyncOverview);
+function openSchaltplanEditor() {
+  window.location.href = "schaltplan-zeichner.html";
+}
+
+function openFeedback() {
+  window.location.href = "feedback.html";
+}
 
 async function applyRoleOverviewVisibility() {
   if (!window.BaudokuAuthContext) return;
   const ctx = await window.BaudokuAuthContext.loadAuthContext({ noCache: true });
   if (!ctx) return;
+
   if (ctx.role === "angestellter") {
-    Array.from(document.querySelectorAll(".task-card h3")).forEach(h3 => {
-      const txt = String(h3.textContent || "").toLowerCase();
-      if (txt.includes("mitarbeiter übersicht") || txt.includes("offene leistungen")) {
-        const card = h3.closest(".task-card");
-        if (card) card.style.display = "none";
-      }
+    Array.from(document.querySelectorAll("[data-manager-only='true']")).forEach(item => {
+      item.style.display = "none";
     });
   }
 }
 
+loadCompanyBranding();
+updateSyncOverview();
 applyRoleOverviewVisibility();
-
-
-
+window.addEventListener("online", updateSyncOverview);
+window.addEventListener("offline", updateSyncOverview);
+window.addEventListener("focus", updateSyncOverview);
 </script>
 
 <script src="pwa.js"></script>
 </body>
 </html>
-

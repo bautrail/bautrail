@@ -4,7 +4,269 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - bautrail</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260523a">
+  <style>
+    body.login-page {
+      display: block;
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: #181818;
+      color: #fff;
+    }
+
+    .login-site {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .login-topbar {
+      min-height: 92px;
+      padding: 22px clamp(24px, 4vw, 56px);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+    }
+
+    .login-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .login-brand img {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      background: #fff;
+      padding: 6px;
+      object-fit: contain;
+    }
+
+    .login-brand strong {
+      display: block;
+      font-size: 1.1rem;
+    }
+
+    .login-brand small {
+      color: #aaa;
+      font-size: 0.75rem;
+    }
+
+    .login-card {
+      width: min(360px, 100%);
+      background: rgba(37, 37, 37, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 20px 55px rgba(0, 0, 0, 0.36);
+    }
+
+    .login-card h2 {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+
+    .login-card input {
+      width: 100%;
+      min-height: 44px;
+      margin-bottom: 10px;
+      padding: 11px 12px;
+      border-radius: 10px;
+      border: none;
+      background: #2a2a2a;
+      color: white;
+    }
+
+    .login-card button.primary-login {
+      width: 100%;
+      min-height: 44px;
+      border: none;
+      border-radius: 10px;
+      background: #ff6b3d;
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .mobile-login-logo {
+      display: none;
+    }
+
+    .login-hero {
+      flex: 0 0 auto;
+      min-height: clamp(380px, 48vh, 500px);
+      display: grid;
+      place-items: center;
+      padding: 4px clamp(24px, 4vw, 56px) 24px;
+      text-align: center;
+    }
+
+    .hero-inner {
+      width: min(980px, 100%);
+      display: grid;
+      gap: 14px;
+      justify-items: center;
+    }
+
+    .hero-emblem {
+      width: min(360px, 64vw);
+      border-radius: 16px;
+      background: #fff;
+      padding: 12px 16px;
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.4);
+    }
+
+    .hero-inner h1 {
+      font-size: clamp(2.2rem, 4.2vw, 4.2rem);
+      line-height: 0.95;
+      max-width: 900px;
+    }
+
+    .hero-inner p {
+      max-width: 720px;
+      color: #d0d0d0;
+      font-size: clamp(1rem, 1.4vw, 1.22rem);
+      line-height: 1.45;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .hero-actions a {
+      min-height: 44px;
+      padding: 12px 18px;
+      border-radius: 10px;
+      text-decoration: none;
+      color: #fff;
+      background: #ff6b3d;
+      font-weight: 700;
+    }
+
+    .hero-actions a.secondary {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .login-sections {
+      padding: 0 clamp(24px, 4vw, 56px) 58px;
+    }
+
+    .feature-strip {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .pricing-strip {
+      width: min(1100px, 100%);
+      margin: 18px auto 0;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .feature-box {
+      background: rgba(37, 37, 37, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 18px;
+      min-height: 132px;
+    }
+
+    .feature-box strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+
+    .feature-box p {
+      color: #aaa;
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+
+    .price-box {
+      min-height: 154px;
+    }
+
+    .price-box .price {
+      display: block;
+      margin: 8px 0;
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .price-box small {
+      color: #aaa;
+      line-height: 1.35;
+    }
+
+    @media (max-width: 760px) {
+      body.login-page {
+        display: flex;
+        justify-content: center;
+        background: linear-gradient(160deg, #1c1c1c, #2a2a2a);
+      }
+
+      .login-site {
+        width: 100%;
+        max-width: 420px;
+        min-height: 100vh;
+        min-height: 100dvh;
+        justify-content: center;
+        background: #1f1f1f;
+        padding: 1.5rem;
+      }
+
+      .login-topbar {
+        min-height: 0;
+        padding: 0;
+        display: block;
+      }
+
+      .login-brand,
+      .login-hero,
+      .login-sections {
+        display: none;
+      }
+
+      .login-card {
+        width: 100%;
+        max-width: 350px;
+        margin: 0 auto;
+        border: none;
+        border-radius: 16px;
+        box-shadow: none;
+        padding: 0.85rem;
+      }
+
+      .mobile-login-logo {
+        display: block;
+        width: min(270px, 100%);
+        margin: 0 auto 18px;
+        border-radius: 10px;
+        background: #fff;
+        padding: 8px 10px;
+      }
+
+      .login-card h2 {
+        text-align: center;
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+      }
+    }
+  </style>
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#ff6b3d">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,30 +274,83 @@
   <link rel="icon" href="assets/bautrail-icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="assets/bautrail-apple-touch-icon.png">
 </head>
-<body>
+<body class="login-page">
 
-<div class="app-wrapper">
-  <div class="app-content" style="display:flex;justify-content:center;align-items:center;height:100vh;">
-    <div class="task-card" style="width:100%;max-width:350px;">
-      <img class="app-logo login-logo" src="assets/bautrail-logo.png" alt="bautrail">
-      <h2 style="text-align:center;margin-bottom:20px;">Login</h2>
+<main class="login-site">
+  <header class="login-topbar">
+    <div class="login-brand">
+      <img src="assets/bautrail-icon-192.png" alt="bautrail">
+      <div>
+        <strong>bautrail</strong>
+        <small>Baustelle. Dokumentation. Einfach digital.</small>
+      </div>
+    </div>
 
-      <input type="email" id="email" placeholder="E-Mail" style="width:100%;margin-bottom:10px;padding:12px;border-radius:10px;border:none;">
-      <input type="password" id="password" placeholder="Passwort" style="width:100%;margin-bottom:10px;padding:12px;border-radius:10px;border:none;">
+    <section class="login-card" aria-label="Login">
+      <img class="mobile-login-logo" src="assets/bautrail-logo.png" alt="bautrail">
+      <h2>Login</h2>
+
+      <input type="email" id="email" placeholder="E-Mail">
+      <input type="password" id="password" placeholder="Passwort">
 
       <p id="errorMsg" style="color:#ff3b3b;font-size:14px;text-align:center;margin-bottom:10px;display:none;"></p>
 
-      <button onclick="login()" style="width:100%;padding:12px;border:none;border-radius:10px;background:#ff6b3d;color:white;font-size:16px;cursor:pointer;">
-        Einloggen
-      </button>
+      <button class="primary-login" onclick="login()">Einloggen</button>
 
-      <p style="margin-top:15px;text-align:center;font-size:14px;">
+      <p style="margin-top:13px;text-align:center;font-size:14px;">
         Noch kein Konto?
         <a href="register.html" style="color:#ff6b3d;text-decoration:none;">Registrieren</a>
       </p>
+    </section>
+  </header>
+
+  <section class="login-hero">
+    <div class="hero-inner">
+      <img class="hero-emblem" src="assets/bautrail-logo.png" alt="bautrail">
+      <h1>bautrail</h1>
+      <p>Die digitale Arbeitszentrale für Baustelle, Büro und Chef. Planung, Aufträge, Zeiten, Nachweise und Kundendaten bleiben an einem Ort.</p>
+      <div class="hero-actions">
+        <a href="register.html">Firma starten</a>
+        <a class="secondary" href="#funktionen">Funktionen ansehen</a>
+        <a class="secondary" href="#preise">Preise</a>
+      </div>
     </div>
-  </div>
-</div>
+  </section>
+
+  <section class="login-sections" id="funktionen">
+    <div class="feature-strip">
+      <div class="feature-box">
+        <strong>Planung im Blick</strong>
+        <p>Einsätze, Mitarbeiter, Urlaub und offene Aufgaben lassen sich direkt im Tagesablauf prüfen.</p>
+      </div>
+      <div class="feature-box">
+        <strong>Nachweise sauber ablegen</strong>
+        <p>Stunden, Kilometer, Prüfprotokolle, Bilder und Notizen landen beim passenden Kunden oder Auftrag.</p>
+      </div>
+      <div class="feature-box">
+        <strong>Chef & Büro verbunden</strong>
+        <p>Dashboard, Freigaben, Erinnerungen und Exporte helfen, den Überblick über die Firma zu behalten.</p>
+      </div>
+    </div>
+    <div class="pricing-strip" id="preise">
+      <div class="feature-box price-box">
+        <strong>Starter</strong>
+        <span class="price">29 €</span>
+        <small>Für kleine Teams, die digital starten wollen. Planung, Aufträge und Nachweise inklusive.</small>
+      </div>
+      <div class="feature-box price-box">
+        <strong>Business</strong>
+        <span class="price">59 €</span>
+        <small>Für wachsende Betriebe mit Teamplanung, Exporten, Speicher und Chef-Dashboard.</small>
+      </div>
+      <div class="feature-box price-box">
+        <strong>Enterprise</strong>
+        <span class="price">Individuell</span>
+        <small>Für größere Firmen mit mehr Speicher, erweiterten Abläufen und persönlicher Einrichtung.</small>
+      </div>
+    </div>
+  </section>
+</main>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>

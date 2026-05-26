@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Zeiten - bautrail</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260522h">
   <style>
     .time-form { display:grid; gap:8px; }
     .time-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -45,23 +45,33 @@
       <p id="timeStatus" style="font-size:12px;opacity:0.75;margin-top:8px;"></p>
     </div>
 
-    <div class="task-card">
-      <h3>Verlauf</h3>
-      <div class="time-tabs">
-        <button class="time-tab active" onclick="setViewMode('week', event)">Diese Woche</button>
-        <button class="time-tab" onclick="setViewMode('month', event)">Dieser Monat</button>
+    <details class="task-card details-card">
+      <summary>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div>
+            <h3>Verlauf</h3>
+            <small style="opacity:0.7;">Zeiten suchen, ansehen und exportieren</small>
+          </div>
+          <small style="opacity:0.75;">Aufklappen</small>
+        </div>
+      </summary>
+      <div class="details-body">
+        <div class="time-tabs">
+          <button class="time-tab active" onclick="setViewMode('week', event)">Diese Woche</button>
+          <button class="time-tab" onclick="setViewMode('month', event)">Dieser Monat</button>
+        </div>
+        <div class="time-row" style="margin-top:8px;">
+          <input id="searchDate" type="date" class="compact-input">
+          <button class="login-btn" style="margin:0;background:#444;" onclick="loadTimes()">Datum suchen</button>
+        </div>
+        <div class="time-row" style="margin-top:8px;">
+          <input id="exportMonth" type="month" class="compact-input">
+          <button id="exportBtn" class="login-btn" style="margin:0;" onclick="downloadMonthlyExport()">Monats-Export CSV</button>
+        </div>
+        <button id="exportPdfBtn" class="login-btn" style="margin-top:8px;margin-bottom:0;background:#3a3a3a;" onclick="downloadMonthlyExportPdf()">Monats-Export PDF</button>
+        <div id="timeList" style="margin-top:10px;"></div>
       </div>
-      <div class="time-row" style="margin-top:8px;">
-        <input id="searchDate" type="date" class="compact-input">
-        <button class="login-btn" style="margin:0;background:#444;" onclick="loadTimes()">Datum suchen</button>
-      </div>
-      <div class="time-row" style="margin-top:8px;">
-        <input id="exportMonth" type="month" class="compact-input">
-        <button id="exportBtn" class="login-btn" style="margin:0;" onclick="downloadMonthlyExport()">Monats-Export CSV</button>
-      </div>
-      <button id="exportPdfBtn" class="login-btn" style="margin-top:8px;margin-bottom:0;background:#3a3a3a;" onclick="downloadMonthlyExportPdf()">Monats-Export PDF</button>
-      <div id="timeList" style="margin-top:10px;"></div>
-    </div>
+    </details>
   </div>
 
   <nav class="bottom-nav">

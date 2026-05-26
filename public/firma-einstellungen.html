@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Firma Einstellungen - bautrail</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260522f">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#ff6b3d">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,12 +17,20 @@
   <div class="app-content">
     <header class="app-header">
       <button class="back-btn" onclick="window.location.href='chef-dashboard.html'">&#8592;</button>
-      <h1 class="app-name">Firma Einstellungen</h1>
-      <p class="company-name">Firmendaten und Dokumente</p>
+      <h1 class="app-name">Firmeneinstellungen</h1>
+      <p class="company-name">Firma, Team, Speicher und Dokumente</p>
     </header>
 
+    <div class="overview-note">
+      <strong>Alles zur Firma an einem Ort</strong><br>
+      Die wichtigen Bereiche sind getrennt: Firmendaten, Speicher, Einladungscode, Mitarbeiterliste und Dokumente.
+    </div>
+
     <div class="task-card">
-      <h3>Firmendaten</h3>
+      <div class="card-title-row">
+        <h3>&#127970; Firmendaten</h3>
+        <button type="button" class="info-dot" aria-label="Info zu Firmendaten" data-info="Adresse, Kontakt, Logo und rechtliche Angaben der Firma. Diese Daten werden in Exporten und Kundendokumenten verwendet.">i</button>
+      </div>
       <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
         <img id="logoPreview" alt="Logo" style="width:64px;height:64px;border-radius:12px;object-fit:cover;background:#2a2a2a;display:none;">
         <input id="logoInput" type="file" accept="image/*" class="compact-input">
@@ -50,7 +58,22 @@
 
 
     <div class="task-card">
-      <h3>Tarif und Speicher</h3>
+      <div class="card-title-row">
+        <h3>&#128190; Speicher & Tarif</h3>
+        <button type="button" class="info-dot" aria-label="Info zu Speicher und Tarif" data-info="Zeigt, wie viel Speicher deine Firma gebucht hat und wie viel bereits genutzt wird.">i</button>
+      </div>
+      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Zeigt Modell, gebuchten Speicher und aktuellen Verbrauch der Firma.</p>
+      <div id="storageOverviewBox" style="margin-top:10px;"></div>
+      <div class="button-row" style="margin-top:10px;">
+        <button class="login-btn" style="margin-bottom:0;" onclick="loadStorageOverview()">Aktualisieren</button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="card-title-row">
+        <h3>&#9881;&#65039; Tarif & Speicher bearbeiten</h3>
+        <button type="button" class="info-dot" aria-label="Info zu Tarif bearbeiten" data-info="Hier änderst du Plan, Zusatzspeicher und Speicherlimit. Das wirkt sich auf Uploads und Dokumente aus.">i</button>
+      </div>
       <div class="button-row" style="margin-top:8px;">
         <select id="planInput" class="compact-input">
           <option value="starter">Starter</option>
@@ -70,7 +93,34 @@
     </div>
 
     <div class="task-card">
-      <h3>Firmendokumente</h3>
+      <div class="card-title-row">
+        <h3>&#9993;&#65039; Einladungscode erstellen</h3>
+        <button type="button" class="info-dot" aria-label="Info zu Einladungscode" data-info="Erstellt einen Code, mit dem sich neue Mitarbeiter oder Büro-Nutzer der Firma anschließen können.">i</button>
+      </div>
+      <div class="button-row" style="margin-top:8px;">
+        <select id="inviteRole" class="compact-input">
+          <option value="buero">B&uuml;ro</option>
+          <option value="angestellter">Angestellter</option>
+        </select>
+        <button class="login-btn" style="margin-bottom:0;" onclick="createInvite()">Code erstellen</button>
+      </div>
+      <p id="inviteResult" style="margin-top:10px;font-weight:700;"></p>
+      <p id="inviteStatus" style="font-size:12px;opacity:0.75;"></p>
+    </div>
+
+    <div class="task-card">
+      <div class="card-title-row">
+        <h3>&#128101; Mitarbeiterliste</h3>
+        <button type="button" class="info-dot" aria-label="Info zur Mitarbeiterliste" data-info="Hier verwaltest du Rollen, Aktiv-Status und Mitarbeiter-Typen. Gelöschte Accounts werden dauerhaft entfernt.">i</button>
+      </div>
+      <div id="memberList" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="task-card">
+      <div class="card-title-row">
+        <h3>&#128196; Firmendokumente</h3>
+        <button type="button" class="info-dot" aria-label="Info zu Firmendokumenten" data-info="Hier kannst du Dokumente ablegen, die zur Firma gehören, zum Beispiel Vorlagen, Nachweise oder rechtliche Unterlagen.">i</button>
+      </div>
       <input id="docInput" type="file" class="compact-input">
       <button class="login-btn" style="margin-top:8px;" onclick="uploadDocument()">Dokument hochladen</button>
       <p id="docStatus" style="font-size:12px;opacity:0.75;"></p>
@@ -87,9 +137,11 @@
 let authContext = null;
 let company = null;
 let companyLogoData = "";
+let membersCache = [];
 
 function setStatus(id, text, ok) {
   const el = document.getElementById(id);
+  if (!el) return;
   el.textContent = text || "\u00A0";
   el.style.color = ok ? "#6bd86b" : "#ff6b3d";
 
@@ -100,6 +152,29 @@ function setStatus(id, text, ok) {
       }
     }, 2500);
   }
+}
+
+function setInviteStatus(text, ok) {
+  const el = document.getElementById("inviteStatus");
+  if (!el) return;
+  el.textContent = text || "";
+  el.style.color = ok ? "#6bd86b" : "#ff6b3d";
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+function randomInviteCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const pick = len => Array.from({ length: len }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+  return "BAU-" + pick(5) + "-" + pick(5);
 }
 
 function showLogo(value) {
@@ -254,11 +329,231 @@ async function saveCompany() {
     }
 
     setStatus("saveStatus", "Gespeichert", true);
+    await renderStorageStatus();
+    await loadStorageOverview();
   } catch (err) {
     console.log(err);
     setStatus("saveStatus", "Speichern fehlgeschlagen: " + (err && err.message ? err.message : "Unbekannter Fehler"), false);
   }
 }
+
+async function loadStorageOverview() {
+  const box = document.getElementById("storageOverviewBox");
+  if (!box) return;
+  if (!window.BautrailStorageQuota || !authContext) {
+    box.innerHTML = "<p style='opacity:0.7;'>Speicherdaten sind gerade nicht verf&uuml;gbar.</p>";
+    return;
+  }
+
+  box.innerHTML = "<p style='opacity:0.7;'>Lade Speicherdaten...</p>";
+  const status = await window.BautrailStorageQuota.loadStatus(authContext);
+  const percent = Number(status.percent || 0);
+  const color = percent >= 95 ? "#ff3b3b" : percent >= 80 ? "#ffb347" : "#ff6b3d";
+
+  box.innerHTML = [
+    '<div class="info-box" style="margin:0;">',
+    '  <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">',
+    '    <div>',
+    '      <strong>' + window.BautrailStorageQuota.planLabel(status.plan_code) + '</strong><br>',
+    '      <small>' + window.BautrailStorageQuota.formatBytes(status.used_bytes) + ' von ' + window.BautrailStorageQuota.formatBytes(status.limit_bytes) + ' belegt</small>',
+    '    </div>',
+    '    <div style="text-align:right;min-width:120px;">',
+    '      <strong>' + percent.toFixed(0) + '%</strong><br>',
+    '      <small>' + (status.storage_limit_enabled === false ? 'ohne Limit' : 'verf&uuml;gbar: ' + window.BautrailStorageQuota.formatBytes(status.remaining_bytes)) + '</small>',
+    '    </div>',
+    '  </div>',
+    '  <div style="margin-top:10px;height:12px;border-radius:999px;background:#1f1f1f;overflow:hidden;">',
+    '    <div style="height:100%;width:' + Math.min(100, percent) + '%;background:' + color + ';"></div>',
+    '  </div>',
+    '  <div style="display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:8px;margin-top:10px;">',
+    '    <div><small>Modell</small><br><strong>' + window.BautrailStorageQuota.planLabel(status.plan_code) + '</strong></div>',
+    '    <div><small>Inklusive</small><br><strong>' + status.included_storage_mb + ' MB</strong></div>',
+    '    <div><small>Zusatzspeicher</small><br><strong>' + status.extra_storage_mb + ' MB</strong></div>',
+    '  </div>',
+    '</div>'
+  ].join("");
+}
+
+async function createInvite() {
+  if (!authContext || !authContext.company_id) return;
+
+  const roleInput = document.getElementById("inviteRole");
+  const role = roleInput ? roleInput.value : "angestellter";
+  let lastError = null;
+  let createdCode = "";
+
+  for (let i = 0; i < 6; i += 1) {
+    const invite_code = randomInviteCode();
+    const { error } = await db
+      .from("company_invites")
+      .insert([{
+        company_id: authContext.company_id,
+        invite_code,
+        role,
+        created_by: authContext.user_id,
+        active: true,
+        expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+      }]);
+
+    if (!error) {
+      createdCode = invite_code;
+      break;
+    }
+
+    lastError = error;
+    const msg = String(error.message || "").toLowerCase();
+    if (!msg.includes("duplicate") && !msg.includes("unique")) break;
+  }
+
+  if (!createdCode) {
+    console.log(lastError);
+    setInviteStatus("Code konnte nicht erstellt werden: " + ((lastError && lastError.message) || "Fehler"), false);
+    return;
+  }
+
+  const result = document.getElementById("inviteResult");
+  if (result) result.textContent = createdCode;
+  setInviteStatus("Code erstellt. Du kannst ihn direkt kopieren.", true);
+}
+
+async function loadMembers() {
+  const list = document.getElementById("memberList");
+  if (list) list.innerHTML = "<p style='opacity:0.7;'>Lade Team...</p>";
+
+  const { data, error } = await db
+    .from("company_members")
+    .select("*")
+    .eq("company_id", authContext.company_id)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.log(error);
+    if (list) list.innerHTML = "<p style='opacity:0.7;'>Team konnte nicht geladen werden.</p>";
+    return;
+  }
+
+  if (!(data || []).length) {
+    membersCache = [];
+    if (list) list.innerHTML = "<p style='opacity:0.7;'>Noch keine Mitglieder.</p>";
+    return;
+  }
+
+  membersCache = data || [];
+  if (!list) return;
+  list.innerHTML = "";
+  membersCache.forEach(member => {
+    const card = document.createElement("div");
+    card.className = "info-box";
+    card.style.marginBottom = "8px";
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+        <div style="min-width:220px;flex:1;">
+          <strong>${escapeHtml(member.name || member.email || "Mitarbeiter")}</strong><br>
+          <small>${escapeHtml(member.role || "angestellter")} | ${member.active ? "aktiv" : "deaktiviert"} | ${escapeHtml(member.job_type || "ohne Typ")}</small>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="role_${member.id}" class="compact-input" style="min-height:38px;padding:8px 10px;">
+              <option value="chef" ${member.role === "chef" ? "selected" : ""}>Chef</option>
+              <option value="buero" ${member.role === "buero" ? "selected" : ""}>B&uuml;ro</option>
+              <option value="angestellter" ${member.role === "angestellter" ? "selected" : ""}>Mitarbeiter</option>
+            </select>
+            <button class="login-btn" style="width:auto;margin:0;padding:8px 10px;background:#444;" onclick="saveMemberRole('${member.id}')">Rolle speichern</button>
+            <select id="jobtype_${member.id}" class="compact-input" style="min-height:38px;padding:8px 10px;">
+              <option value="">Typ w&auml;hlen</option>
+              <option value="Meister" ${member.job_type === "Meister" ? "selected" : ""}>Meister</option>
+              <option value="Monteur" ${member.job_type === "Monteur" ? "selected" : ""}>Monteur</option>
+              <option value="Helfer" ${member.job_type === "Helfer" ? "selected" : ""}>Helfer</option>
+            </select>
+            <button class="login-btn" style="width:auto;margin:0;padding:8px 10px;background:#444;" onclick="saveMemberJobType('${member.id}')">Typ speichern</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;min-width:116px;">
+          <button class="login-btn" style="width:auto;margin:0;padding:10px 12px;background:${member.active ? "#444" : "#ff6b3d"};" onclick="toggleMember('${member.id}', ${member.active ? "false" : "true"})">
+            ${member.active ? "Deaktivieren" : "Aktivieren"}
+          </button>
+          <button class="delete-btn" style="width:auto;margin:0;padding:10px 12px;" onclick="deleteMemberAccount('${member.user_id}')">L&ouml;schen</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+window.deleteMemberAccount = async function(userId) {
+  if (!userId) return;
+  if (String(userId) === String(authContext.user_id)) {
+    alert("Deinen eigenen Account löschst du in den Einstellungen.");
+    return;
+  }
+
+  const member = (membersCache || []).find(item => String(item.user_id) === String(userId));
+  const label = member ? (member.name || member.email || "diesem Mitarbeiter") : "diesem Mitarbeiter";
+  const ok = confirm("Account von " + label + " dauerhaft löschen?");
+  if (!ok) return;
+
+  const typed = String(prompt("Bitte LÖSCHEN eingeben, um den Account zu löschen:") || "").trim().toUpperCase();
+  if (typed !== "LÖSCHEN" && typed !== "LOESCHEN") return;
+
+  const { error } = await db.rpc("delete_company_member_account", { p_user_id: userId });
+  if (error) {
+    console.log(error);
+    alert("Account konnte nicht gelöscht werden: " + (error.message || "Fehler"));
+    return;
+  }
+
+  await loadMembers();
+};
+
+window.saveMemberRole = async function(memberId) {
+  const select = document.getElementById("role_" + memberId);
+  const role = select ? select.value : "angestellter";
+
+  const { error } = await db.rpc("set_company_member_role", {
+    p_member_id: memberId,
+    p_role: role
+  });
+
+  if (error) {
+    console.log(error);
+    alert("Rolle konnte nicht gespeichert werden: " + (error.message || "Fehler"));
+    return;
+  }
+
+  await loadMembers();
+};
+
+window.toggleMember = async function(memberId, targetActive) {
+  const { error } = await db.rpc("set_company_member_active", {
+    p_member_id: memberId,
+    p_active: targetActive
+  });
+
+  if (error) {
+    console.log(error);
+    alert("Status konnte nicht geändert werden: " + (error.message || "Fehler"));
+    return;
+  }
+
+  await loadMembers();
+};
+
+window.saveMemberJobType = async function(memberId) {
+  const select = document.getElementById("jobtype_" + memberId);
+  const jobType = select ? select.value : "";
+
+  const { error } = await db
+    .from("company_members")
+    .update({ job_type: jobType || null })
+    .eq("id", memberId)
+    .eq("company_id", authContext.company_id);
+
+  if (error) {
+    console.log(error);
+    alert("Mitarbeiter-Typ konnte nicht gespeichert werden.");
+    return;
+  }
+
+  await loadMembers();
+};
 
 async function loadDocuments() {
   const list = document.getElementById("docList");
@@ -304,8 +599,8 @@ window.openDoc = function(url) {
 };
 
 window.deleteDoc = async function(id) {
-  const typed = prompt("Zum Löschen bitte BESTAETIGEN eingeben.");
-  if (typed !== "BESTAETIGEN") return;
+  const typed = String(prompt("Zum Löschen bitte BESTÄTIGEN eingeben.") || "").trim().toUpperCase();
+  if (typed !== "BESTÄTIGEN" && typed !== "BESTAETIGEN") return;
 
   const { error } = await db
     .from("company_documents")
@@ -322,6 +617,7 @@ window.deleteDoc = async function(id) {
   setStatus("docStatus", "Dokument gelöscht.", true);
   await loadDocuments();
   await renderStorageStatus();
+  await loadStorageOverview();
 };
 
 async function renderStorageStatus() {
@@ -342,7 +638,7 @@ async function uploadDocument() {
   const input = document.getElementById("docInput");
   const file = input.files && input.files[0];
   if (!file) {
-    setStatus("docStatus", "Bitte zuerst eine Datei auswaehlen.", false);
+    setStatus("docStatus", "Bitte zuerst eine Datei auswählen.", false);
     return;
   }
 
@@ -379,6 +675,7 @@ async function uploadDocument() {
     input.value = "";
     await loadDocuments();
     await renderStorageStatus();
+    await loadStorageOverview();
   };
 
   reader.readAsDataURL(file);
@@ -396,10 +693,13 @@ async function uploadDocument() {
     return;
   }
   await loadCompany();
+  await loadStorageOverview();
+  await loadMembers();
   await loadDocuments();
   await renderStorageStatus();
 })();
 </script>
+<script src="info-help.js?v=20260522f"></script>
 <script src="pwa.js"></script>
 </body>
 </html>

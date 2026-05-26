@@ -582,6 +582,22 @@ onclick="deleteJob()"
 🗑 Löschen
 </button>
 
+<button
+class="done-btn"
+style="background:#444;"
+onclick="openJobReport()"
+>
+Stundennachweis
+</button>
+
+<button
+class="done-btn"
+style="background:#ff6b3d;"
+onclick="openJobCircuitPlan()"
+>
+Schaltplan
+</button>
+
 </div>
 
 <div class="info-box">
@@ -749,6 +765,18 @@ onclick="deleteJob()"
     "
   ></audio>
 
+  <textarea
+    id="voiceTranscript"
+    class="compact-input compact-textarea"
+    placeholder="Transkript / Notiz zur Sprachaufnahme"
+    style="margin-top:10px;"
+  ></textarea>
+
+  <p
+    id="voiceStatus"
+    style="font-size:12px;opacity:0.75;margin-top:8px;"
+  ></p>
+
   <button
     class="delete-btn"
     style="
@@ -761,6 +789,11 @@ onclick="deleteJob()"
   >
     🗑 Sprachtext löschen
   </button>
+
+  <div
+    id="voiceNoteList"
+    style="margin-top:12px;"
+  ></div>
 
 </div>
 
@@ -864,6 +897,7 @@ onclick="deleteJob()"
 <script src="storage-quota.js"></script>
 <script src="role-nav.js"></script>
 <script src="storage-links.js"></script>
+<script src="voice-notes.js"></script>
 <script src="project-documents.js"></script>
 <script src="work-presets.js"></script>
 <script src="auto-textareas.js"></script>
@@ -882,6 +916,22 @@ let employees = [];
 loadJob();
 renderFavoriteMaterials();
 loadEmployees();
+
+function openJobReport() {
+  const params = new URLSearchParams();
+  params.set("auftrag_id", jobId);
+  if (currentJob && currentJob.customer_id) params.set("customer_id", currentJob.customer_id);
+  if (currentJob && currentJob.project_id) params.set("project_id", currentJob.project_id);
+  window.location.href = "stunden-nachweis.html?" + params.toString();
+}
+
+function openJobCircuitPlan() {
+  const params = new URLSearchParams();
+  params.set("auftrag_id", jobId);
+  if (currentJob && currentJob.customer_id) params.set("customer_id", currentJob.customer_id);
+  if (currentJob && currentJob.project_id) params.set("project_id", currentJob.project_id);
+  window.location.href = "schaltplan-zeichner.html?" + params.toString();
+}
 
 function renderFavoriteMaterials(){
 
@@ -1002,6 +1052,7 @@ async function loadJob(){
 
   await loadImages();
   await loadAudio();
+  await loadVoiceNotes();
   await loadMaterialList();
 }
 
@@ -1439,8 +1490,61 @@ async function moveImageToFolder(imageUrl){
 let mediaRecorder;
 let audioChunks = [];
 let currentAudioId = null;
+let currentAudioPath = null;
+let currentVoiceNoteId = null;
+let voiceRecognitionSession = null;
+
+function escapeHtml(value){
+  return String(value || "")
+    .replace(/[&<>"']/g, char => ({
+      "&":"&amp;",
+      "<":"&lt;",
+      ">":"&gt;",
+      '"':"&quot;",
+      "'":"&#39;"
+    }[char]));
+}
+
+function setVoiceStatus(text, ok){
+  const status =
+    document.getElementById("voiceStatus");
+
+  if(!status) return;
+
+  status.textContent =
+    text || "";
+
+  status.style.color =
+    ok === false
+      ? "#ff6b3d"
+      : "#9be15d";
+}
 
 async function startRecording(){
+
+  const transcript =
+    document.getElementById(
+      "voiceTranscript"
+    );
+
+  if(transcript){
+    transcript.value = "";
+  }
+
+  if(window.BautrailVoiceNotes){
+    voiceRecognitionSession =
+      window.BautrailVoiceNotes
+        .startSpeechToText({
+          onText:text => {
+            const field =
+              document.getElementById(
+                "voiceTranscript"
+              );
+            if(field) field.value = text;
+          },
+          onStatus:text => setVoiceStatus(text, true)
+        });
+  }
 
   const stream =
     await navigator
@@ -1492,6 +1596,11 @@ async function startRecording(){
 }
 
 function stopRecording(){
+
+  if(voiceRecognitionSession){
+    voiceRecognitionSession.stop();
+    voiceRecognitionSession = null;
+  }
 
   if(mediaRecorder){
 
@@ -1563,6 +1672,65 @@ async function saveAudioBlob(audioBlob){
     record && record.id
     ? record.id
     : null;
+
+  currentAudioPath =
+    fileName;
+
+  await saveVoiceNoteForAudio(
+    fileName,
+    audioBlob
+  );
+
+  await loadVoiceNotes();
+  setVoiceStatus("Sprachaufnahme gespeichert.", true);
+}
+
+async function saveVoiceNoteForAudio(fileName, audioBlob){
+
+  if(!window.BautrailVoiceNotes){
+    return;
+  }
+
+  const transcript =
+    document.getElementById(
+      "voiceTranscript"
+    );
+
+  const text =
+    transcript
+      ? transcript.value.trim()
+      : "";
+
+  const result =
+    await window.BautrailVoiceNotes
+      .saveVoiceNote({
+        storage_path:fileName,
+        audio_url:fileName,
+        file_size:Number(audioBlob.size || 0),
+        customer_id:
+          currentJob
+          ? currentJob.customer_id
+          : null,
+        project_id:projektId,
+        auftrag_id:jobId,
+        transcript:text,
+        note_text:text,
+        source:"auftrag-audio"
+      });
+
+  if(result.error){
+    console.log(result.error);
+    setVoiceStatus(
+      "Audio gespeichert, Textnotiz konnte nicht gespeichert werden.",
+      false
+    );
+    return;
+  }
+
+  currentVoiceNoteId =
+    result.data && result.data.id
+      ? result.data.id
+      : null;
 }
 
 async function deleteAudio(){
@@ -1581,7 +1749,21 @@ async function deleteAudio(){
     }
   }
 
+  if(currentAudioPath){
+    await db
+      .from("voice_notes")
+      .delete()
+      .eq("storage_path", currentAudioPath);
+  } else if(currentVoiceNoteId){
+    await db
+      .from("voice_notes")
+      .delete()
+      .eq("id", currentVoiceNoteId);
+  }
+
   currentAudioId = null;
+  currentAudioPath = null;
+  currentVoiceNoteId = null;
 
   const player =
     document.getElementById(
@@ -1596,6 +1778,17 @@ async function deleteAudio(){
   document.getElementById(
     "deleteAudioBtn"
   ).style.display = "none";
+
+  const transcript =
+    document.getElementById(
+      "voiceTranscript"
+    );
+
+  if(transcript){
+    transcript.value = "";
+  }
+
+  await loadVoiceNotes();
 }
 
 // =======================
@@ -1632,6 +1825,11 @@ async function loadAudio(){
   currentAudioId =
     audio.id || null;
 
+  currentAudioPath =
+    audio.storage_path ||
+    audio.audio_url ||
+    null;
+
   const player =
     document.getElementById(
       "audioPlayer"
@@ -1654,6 +1852,61 @@ async function loadAudio(){
   document.getElementById(
     "deleteAudioBtn"
   ).style.display = "block";
+
+  await loadVoiceNotes();
+}
+
+async function loadVoiceNotes(){
+
+  const list =
+    document.getElementById(
+      "voiceNoteList"
+    );
+
+  if(!list || !window.BautrailVoiceNotes){
+    return;
+  }
+
+  const notes =
+    await window.BautrailVoiceNotes
+      .loadVoiceNotes({
+        auftrag_id:jobId,
+        limit:10
+      });
+
+  if(!notes.length){
+    list.innerHTML =
+      "<p style='opacity:0.7;'>Noch keine Textnotizen aus Sprache.</p>";
+    return;
+  }
+
+  currentVoiceNoteId =
+    notes[0].id || null;
+
+  list.innerHTML = "";
+
+  for(const note of notes){
+    const url =
+      await window.BautrailVoiceNotes
+        .resolveAudioUrl(note);
+
+    const div =
+      document.createElement("div");
+
+    div.className = "info-box";
+    div.style.marginBottom = "8px";
+    div.innerHTML = `
+      <small>${new Date(note.created_at).toLocaleString("de-DE")}</small>
+      <div class="text">${escapeHtml(note.note_text || note.transcript || "Ohne Text")}</div>
+      ${
+        url
+        ? `<audio controls style="width:100%;margin-top:8px;" src="${url}"></audio>`
+        : ""
+      }
+    `;
+
+    list.appendChild(div);
+  }
 }
 
 async function addMaterialItem(){

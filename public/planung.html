@@ -172,6 +172,11 @@ textarea{
   cursor:grab;
 }
 
+.week-entry.absence{
+  background:#3a2430;
+  border:1px solid #694055;
+}
+
 .week-entry:last-child{
   margin-bottom:0;
 }
@@ -189,6 +194,48 @@ textarea{
 .week-empty{
   font-size:12px;
   opacity:0.5;
+}
+
+.planning-form-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin-top:10px;
+}
+
+.planning-form-grid .wide{
+  grid-column:1 / -1;
+}
+
+.employee-picker{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:8px;
+  margin-top:8px;
+}
+
+.employee-pick{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:#1f1f1f;
+  border:1px solid #383838;
+  border-radius:10px;
+  padding:9px 10px;
+  font-size:13px;
+}
+
+.daily-overview-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:8px;
+  margin-top:10px;
+}
+
+@media (max-width: 560px){
+  .planning-form-grid{
+    grid-template-columns:1fr;
+  }
 }
 
 </style>
@@ -355,6 +402,7 @@ textarea{
 <script src="supabase.js"></script>
 <script src="auth-context.js"></script>
 <script src="role-nav.js"></script>
+<script src="recurring-orders.js"></script>
 <script>
 
 // =======================
@@ -911,10 +959,46 @@ async function loadPlanningTimeline() {
     return;
   }
 
+  if (window.BautrailRecurringOrders) {
+    await window.BautrailRecurringOrders.processDueRecurrences();
+  }
+
   const [{ data: jobs }, { data: projects }] = await Promise.all([
     db.from("auftraege").select("*").order("faelligkeit", { ascending: true }),
     db.from("projects").select("*").order("faelligkeit", { ascending: true })
   ]);
+
+  const recurringContext =
+    window.BautrailRecurringOrders
+      ? await window.BautrailRecurringOrders.getContext()
+      : null;
+
+  const reminders =
+    window.BautrailRecurringOrders
+      ? await window.BautrailRecurringOrders.loadOpenReminders(50)
+      : [];
+
+  let recurringRules = [];
+
+  if (
+    window.BautrailRecurringOrders &&
+    window.BautrailRecurringOrders.isManager(recurringContext) &&
+    recurringContext.company_id
+  ) {
+    const { data: recurringData, error: recurringError } =
+      await db
+        .from("recurring_orders")
+        .select("*")
+        .eq("company_id", recurringContext.company_id)
+        .eq("active", true)
+        .order("next_due_date", { ascending:true });
+
+    if (recurringError) {
+      console.log(recurringError);
+    }
+
+    recurringRules = recurringData || [];
+  }
 
   const now = new Date();
   const todayKey = toDateKey(now);
@@ -963,6 +1047,43 @@ async function loadPlanningTimeline() {
     if (dueDate >= now && dueDate <= weekLimit) planningWeekItems.push(item);
   });
 
+  (reminders || []).forEach(reminder => {
+    if (!reminder.due_date) return;
+
+    const dueDate = new Date(reminder.due_date);
+    const dueKey = toDateKey(dueDate);
+    const item = {
+      type: "Erinnerung",
+      title: reminder.title || "Wiederkehrender Auftrag",
+      subtitle: reminder.message || "",
+      href: "wiederkehrende-auftraege.html"
+    };
+
+    if (dueKey === todayKey) planningTodayItems.push(item);
+    if (dueKey === tomorrowKey) planningTomorrowItems.push(item);
+    if (dueDate >= now && dueDate <= weekLimit) planningWeekItems.push(item);
+  });
+
+  (recurringRules || []).forEach(rule => {
+    if (!rule.next_due_date) return;
+
+    const dueDate = new Date(rule.next_due_date);
+    const dueKey = toDateKey(dueDate);
+    const item = {
+      type: "Wiederkehrend",
+      title: (rule.customer || "Kunde") + " - " + (rule.project || "Auftrag"),
+      subtitle:
+        window.BautrailRecurringOrders.intervalLabel(rule) +
+        " | " +
+        (rule.mode === "auto_create" ? "automatisch" : "Erinnerung"),
+      href: "wiederkehrende-auftraege.html"
+    };
+
+    if (dueKey === todayKey) planningTodayItems.push(item);
+    if (dueKey === tomorrowKey) planningTomorrowItems.push(item);
+    if (dueDate >= now && dueDate <= weekLimit) planningWeekItems.push(item);
+  });
+
   renderPlanningTab();
 }
 
@@ -990,13 +1111,36 @@ async function initRolePlanningNew() {
 
   if (isManager) {
     wrapper.innerHTML = `
-      <h3>Mitarbeiter Planung</h3>
+      <h3>👷 Mitarbeiter Planung</h3>
       <small style="opacity:0.7;">Mitarbeiter auswählen und Kunde/Projekt zuweisen</small>
-      <select id="planEmployee" class="compact-input" style="margin-top:10px;"></select>
-      <select id="planCustomer" class="compact-input" style="margin-top:8px;"></select>
-      <select id="planProject" class="compact-input" style="margin-top:8px;"></select>
-      <input id="planDate" type="date" class="compact-input" style="margin-top:8px;">
-      <button class="login-btn" style="margin-top:8px;margin-bottom:0;" onclick="assignPlanEntry()">Zuweisen</button>
+      <div class="planning-form-grid">
+        <select id="planKind" class="compact-input">
+          <option value="assignment">📌 Einsatz / Auftrag</option>
+          <option value="absence">🏖️ Krank / Urlaub / abwesend</option>
+        </select>
+        <input id="planDate" type="date" class="compact-input">
+        <select id="planCustomer" class="compact-input">
+          <option value="">Kunde wählen</option>
+        </select>
+        <select id="planProject" class="compact-input">
+          <option value="">Projekt wählen</option>
+        </select>
+        <select id="planAuftrag" class="compact-input">
+          <option value="">Auftrag wählen</option>
+        </select>
+        <select id="planAbsenceType" class="compact-input" style="display:none;">
+          <option value="urlaub">Urlaub</option>
+          <option value="krank">Krank</option>
+          <option value="abwesend">Abwesend</option>
+        </select>
+        <textarea id="planDescription" class="compact-input wide" style="height:76px;margin-top:0;" placeholder="Notiz / Treffpunkt / Zusatzinfo"></textarea>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;">
+        <strong>👥 Mitarbeiter auswählen</strong>
+        <button type="button" class="week-nav-btn" onclick="toggleAllPlanningEmployees()">Alle</button>
+      </div>
+      <div id="planEmployeeList" class="employee-picker"></div>
+      <button class="login-btn" style="margin-top:10px;margin-bottom:0;" onclick="assignPlanEntry()">📅 Serienplanung speichern</button>
       <p id="planStatus" style="font-size:12px;opacity:0.75;margin-top:8px;"></p>
     `;
   } else {
@@ -1010,18 +1154,19 @@ async function initRolePlanningNew() {
   const listCard = document.createElement("div");
   listCard.className = "task-card";
   listCard.innerHTML =     `
-    <h3>${isManager ? "Zugewiesene Planungen" : "Meine Eintraege"}</h3>
+    <h3>${isManager ? "📋 Zugewiesene Planungen" : "📋 Meine Einträge"}</h3>
     <div id="planningAssignedList" style="margin-top:10px;"></div>
   `;
 
   const weekCard = document.createElement("div");
   weekCard.className = "task-card";
   weekCard.innerHTML =     `
-    <h3>${isManager ? "Wochenansicht und Drag and Drop" : "Meine Woche"}</h3>
-    <small style="opacity:0.7;">${isManager ? "Einsaetze zwischen Tagen und Mitarbeitern ziehen." : "Deine Einsaetze fuer die aktuelle Woche."}</small>
+    <h3>${isManager ? "🗓️ Wochenansicht und Drag and Drop" : "🗓️ Meine Woche"}</h3>
+    <small style="opacity:0.7;">${isManager ? "Einsätze zwischen Tagen und Mitarbeitern ziehen." : "Deine Einsätze für die aktuelle Woche."}</small>
+    <div id="planningDayOverview" class="daily-overview-grid"></div>
     <div class="week-toolbar">
       <div style="display:flex;gap:8px;align-items:center;">
-        <button class="week-nav-btn" onclick="shiftPlanningWeek(-7)">Zurueck</button>
+        <button class="week-nav-btn" onclick="shiftPlanningWeek(-7)">Zurück</button>
         <button class="week-nav-btn" onclick="shiftPlanningWeek(0)">Diese Woche</button>
         <button class="week-nav-btn" onclick="shiftPlanningWeek(7)">Weiter</button>
       </div>
@@ -1044,7 +1189,8 @@ let planningWeekStart = startOfWeek(new Date());
 let planningData = {
   members: [],
   customers: [],
-  projects: []
+  projects: [],
+  jobs: []
 };
 
 function startOfWeek(date) {
@@ -1093,20 +1239,31 @@ async function loadPlanningDataNew(ctx, isManager) {
   planningCtx = ctx;
   planningIsManager = !!isManager;
   if (isManager) {
-    const [members, customers, projects] = await Promise.all([
+    const [members, customers, projects, jobs] = await Promise.all([
       db.from("company_members")
         .select("id, user_id, name, email, role, active")
         .eq("company_id", ctx.company_id)
         .eq("active", true)
-        .eq("role", "angestellter")
         .order("name", { ascending: true }),
       loadScopedRows("customers", ctx),
-      loadScopedRows("projects", ctx)
+      loadScopedRows("projects", ctx),
+      loadScopedRows("auftraege", ctx)
     ]);
 
-    planningData.members = (members.data || []);
+    planningData.members = (members.data || [])
+      .filter(member => member.user_id)
+      .sort((a, b) => {
+        const aManager = ["chef", "buero"].includes(String(a.role || ""));
+        const bManager = ["chef", "buero"].includes(String(b.role || ""));
+        if (aManager !== bManager) return aManager ? 1 : -1;
+        return String(a.name || a.email || "").localeCompare(String(b.name || b.email || ""), "de");
+      });
     planningData.customers = customers || [];
     planningData.projects = projects || [];
+    planningData.jobs = (jobs || []).filter(job => {
+      const statusValue = job.status || (job.done ? "erledigt" : "offen");
+      return statusValue !== "erledigt" && statusValue !== "abgerechnet";
+    });
     fillPlanningSelects();
   } else {
     planningData.members = [{ user_id: ctx.user_id, name: ctx.name || ctx.email || "Ich" }];
@@ -1144,6 +1301,125 @@ function fillPlanningSelects() {
     "<option value=''>Projekt wählen</option>" +
     planningData.projects.map(p => `<option value="${p.id}">${p.name || "Projekt"}</option>`).join("");
 
+  const d = document.getElementById("planDate");
+  if (d) d.value = formatDateInputValue(new Date());
+}
+
+function customerLabelForPlanning(customer) {
+  return customer
+    ? (customer.firma || [customer.vorname, customer.nachname].filter(Boolean).join(" ") || "Kunde")
+    : "Kunde";
+}
+
+function jobLabelForPlanning(job) {
+  return [
+    job.auftrag_number || job.auftrag_nummer || "",
+    job.project || job.objekt || "Auftrag",
+    job.faelligkeit ? "fällig " + formatDateDe(job.faelligkeit) : ""
+  ].filter(Boolean).join(" | ");
+}
+
+function formatDateDe(value) {
+  if (!value) return "-";
+  const parts = String(value).split("-");
+  if (parts.length === 3) return parts[2] + "." + parts[1] + "." + parts[0];
+  return value;
+}
+
+function selectedPlanningEmployees() {
+  return Array.from(document.querySelectorAll(".plan-employee-check:checked"))
+    .map(node => node.value)
+    .filter(Boolean);
+}
+
+window.toggleAllPlanningEmployees = function() {
+  const checks = Array.from(document.querySelectorAll(".plan-employee-check"));
+  if (!checks.length) return;
+  const shouldCheck = checks.some(node => !node.checked);
+  checks.forEach(node => {
+    node.checked = shouldCheck;
+  });
+};
+
+function fillPlanningSelects() {
+  const employeeList = document.getElementById("planEmployeeList");
+  const customerSel = document.getElementById("planCustomer");
+  const projectSel = document.getElementById("planProject");
+  const jobSel = document.getElementById("planAuftrag");
+  const kindSel = document.getElementById("planKind");
+  const absenceSel = document.getElementById("planAbsenceType");
+  if (!employeeList || !customerSel || !projectSel || !jobSel) return;
+
+  if (!planningData.members.length) {
+    employeeList.innerHTML = `
+      <div class="info-box" style="margin:0;grid-column:1 / -1;min-height:0;">
+        <strong>Keine aktiven Mitarbeiter gefunden.</strong><br>
+        <small>Bitte im Chef-Dashboard Mitarbeiter aktivieren oder einladen.</small>
+      </div>
+    `;
+  } else {
+  employeeList.innerHTML = planningData.members.map(m => `
+    <label class="employee-pick">
+      <input type="checkbox" class="plan-employee-check" value="${m.user_id}">
+      <span>${m.name || m.email || "Mitarbeiter"}${m.role ? " · " + m.role : ""}</span>
+    </label>
+  `).join("");
+  }
+
+  customerSel.innerHTML =
+    "<option value=''>Kunde wählen</option>" +
+    planningData.customers.map(c => `<option value="${c.id}">${customerLabelForPlanning(c)}</option>`).join("");
+
+  function refreshJobs() {
+    const customerId = customerSel.value;
+    const projectId = projectSel.value;
+    let list = planningData.jobs.slice();
+    if (customerId) list = list.filter(job => String(job.customer_id || "") === String(customerId));
+    if (projectId) list = list.filter(job => String(job.project_id || "") === String(projectId));
+    jobSel.innerHTML =
+      "<option value=''>Auftrag optional</option>" +
+      list.map(job => `<option value="${job.id}">${jobLabelForPlanning(job)}</option>`).join("");
+  }
+
+  function refreshProjects() {
+    const customerId = customerSel.value;
+    let list = planningData.projects.filter(p => String(p.customer_id || "") === String(customerId || ""));
+    if (!customerId || !list.length) list = planningData.projects;
+    projectSel.innerHTML =
+      "<option value=''>Projekt wählen</option>" +
+      list.map(p => `<option value="${p.id}">${p.name || "Projekt"}</option>`).join("");
+    refreshJobs();
+  }
+
+  customerSel.addEventListener("change", refreshProjects);
+  projectSel.addEventListener("change", refreshJobs);
+  jobSel.addEventListener("change", () => {
+    const job = planningData.jobs.find(item => String(item.id) === String(jobSel.value));
+    if (!job) return;
+    if (job.customer_id) {
+      customerSel.value = job.customer_id;
+      refreshProjects();
+    }
+    if (job.project_id) {
+      projectSel.value = job.project_id;
+      refreshJobs();
+      jobSel.value = job.id;
+    }
+  });
+
+  if (kindSel && absenceSel) {
+    const syncKind = () => {
+      const isAbsence = kindSel.value === "absence";
+      absenceSel.style.display = isAbsence ? "block" : "none";
+      customerSel.style.display = isAbsence ? "none" : "block";
+      projectSel.style.display = isAbsence ? "none" : "block";
+      jobSel.style.display = isAbsence ? "none" : "block";
+    };
+    kindSel.addEventListener("change", syncKind);
+    syncKind();
+  }
+
+  refreshProjects();
   const d = document.getElementById("planDate");
   if (d) d.value = formatDateInputValue(new Date());
 }
@@ -1196,6 +1472,123 @@ window.assignPlanEntry = async function() {
   await loadAssignedListNew(planningCtx, true);
 };
 
+async function insertPlanningEntriesWithFallback(payloads) {
+  let safeRows = payloads.map(item => ({ ...item }));
+  let result = await db.from("planning_entries").insert(safeRows);
+  let guard = 0;
+  while (result.error && guard < 12) {
+    const msg = String(result.error.message || "");
+    const match =
+      msg.match(/column\s+"([^"]+)"/i) ||
+      msg.match(/column\s+'([^']+)'/i) ||
+      msg.match(/find the '([^']+)' column/i) ||
+      msg.match(/find the "([^"]+)" column/i);
+    if (!match || !match[1]) break;
+    const badKey = match[1];
+    let removed = false;
+    safeRows = safeRows.map(row => {
+      if (!(badKey in row)) return row;
+      removed = true;
+      const next = { ...row };
+      delete next[badKey];
+      return next;
+    });
+    if (!removed) break;
+    result = await db.from("planning_entries").insert(safeRows);
+    guard += 1;
+  }
+  return result;
+}
+
+window.assignPlanEntry = async function() {
+  const status = document.getElementById("planStatus");
+  if (!planningCtx) return;
+
+  const kind = (document.getElementById("planKind") || {}).value || "assignment";
+  const assignedToList = selectedPlanningEmployees();
+  const customerIdRaw = (document.getElementById("planCustomer") || {}).value || "";
+  const projectIdRaw = (document.getElementById("planProject") || {}).value || "";
+  const jobId = (document.getElementById("planAuftrag") || {}).value || "";
+  const date = (document.getElementById("planDate") || {}).value || null;
+  const description = String((document.getElementById("planDescription") || {}).value || "").trim();
+  const absenceType = (document.getElementById("planAbsenceType") || {}).value || "abwesend";
+
+  if (!assignedToList.length || !date) {
+    if (status) {
+      status.textContent = "Bitte mindestens einen Mitarbeiter und ein Datum wählen.";
+      status.style.color = "#ff6b3d";
+    }
+    return;
+  }
+
+  const job = planningData.jobs.find(item => String(item.id) === String(jobId));
+  const customerId = customerIdRaw || (job ? job.customer_id : "");
+  const projectId = projectIdRaw || (job ? job.project_id : "");
+  const customer = planningData.customers.find(c => String(c.id) === String(customerId));
+  const project = planningData.projects.find(p => String(p.id) === String(projectId));
+
+  let basePayload = {
+    company_id: planningCtx.company_id,
+    date,
+    created_by: planningCtx.user_id,
+    description
+  };
+
+  if (kind === "absence") {
+    const absenceLabel = absenceType === "urlaub" ? "Urlaub" : absenceType === "krank" ? "Krank" : "Abwesend";
+    basePayload = {
+      ...basePayload,
+      entry_type: "absence",
+      absence_type: absenceType,
+      title: absenceLabel,
+      description: description || absenceLabel
+    };
+  } else {
+    if (!customerId && !projectId && !jobId) {
+      if (status) {
+        status.textContent = "Bitte Kunde, Projekt oder Auftrag wählen.";
+        status.style.color = "#ff6b3d";
+      }
+      return;
+    }
+    const customerName = job && job.customer ? job.customer : customerLabelForPlanning(customer);
+    const projectName = job && (job.project || job.objekt)
+      ? (job.project || job.objekt)
+      : (project ? (project.name || "Projekt") : "Einsatz");
+    basePayload = {
+      ...basePayload,
+      entry_type: "assignment",
+      customer_id: customerId || null,
+      customer: customerName,
+      project_id: projectId || null,
+      auftrag_id: jobId || null,
+      title: customerName + " - " + projectName,
+      description: description || (job ? (job.beschreibung || "") : "")
+    };
+  }
+
+  const payloads = assignedToList.map(assigned_to => ({
+    ...basePayload,
+    assigned_to
+  }));
+
+  const { error } = await insertPlanningEntriesWithFallback(payloads);
+  if (error) {
+    console.log(error);
+    if (status) {
+      status.textContent = "Planung konnte nicht gespeichert werden.";
+      status.style.color = "#ff6b3d";
+    }
+    return;
+  }
+
+  if (status) {
+    status.textContent = assignedToList.length + " Eintrag(e) gespeichert.";
+    status.style.color = "#9be15d";
+  }
+  await loadAssignedListNew(planningCtx, true);
+};
+
 async function loadAssignedListNew(ctx, isManager) {
   const host = document.getElementById("planningAssignedList");
   if (!host) return;
@@ -1212,6 +1605,7 @@ async function loadAssignedListNew(ctx, isManager) {
   }
 
   planningAssignments = data || [];
+  renderPlanningWeekBoard();
   const memberMap = new Map((planningData.members || []).map(m => [String(m.user_id), m.name || m.email || "Mitarbeiter"]));
   if (!(data || []).length) {
     host.innerHTML = "<p style='opacity:0.7;'>Keine Einträge vorhanden.</p>";
@@ -1241,6 +1635,45 @@ async function loadAssignedListNew(ctx, isManager) {
   renderPlanningWeekBoard();
 }
 
+function renderPlanningDayOverview(members) {
+  const target = document.getElementById("planningDayOverview");
+  if (!target) return;
+  const todayKey = formatDateInputValue(new Date());
+  const overdueJobs = planningData.jobs.filter(job => job.faelligkeit && String(job.faelligkeit) < todayKey);
+  const openJobs = planningData.jobs.length;
+  const rows = (members || []).map(member => {
+    const entries = planningAssignments.filter(item =>
+      String(item.assigned_to || "") === String(member.user_id || "") &&
+      String(item.date || "") === todayKey
+    );
+    const text = entries.length
+      ? entries.map(item => item.title || "Planung").slice(0, 2).join("<br>")
+      : "frei";
+    return `
+      <div class="info-box" style="margin:0;min-height:0;">
+        <strong>${member.name || member.email || "Mitarbeiter"}</strong><br>
+        <small>${text}</small>
+      </div>
+    `;
+  }).join("");
+
+  target.innerHTML = `
+    <div class="info-box" style="margin:0;min-height:0;">
+      <strong>Heute</strong><br>
+      <small>${planningAssignments.filter(item => String(item.date || "") === todayKey).length} Planungen</small>
+    </div>
+    <div class="info-box" style="margin:0;min-height:0;">
+      <strong>Offen</strong><br>
+      <small>${openJobs} Auftrag(e)</small>
+    </div>
+    <div class="info-box" style="margin:0;min-height:0;">
+      <strong>⚠️ Überfällig</strong><br>
+      <small>${overdueJobs.length} Auftrag(e)</small>
+    </div>
+    ${rows}
+  `;
+}
+
 function renderPlanningWeekBoard() {
   const host = document.getElementById("planningWeekBoard");
   const label = document.getElementById("planningWeekLabel");
@@ -1252,6 +1685,7 @@ function renderPlanningWeekBoard() {
     ? (planningData.members.length ? planningData.members : [])
     : [{ user_id: planningCtx ? planningCtx.user_id : "", name: planningCtx ? (planningCtx.name || planningCtx.email || "Ich") : "Ich" }];
 
+  renderPlanningDayOverview(members);
   host.innerHTML = "";
 
   dates.forEach(date => {
@@ -1276,10 +1710,11 @@ function renderPlanningWeekBoard() {
       } else {
         items.forEach(item => {
           const entry = document.createElement("div");
-          entry.className = "week-entry";
+          entry.className = item.entry_type === "absence" ? "week-entry absence" : "week-entry";
           entry.draggable = planningIsManager;
           entry.dataset.id = item.id;
-          entry.innerHTML = `<strong>${item.title || "Planung"}</strong><small>${item.description || item.date || ""}</small>`;
+          const linked = item.auftrag_id ? "Auftrag" : (item.entry_type === "absence" ? "Abwesenheit" : "");
+          entry.innerHTML = `<strong>${item.title || "Planung"}</strong><small>${[linked, item.description || item.date || ""].filter(Boolean).join(" | ")}</small>`;
           if (planningIsManager) {
             entry.addEventListener("dragstart", ev => {
               ev.dataTransfer.setData("text/plain", String(item.id));

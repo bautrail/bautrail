@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chef Dashboard - bautrail</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260522f">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#ff6b3d">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -21,8 +21,16 @@
       <p class="company-name" id="companySubline">Firmensteuerung</p>
     </header>
 
+    <div class="overview-note">
+      <strong>Chef-&Uuml;berblick</strong><br>
+      Oben stehen die t&auml;glichen Themen. Archiv, Exporte und Auswertungen sind einklappbar, damit die Seite ruhiger bleibt.
+    </div>
+
     <div class="task-card">
-      <h3>&#127970; Firmenübersicht</h3>
+      <div class="card-title-row">
+        <h3>&#127970; Firmenübersicht</h3>
+        <button type="button" class="info-dot" aria-label="Info zur Firmenübersicht" data-info="Zeigt deine aktuelle Rolle und führt zu den Firmeneinstellungen oder zurück zur Hauptübersicht.">i</button>
+      </div>
       <p id="roleInfo" style="opacity:0.8;margin-top:8px;">Lade Daten...</p>
       <div class="button-row" style="margin-top:10px;">
         <button class="login-btn" style="margin-bottom:0;" onclick="window.location.href='firma-einstellungen.html'">Firma einstellen</button>
@@ -31,110 +39,136 @@
     </div>
 
     <div class="task-card">
-      <h3>&#128190; Speicher & Tarif</h3>
-      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Zeigt Modell, gebuchten Speicher und aktuellen Verbrauch der Firma.</p>
-      <div id="storageOverviewBox" style="margin-top:10px;"></div>
-      <div class="button-row" style="margin-top:10px;">
-        <button class="login-btn" style="margin-bottom:0;" onclick="loadStorageOverview()">Aktualisieren</button>
-        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="window.location.href='firma-einstellungen.html'">Speicher einstellen</button>
+      <div class="card-title-row">
+        <h3>🔁 Wiederkehrende Aufträge</h3>
+        <button type="button" class="info-dot" aria-label="Info zu wiederkehrenden Aufträgen" data-info="Zeigt bald fällige Serienaufträge und Erinnerungen. Über Öffnen bearbeitest du die Regeln.">i</button>
       </div>
+      <button class="login-btn" style="margin-top:8px;margin-bottom:0;background:#444;" onclick="window.location.href='wiederkehrende-auftraege.html'">Öffnen</button>
+      <div id="recurringDashboardList" style="margin-top:10px;"></div>
     </div>
 
     <div class="task-card">
-      <h3>&#9993;&#65039; Einladungscode erstellen</h3>
-      <div class="button-row" style="margin-top:8px;">
-        <select id="inviteRole" class="compact-input">
-          <option value="buero">Büro</option>
-          <option value="angestellter">Angestellter</option>
-        </select>
-        <button class="login-btn" style="margin-bottom:0;" onclick="createInvite()">Code erstellen</button>
+      <div class="card-title-row">
+        <h3>📍 Tagesübersicht</h3>
+        <button type="button" class="info-dot" aria-label="Info zur Tagesübersicht" data-info="Zeigt, wer heute wo geplant ist, was noch offen ist und was überfällig wurde.">i</button>
       </div>
-      <p id="inviteResult" style="margin-top:10px;font-weight:700;"></p>
-      <p id="inviteStatus" style="font-size:12px;opacity:0.75;"></p>
-    </div>
-    <div class="task-card">
-      <h3>&#128230; Kundendaten Download</h3>
-      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Erstellt einen ZIP-Ordner mit Kunden, Projekten, Aufträgen und Stundennachweisen deiner Firma.</p>
-      <button class="login-btn" style="margin-top:10px;margin-bottom:0;" onclick="downloadCustomerDataArchive()">Kundendaten herunterladen</button>
-      <p id="customerExportStatus" style="font-size:12px;opacity:0.8;min-height:18px;margin-top:8px;">&nbsp;</p>
+      <button class="login-btn" style="margin-top:8px;margin-bottom:0;background:#444;" onclick="loadDailyPlanningOverview()">Aktualisieren</button>
+      <div id="dailyPlanningOverview" style="margin-top:10px;"></div>
     </div>
 
-
-    <div class="task-card">
-      <h3>&#128202; Exporte & Abrechnung</h3>
-      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Monats?bersicht f?r Stunden, Kilometer, Auftr?ge und Kundendaten.</p>
-      <div class="button-row" style="margin-top:8px;">
-        <input id="adminExportMonth" type="month" class="compact-input">
-        <button class="login-btn" style="margin-bottom:0;" onclick="downloadMonthlyBillingArchive()">Monats-ZIP</button>
-        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="downloadMonthlyBillingPdf()">Monats-PDF</button>
+    <details class="task-card details-card">
+      <summary>
+        <div class="card-title-row">
+          <h3>&#128230; Kundendaten Download</h3>
+          <button type="button" class="info-dot" aria-label="Info zum Kundendaten Download" data-info="Erstellt eine ZIP-Datei mit Kunden, Projekten, Aufträgen und Stundennachweisen deiner Firma.">i</button>
+        </div>
+      </summary>
+      <div class="details-body">
+        <p style="font-size:12px;opacity:0.75;margin-top:8px;">Erstellt einen ZIP-Ordner mit Kunden, Projekten, Aufträgen und Stundennachweisen deiner Firma.</p>
+        <button class="login-btn" style="margin-top:10px;margin-bottom:0;" onclick="downloadCustomerDataArchive()">Kundendaten herunterladen</button>
+        <p id="customerExportStatus" style="font-size:12px;opacity:0.8;min-height:18px;margin-top:8px;">&nbsp;</p>
       </div>
-      <button class="login-btn" style="margin-top:8px;margin-bottom:0;background:#444;" onclick="downloadFullCompanyArchive()">Komplettes Firmenbackup</button>
-      <p id="adminExportStatus" style="font-size:12px;opacity:0.8;min-height:18px;margin-top:8px;">&nbsp;</p>
-    </div>
+    </details>
 
-    <div class="task-card">
-      <h3>&#128101; Mitarbeiterliste</h3>
-      <div id="memberList" style="margin-top:10px;"></div>
-    </div>
 
-    <div class="task-card">
-      <h3>&#128663; Kilometerübersicht</h3>
-      <div class="button-row" style="margin-top:8px;">
-        <input id="mileageMonth" type="month" class="compact-input">
-        <button class="login-btn" style="margin-bottom:0;" onclick="loadMileageOverview()">Aktualisieren</button>
+    <details class="task-card details-card">
+      <summary>
+        <div class="card-title-row">
+          <h3>&#128202; Exporte & Abrechnung</h3>
+          <button type="button" class="info-dot" aria-label="Info zu Exporten und Abrechnung" data-info="Erstellt Monatsübersichten, ZIP-Archive, PDF-Auswertungen und das vollständige Firmenbackup.">i</button>
+        </div>
+      </summary>
+      <div class="details-body">
+        <p style="font-size:12px;opacity:0.75;margin-top:8px;">Monats&uuml;bersicht f&uuml;r Stunden, Kilometer, Auftr&auml;ge und Kundendaten.</p>
+        <div class="button-row" style="margin-top:8px;">
+          <input id="adminExportMonth" type="month" class="compact-input">
+          <button class="login-btn" style="margin-bottom:0;" onclick="downloadMonthlyBillingArchive()">Monats-ZIP</button>
+          <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="downloadMonthlyBillingPdf()">Monats-PDF</button>
+        </div>
+        <button class="login-btn" style="margin-top:8px;margin-bottom:0;background:#444;" onclick="downloadFullCompanyArchive()">Komplettes Firmenbackup</button>
+        <p id="adminExportStatus" style="font-size:12px;opacity:0.8;min-height:18px;margin-top:8px;">&nbsp;</p>
       </div>
-      <div id="mileageOverview" style="margin-top:10px;"></div>
-    </div>
+    </details>
+
+    <details class="task-card details-card">
+      <summary>
+        <div class="card-title-row">
+          <h3>&#128663; Kilometerübersicht</h3>
+          <button type="button" class="info-dot" aria-label="Info zur Kilometerübersicht" data-info="Zeigt Kilometer aus den Stundennachweisen für den gewählten Monat.">i</button>
+        </div>
+      </summary>
+      <div class="details-body">
+        <div class="button-row" style="margin-top:8px;">
+          <input id="mileageMonth" type="month" class="compact-input">
+          <button class="login-btn" style="margin-bottom:0;" onclick="loadMileageOverview()">Aktualisieren</button>
+        </div>
+        <div id="mileageOverview" style="margin-top:10px;"></div>
+      </div>
+    </details>
 
     <div class="task-card">
-      <h3>&#128221; Offene Stundenzettel</h3>
+      <div class="card-title-row">
+        <h3>&#128221; Offene Stundenzettel</h3>
+        <button type="button" class="info-dot" aria-label="Info zu offenen Stundenzetteln" data-info="Hier prüfst du neue Stundennachweise und kannst sie bestätigen oder ablehnen.">i</button>
+      </div>
       <div id="timesheetList" style="margin-top:10px;"></div>
     </div>
 
-    <div class="task-card">
-      <h3>&#9888;&#65039; Fehlende Einträge heute</h3>
-      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Zeigt Mitarbeiter, bei denen heute noch Stundennachweis oder Arbeitszeit fehlt.</p>
-      <button class="login-btn" style="margin-top:8px;margin-bottom:0;" onclick="loadMissingToday()">Aktualisieren</button>
-      <div id="missingTodayList" style="margin-top:10px;"></div>
-    </div>
-
-    <div class="task-card">
-      <h3>&#128450;&#65039; Stundennachweis-Archiv</h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
-        <input id="archiveMonth" type="month" class="compact-input">
-        <select id="archiveMember" class="compact-input"><option value="">Alle Mitarbeiter</option></select>
-        <select id="archiveCustomer" class="compact-input"><option value="">Alle Kunden</option></select>
-        <select id="archiveProject" class="compact-input"><option value="">Alle Projekte</option></select>
-        <select id="archiveStatus" class="compact-input">
-          <option value="">Alle Status</option>
-          <option value="offen">Offen</option>
-          <option value="geprueft">Geprüft</option>
-          <option value="abgelehnt">Abgelehnt</option>
-          <option value="abgerechnet">Abgerechnet</option>
-        </select>
-        <button class="login-btn" style="margin:0;" onclick="loadReportArchive()">Suchen</button>
+    <details class="task-card details-card">
+      <summary>
+        <div class="card-title-row">
+          <h3>&#9888;&#65039; Fehlende Einträge heute</h3>
+          <button type="button" class="info-dot" aria-label="Info zu fehlenden Einträgen" data-info="Zeigt Mitarbeiter, bei denen heute noch Arbeitszeit oder Stundennachweis fehlt.">i</button>
+        </div>
+      </summary>
+      <div class="details-body">
+        <p style="font-size:12px;opacity:0.75;margin-top:8px;">Zeigt Mitarbeiter, bei denen heute noch Stundennachweis oder Arbeitszeit fehlt.</p>
+        <button class="login-btn" style="margin-top:8px;margin-bottom:0;" onclick="loadMissingToday()">Aktualisieren</button>
+        <div id="missingTodayList" style="margin-top:10px;"></div>
       </div>
-      <div id="archiveSummary" style="margin-top:10px;"></div>
-      <div id="reportArchiveList" style="margin-top:10px;"></div>
-    </div>
+    </details>
 
-    <div class="task-card">
-      <h3>&#128188; Rechnungs-Vorbereitung</h3>
-      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Sammelt geprüfte Nachweise eines Kunden für den gewählten Monat.</p>
-      <div class="button-row" style="margin-top:8px;">
-        <select id="billingCustomer" class="compact-input"><option value="">Kunde wählen</option></select>
-        <button class="login-btn" style="margin-bottom:0;" onclick="prepareCustomerBilling()">Vorbereiten</button>
-        <button class="login-btn" style="margin-bottom:0;background:#444;" onclick="openBillingCustomerFile()">Kundenakte</button>
+    <details class="task-card details-card">
+      <summary>
+        <div class="card-title-row">
+          <h3>&#128450;&#65039; Stundennachweis-Archiv</h3>
+          <button type="button" class="info-dot" aria-label="Info zum Stundennachweis Archiv" data-info="Suche alte Nachweise nach Zeitraum, Mitarbeiter, Kunde, Projekt und Status. Erst Zeitraum wählen, dann suchen.">i</button>
+        </div>
+      </summary>
+      <div class="details-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+          <input id="archiveStart" type="date" class="compact-input" aria-label="Von Datum">
+          <input id="archiveEnd" type="date" class="compact-input" aria-label="Bis Datum">
+          <select id="archiveMember" class="compact-input"><option value="">Alle Mitarbeiter</option></select>
+          <select id="archiveCustomer" class="compact-input"><option value="">Alle Kunden</option></select>
+          <select id="archiveProject" class="compact-input"><option value="">Alle Projekte</option></select>
+          <select id="archiveStatus" class="compact-input">
+            <option value="">Alle Status</option>
+            <option value="offen">Offen</option>
+            <option value="geprueft">Geprüft</option>
+            <option value="abgelehnt">Abgelehnt / gelöscht</option>
+            <option value="abgerechnet">Abgerechnet</option>
+          </select>
+          <button class="login-btn" style="margin:0;" onclick="loadReportArchive()">Suchen</button>
+        </div>
+        <div id="archiveSummary" style="margin-top:10px;"><p style="opacity:0.7;">Bitte zuerst einen Zeitraum wählen.</p></div>
+        <div id="reportArchiveList" style="margin-top:10px;"></div>
       </div>
-      <div id="billingPreview" style="margin-top:10px;"></div>
-    </div>
+    </details>
 
-    <div class="task-card">
-      <h3>&#128200; Mitarbeiter-Auswertung</h3>
-      <p style="font-size:12px;opacity:0.75;margin-top:8px;">Stunden, Kilometer, Nachweise und Projekte pro Mitarbeiter im Monat.</p>
-      <button class="login-btn" style="margin-top:8px;margin-bottom:0;" onclick="loadEmployeeAnalysis()">Auswertung laden</button>
-      <div id="employeeAnalysis" style="margin-top:10px;"></div>
-    </div>
+    <details class="task-card details-card">
+      <summary>
+        <div class="card-title-row">
+          <h3>&#128200; Mitarbeiter-Auswertung</h3>
+          <button type="button" class="info-dot" aria-label="Info zur Mitarbeiter-Auswertung" data-info="Zeigt Stunden, Kilometer, Nachweise und Projekte pro Mitarbeiter im ausgewählten Monat.">i</button>
+        </div>
+      </summary>
+      <div class="details-body">
+        <p style="font-size:12px;opacity:0.75;margin-top:8px;">Stunden, Kilometer, Nachweise und Projekte pro Mitarbeiter im Monat.</p>
+        <button class="login-btn" style="margin-top:8px;margin-bottom:0;" onclick="loadEmployeeAnalysis()">Auswertung laden</button>
+        <div id="employeeAnalysis" style="margin-top:10px;"></div>
+      </div>
+    </details>
   </div>
 
   <nav class="bottom-nav">
@@ -155,6 +189,7 @@
 <script src="role-nav.js"></script>
 <script src="company-export.js"></script>
 <script src="chef-report-tools.js"></script>
+<script src="recurring-orders.js"></script>
 <script>
 let authContext = null;
 let company = null;
@@ -419,7 +454,7 @@ async function loadStorageOverview() {
   const box = document.getElementById("storageOverviewBox");
   if (!box) return;
   if (!window.BautrailStorageQuota || !authContext) {
-    box.innerHTML = "<p style='opacity:0.7;'>Speicherdaten sind gerade nicht verfuegbar.</p>";
+    box.innerHTML = "<p style='opacity:0.7;'>Speicherdaten sind gerade nicht verfügbar.</p>";
     return;
   }
 
@@ -437,7 +472,7 @@ async function loadStorageOverview() {
     '    </div>',
     '    <div style="text-align:right;min-width:120px;">',
     '      <strong>' + percent.toFixed(0) + '%</strong><br>',
-    '      <small>' + (status.storage_limit_enabled === false ? 'ohne Limit' : 'verfuegbar: ' + window.BautrailStorageQuota.formatBytes(status.remaining_bytes)) + '</small>',
+    '      <small>' + (status.storage_limit_enabled === false ? 'ohne Limit' : 'verfügbar: ' + window.BautrailStorageQuota.formatBytes(status.remaining_bytes)) + '</small>',
     '    </div>',
     '  </div>',
     '  <div style="margin-top:10px;height:12px;border-radius:999px;background:#1f1f1f;overflow:hidden;">',
@@ -492,7 +527,7 @@ async function createInvite() {
 
 async function loadMembers() {
   const list = document.getElementById("memberList");
-  list.innerHTML = "<p style='opacity:0.7;'>Lade Team...</p>";
+  if (list) list.innerHTML = "<p style='opacity:0.7;'>Lade Team...</p>";
 
   const { data, error } = await db
     .from("company_members")
@@ -502,17 +537,18 @@ async function loadMembers() {
 
   if (error) {
     console.log(error);
-    list.innerHTML = "<p style='opacity:0.7;'>Team konnte nicht geladen werden.</p>";
+    if (list) list.innerHTML = "<p style='opacity:0.7;'>Team konnte nicht geladen werden.</p>";
     return;
   }
 
   if (!(data || []).length) {
     membersCache = [];
-    list.innerHTML = "<p style='opacity:0.7;'>Noch keine Mitglieder.</p>";
+    if (list) list.innerHTML = "<p style='opacity:0.7;'>Noch keine Mitglieder.</p>";
     return;
   }
 
   membersCache = data || [];
+  if (!list) return;
   list.innerHTML = "";
   (data || []).forEach(member => {
     const card = document.createElement("div");
@@ -555,15 +591,15 @@ async function loadMembers() {
 window.deleteMemberAccount = async function(userId) {
   if (!userId) return;
   if (String(userId) === String(authContext.user_id)) {
-    alert("Deinen eigenen Account loeschst du in den Einstellungen.");
+    alert("Deinen eigenen Account löschst du in den Einstellungen.");
     return;
   }
   const member = (membersCache || []).find(item => String(item.user_id) === String(userId));
   const label = member ? (member.name || member.email || "diesem Mitarbeiter") : "diesem Mitarbeiter";
   const ok = confirm("Account von " + label + " dauerhaft löschen?");
   if (!ok) return;
-  const typed = prompt("Bitte LOESCHEN eingeben, um den Account zu löschen:");
-  if (String(typed || "").trim().toUpperCase() !== "LOESCHEN") return;
+  const typed = String(prompt("Bitte LÖSCHEN eingeben, um den Account zu löschen:") || "").trim().toUpperCase();
+  if (typed !== "LÖSCHEN" && typed !== "LOESCHEN") return;
 
   const { error } = await db.rpc("delete_company_member_account", { p_user_id: userId });
   if (error) {
@@ -809,6 +845,155 @@ window.reviewTimesheet = async function(timesheetId, status) {
   await loadOpenTimesheets();
 };
 
+function localDateKey(date) {
+  const d = date || new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+async function loadDailyPlanningOverview() {
+  const target = document.getElementById("dailyPlanningOverview");
+  if (!target || !authContext || !authContext.company_id) return;
+  target.innerHTML = "<p style='opacity:0.7;'>Lade Tagesübersicht...</p>";
+
+  const today = localDateKey(new Date());
+  const [planningRes, ordersRes] = await Promise.all([
+    db.from("planning_entries")
+      .select("*")
+      .eq("company_id", authContext.company_id)
+      .eq("date", today)
+      .order("created_at", { ascending: true }),
+    db.from("auftraege")
+      .select("*")
+      .eq("company_id", authContext.company_id)
+      .order("faelligkeit", { ascending: true })
+      .limit(200)
+  ]);
+
+  if (planningRes.error || ordersRes.error) {
+    console.log(planningRes.error || ordersRes.error);
+    target.innerHTML = "<p style='opacity:0.7;'>Tagesübersicht konnte nicht geladen werden.</p>";
+    return;
+  }
+
+  const entries = planningRes.data || [];
+  const openOrders = (ordersRes.data || []).filter(order => {
+    const status = order.status || (order.done ? "erledigt" : "offen");
+    return status !== "erledigt" && status !== "abgerechnet";
+  });
+  const overdueOrders = openOrders.filter(order => order.faelligkeit && String(order.faelligkeit) < today);
+  const members = (membersCache || []).filter(member =>
+    member.active !== false &&
+    member.user_id &&
+    !["chef", "buero"].includes(String(member.role || ""))
+  );
+
+  const summary = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px;">
+      <div class="info-box" style="margin:0;min-height:0;"><strong>${entries.length}</strong><br><small>Heute geplant</small></div>
+      <div class="info-box" style="margin:0;min-height:0;"><strong>${openOrders.length}</strong><br><small>📂 Offene Aufträge</small></div>
+      <div class="info-box" style="margin:0;min-height:0;"><strong>${overdueOrders.length}</strong><br><small>⚠️ Überfällig</small></div>
+    </div>
+  `;
+
+  const memberHtml = members.map(member => {
+    const memberEntries = entries.filter(entry => String(entry.assigned_to || "") === String(member.user_id || ""));
+    const detail = memberEntries.length
+      ? memberEntries.map(entry => {
+          const marker = entry.entry_type === "absence" ? "Abwesenheit" : "Einsatz";
+          return `<small>${marker}: ${escapeHtml(entry.title || "Planung")}</small>`;
+        }).join("<br>")
+      : "<small style='opacity:0.7;'>Heute frei / nichts geplant</small>";
+    return `
+      <div class="info-box" style="margin-bottom:8px;min-height:0;">
+        <strong>${escapeHtml(member.name || member.email || "Mitarbeiter")}</strong><br>
+        ${detail}
+      </div>
+    `;
+  }).join("");
+
+  const overdueHtml = overdueOrders.slice(0, 5).map(order => `
+    <div class="info-box" style="margin-bottom:8px;min-height:0;cursor:pointer;" onclick="window.location.href='auftrag-detail.html?id=${order.id}'">
+      <small>fällig ${formatDateDe(order.faelligkeit)}</small>
+      <div class="text">${escapeHtml(order.customer || "Kunde")} - ${escapeHtml(order.project || order.objekt || "Auftrag")}</div>
+    </div>
+  `).join("");
+
+  target.innerHTML = summary +
+    (memberHtml || "<p style='opacity:0.7;'>Noch keine aktiven Mitarbeiter.</p>") +
+    `<h4 style="margin-top:12px;margin-bottom:8px;">⚠️ Überfällig</h4>` +
+    (overdueHtml || "<p style='opacity:0.7;'>Keine überfälligen Aufträge.</p>");
+}
+
+window.loadDailyPlanningOverview = loadDailyPlanningOverview;
+
+async function loadRecurringDashboard() {
+  const target = document.getElementById("recurringDashboardList");
+  if (!target || !authContext || !authContext.company_id || !window.BautrailRecurringOrders) return;
+
+  target.innerHTML = "<p style='opacity:0.7;'>Lade Wiederholungen...</p>";
+  await window.BautrailRecurringOrders.processDueRecurrences();
+
+  const reminders = await window.BautrailRecurringOrders.loadOpenReminders(6);
+  const { data: rules, error } = await db
+    .from("recurring_orders")
+    .select("*")
+    .eq("company_id", authContext.company_id)
+    .eq("active", true)
+    .order("next_due_date", { ascending: true })
+    .limit(6);
+
+  if (error) {
+    console.log(error);
+    target.innerHTML = "<p style='opacity:0.7;'>Wiederholungen konnten nicht geladen werden.</p>";
+    return;
+  }
+
+  if (!reminders.length && !(rules || []).length) {
+    target.innerHTML = "<p style='opacity:0.7;'>Keine Wiederholungen oder Erinnerungen offen.</p>";
+    return;
+  }
+
+  const reminderHtml = reminders.map(reminder => `
+    <div class="info-box" style="margin-top:0;margin-bottom:8px;min-height:0;">
+      <small>${escapeHtml(reminder.status)} | fällig ${window.BautrailRecurringOrders.formatDateDe(reminder.due_date)}</small>
+      <div class="text">${escapeHtml(reminder.title)}</div>
+      <small>${escapeHtml(reminder.message || "")}</small>
+      <div class="button-row" style="margin-top:8px;">
+        <button class="login-btn" style="margin:0;" onclick="createDashboardReminderOrder('${reminder.id}')">Auftrag</button>
+        <button class="login-btn" style="margin:0;background:#444;" onclick="completeDashboardReminder('${reminder.id}')">Erledigt</button>
+      </div>
+    </div>
+  `).join("");
+
+  const ruleHtml = (rules || []).slice(0, 4).map(rule => `
+    <div class="info-box" style="margin-top:0;margin-bottom:8px;min-height:0;">
+      <small>${escapeHtml(window.BautrailRecurringOrders.intervalLabel(rule))} | ${rule.mode === "auto_create" ? "automatisch" : "Erinnerung"}</small>
+      <div class="text">${escapeHtml(rule.customer || "Kunde")} - ${escapeHtml(rule.project || "Auftrag")}</div>
+      <small>Nächste Fälligkeit: ${window.BautrailRecurringOrders.formatDateDe(rule.next_due_date)}</small>
+    </div>
+  `).join("");
+
+  target.innerHTML = reminderHtml + ruleHtml;
+}
+
+window.createDashboardReminderOrder = async function(reminderId) {
+  const result = await window.BautrailRecurringOrders.createOrderFromReminder(reminderId);
+  if (result.error) {
+    alert("Auftrag konnte nicht angelegt werden.");
+    return;
+  }
+  window.location.href = "auftrag-detail.html?id=" + result.data.id;
+};
+
+window.completeDashboardReminder = async function(reminderId) {
+  const result = await window.BautrailRecurringOrders.completeReminder(reminderId);
+  if (result.error) {
+    alert("Erinnerung konnte nicht erledigt werden.");
+    return;
+  }
+  await loadRecurringDashboard();
+};
+
 (async function() {
   authContext = await window.BaudokuAuthContext.loadAuthContext();
   if (!authContext) {
@@ -821,18 +1006,18 @@ window.reviewTimesheet = async function(timesheetId, status) {
   }
   const exportMonth = document.getElementById("adminExportMonth");
   if (exportMonth && window.BautrailCompanyExport) exportMonth.value = window.BautrailCompanyExport.defaultMonth();
-  const archiveMonth = document.getElementById("archiveMonth");
-  if (archiveMonth) archiveMonth.value = defaultMonthValue();
   await loadCompany();
   await loadMembers();
+  await loadRecurringDashboard();
+  await loadDailyPlanningOverview();
   await window.loadArchiveFilterOptions();
   await loadMileageOverview();
   await loadOpenTimesheets();
   await window.loadMissingToday();
-  await window.loadReportArchive();
   await window.loadEmployeeAnalysis();
 })();
 </script>
+<script src="info-help.js?v=20260522f"></script>
 <script src="pwa.js"></script>
 </body>
 </html>

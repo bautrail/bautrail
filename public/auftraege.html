@@ -194,6 +194,13 @@
   Abgerechnet
 </button>
 
+<button
+  class="filter-btn"
+  onclick="window.location.href='wiederkehrende-auftraege.html'"
+>
+  Wiederkehrend
+</button>
+
 </div>
 
 <input
@@ -310,11 +317,19 @@ onclick="openCreate()"
 <script src="role-nav.js"></script>
 <script src="company-context.js"></script>
 <script src="notifications.js"></script>
+<script src="recurring-orders.js"></script>
 <script>
 
 let currentFilter = "all";
 
-loadJobs();
+initJobs();
+
+async function initJobs(){
+  if(window.BautrailRecurringOrders){
+    await window.BautrailRecurringOrders.processDueRecurrences();
+  }
+  loadJobs();
+}
 
 function setFilter(filter,event){
 

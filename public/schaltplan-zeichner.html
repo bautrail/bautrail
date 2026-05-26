@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schaltplan-Zeichner - bautrail</title>
+  <link rel="stylesheet" href="style.css?v=20260526a">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ff6b3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="bautrail">
+  <link rel="icon" href="assets/bautrail-icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/bautrail-apple-touch-icon.png">
+  <style>
+    .draw-shell {
+      display: grid;
+      gap: 10px;
+    }
+
+    .draw-shell [hidden] {
+      display: none !important;
+    }
+
+    body.schaltplan-page .app-wrapper,
+    body.schaltplan-page .bottom-nav {
+      max-width: min(1180px, 100%);
+    }
+
+    body.schaltplan-page .app-content {
+      padding-inline: clamp(1rem, 2vw, 2rem);
+    }
+
+    .draw-toolbar,
+    .draw-settings,
+    .plan-sync-bar,
+    .page-toolbar,
+    .version-toolbar,
+    .layer-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .draw-btn,
+    .draw-chip,
+    .symbol-palette-btn,
+    .symbol-delete-btn {
+      min-height: 40px;
+      border: 1px solid #3a3a3a;
+      border-radius: 10px;
+      background: #303030;
+      color: #fff;
+      padding: 9px 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .draw-btn.active,
+    .symbol-palette-btn.active {
+      background: #ff6b3d;
+      border-color: #ff6b3d;
+    }
+
+    .draw-btn.danger {
+      background: #ff3d45;
+      border-color: #ff3d45;
+    }
+
+    .draw-chip {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      cursor: default;
+      font-size: 0.82rem;
+      color: #ddd;
+    }
+
+    .draw-chip input[type="range"] {
+      width: 120px;
+    }
+
+    .draw-chip input[type="color"],
+    .property-panel input[type="color"] {
+      width: 34px;
+      height: 34px;
+      border: none;
+      border-radius: 8px;
+      padding: 0;
+      background: transparent;
+    }
+
+    .draw-layout {
+      display: grid;
+      grid-template-columns: minmax(154px, 188px) minmax(0, 1fr) minmax(232px, 280px);
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .symbol-library,
+    .property-panel {
+      min-height: 520px;
+      max-height: min(70vh, 680px);
+      border: 1px solid #383838;
+      border-radius: 14px;
+      background: #242424;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .symbol-library {
+      overflow: hidden;
+    }
+
+    .symbol-list {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding-right: 2px;
+      min-height: 150px;
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 900;
+    }
+
+    .panel-copy,
+    .property-empty {
+      margin: 0;
+      color: #bbb;
+      font-size: 0.78rem;
+      line-height: 1.35;
+    }
+
+    .symbol-list,
+    .property-panel form {
+      display: grid;
+      gap: 8px;
+    }
+
+    .symbol-filter-bar {
+      display: grid;
+      gap: 7px;
+    }
+
+    .validation-panel {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+      padding: 10px;
+      border: 1px solid #383838;
+      border-radius: 10px;
+      background: #202020;
+      color: #ddd;
+      font-size: 0.78rem;
+      line-height: 1.35;
+    }
+
+    .validation-panel strong {
+      color: #fff;
+    }
+
+    .validation-panel ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .page-toolbar {
+      padding: 10px;
+      border: 1px solid #383838;
+      border-radius: 12px;
+      background: #202020;
+    }
+
+    .page-toolbar .compact-input {
+      width: auto;
+      min-width: 150px;
+      flex: 1 1 150px;
+    }
+
+    .custom-symbol-accordion {
+      border: 1px solid #383838;
+      border-radius: 12px;
+      background: #202020;
+      overflow: hidden;
+    }
+
+    .custom-symbol-accordion summary {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 900;
+      list-style: none;
+    }
+
+    .custom-symbol-accordion summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .custom-symbol-accordion summary::after {
+      content: "+";
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: #303030;
+      color: #ff6b3d;
+      font-size: 1rem;
+      line-height: 1;
+      flex: 0 0 auto;
+    }
+
+    .custom-symbol-accordion[open] summary::after {
+      content: "-";
+    }
+
+    .custom-symbol-form {
+      display: grid;
+      gap: 7px;
+      padding: 9px;
+      border-top: 1px solid #383838;
+      background: #202020;
+    }
+
+    .custom-symbol-form label {
+      display: grid;
+      gap: 5px;
+      color: #ddd;
+      font-size: 0.74rem;
+      font-weight: 800;
+    }
+
+    .custom-symbol-form .compact-input {
+      min-height: 38px;
+      border-radius: 9px;
+      padding: 8px 9px;
+    }
+
+    .custom-symbol-form .draw-btn {
+      width: 100%;
+    }
+
+    .symbol-add-btn {
+      width: 100%;
+    }
+
+    .symbol-builder-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: grid;
+      place-items: center;
+      padding: 14px;
+      background: rgba(0, 0, 0, 0.72);
+    }
+
+    .symbol-builder-modal[hidden] {
+      display: none !important;
+    }
+
+    .symbol-builder-sheet {
+      width: min(760px, 100%);
+      max-height: min(92vh, 780px);
+      overflow: auto;
+      border: 1px solid #3d3d3d;
+      border-radius: 14px;
+      background: #202020;
+      box-shadow: 0 20px 55px rgba(0, 0, 0, 0.42);
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .symbol-builder-head,
+    .symbol-builder-footer,
+    .symbol-builder-toolbar,
+    .symbol-builder-fields {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .symbol-builder-head {
+      justify-content: space-between;
+    }
+
+    .symbol-builder-head h3 {
+      margin: 0;
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    .symbol-builder-fields label,
+    .symbol-builder-props label {
+      display: grid;
+      gap: 5px;
+      color: #ddd;
+      font-size: 0.76rem;
+      font-weight: 800;
+    }
+
+    .symbol-builder-fields label {
+      min-width: min(220px, 100%);
+      flex: 1 1 220px;
+    }
+
+    .symbol-builder-workspace {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) minmax(190px, 230px);
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .symbol-builder-canvas {
+      border: 1px solid #383838;
+      border-radius: 12px;
+      background: #f7f7f7;
+      min-height: 320px;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    #symbolBuilderSvg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 320px;
+      touch-action: none;
+    }
+
+    .symbol-builder-props {
+      border: 1px solid #383838;
+      border-radius: 12px;
+      background: #242424;
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .symbol-builder-props p {
+      margin: 0;
+      color: #aaa;
+      font-size: 0.78rem;
+      line-height: 1.35;
+    }
+
+    .symbol-builder-props input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid #3d3d3d;
+      border-radius: 9px;
+      background: #1f1f1f;
+      color: #fff;
+      padding: 8px 9px;
+      font: inherit;
+    }
+
+    .symbol-builder-selected {
+      filter: drop-shadow(0 0 4px rgba(255, 107, 61, 0.95));
+    }
+
+    .endpoint-handle {
+      cursor: grab;
+      filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
+    }
+
+    .comment-marker {
+      filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.35));
+    }
+
+    .symbol-list-title {
+      margin: 3px 0 -2px;
+      color: #aaa;
+      font-size: 0.74rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .symbol-palette-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      justify-content: flex-start;
+      text-align: left;
+      overflow: hidden;
+    }
+
+    .symbol-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 40px;
+      gap: 6px;
+      align-items: stretch;
+    }
+
+    .symbol-row .symbol-palette-btn {
+      min-width: 0;
+    }
+
+    .symbol-delete-btn {
+      width: 40px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      background: #3a2020;
+      border-color: #623030;
+      color: #ff7b7b;
+      font-size: 1.15rem;
+    }
+
+    .symbol-icon {
+      width: 30px;
+      height: 30px;
+      flex: 0 0 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: #242424;
+      color: #fff;
+      text-align: center;
+      font-size: 0.95rem;
+      line-height: 1;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .symbol-palette-btn.custom-symbol .symbol-icon {
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .symbol-copy {
+      min-width: 0;
+      display: block;
+      line-height: 1.12;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .symbol-palette-btn small {
+      display: block;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 0.7rem;
+      font-weight: 700;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .property-empty {
+      border: 1px dashed #444;
+      border-radius: 10px;
+      padding: 11px;
+      background: #202020;
+    }
+
+    .property-panel label {
+      display: grid;
+      gap: 5px;
+      color: #ddd;
+      font-size: 0.76rem;
+      font-weight: 800;
+    }
+
+    .property-panel input,
+    .property-panel select,
+    .property-panel textarea {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid #3d3d3d;
+      border-radius: 9px;
+      background: #1f1f1f;
+      color: #fff;
+      padding: 8px 9px;
+      font: inherit;
+    }
+
+    .property-panel textarea {
+      min-height: 70px;
+      resize: vertical;
+    }
+
+    .property-grid,
+    .property-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .draw-stage {
+      border: 1px solid #383838;
+      border-radius: 14px;
+      background: #f7f7f7;
+      overflow: hidden;
+      touch-action: none;
+      position: relative;
+    }
+
+    #planSvg {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1359 / 945;
+      background: #f7f7f7;
+      touch-action: none;
+    }
+
+    .selected-vector {
+      filter: drop-shadow(0 0 4px rgba(255, 107, 61, 0.9));
+    }
+
+    .draw-status {
+      min-height: 18px;
+      font-size: 12px;
+      color: #aaa;
+      line-height: 1.35;
+    }
+
+    .plan-sync-bar {
+      padding: 10px;
+      border: 1px solid #383838;
+      border-radius: 12px;
+      background: #202020;
+    }
+
+    .plan-sync-bar .compact-input {
+      width: auto;
+      min-width: 180px;
+      flex: 1 1 180px;
+    }
+
+    .sync-note {
+      min-height: 16px;
+      color: #aaa;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    @media (max-width: 980px) {
+      .draw-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .symbol-builder-workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .symbol-library,
+      .property-panel {
+        min-height: auto;
+        max-height: 360px;
+      }
+
+      .symbol-list {
+        grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+        max-height: 220px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .draw-toolbar,
+      .draw-settings,
+      .plan-sync-bar,
+      .page-toolbar,
+      .symbol-builder-toolbar,
+      .symbol-builder-footer {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 4px;
+      }
+
+      .draw-btn,
+      .draw-chip,
+      .plan-sync-bar .compact-input,
+      .page-toolbar .compact-input,
+      .symbol-builder-fields label {
+        flex: 0 0 auto;
+      }
+
+      .property-grid,
+      .property-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .symbol-builder-sheet {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body class="schaltplan-page">
+<div class="app-wrapper">
+  <div class="app-content">
+    <header class="app-header">
+      <button class="back-btn" onclick="window.location.href='index.html'">&#8592;</button>
+      <h1 class="app-name">&#9889; Schaltplan-Zeichner</h1>
+      <p class="company-name">Foto als Vorlage, sauberer Plan als Vektor</p>
+    </header>
+
+    <div class="overview-note">
+      <strong>Feste Schaltplan-Vorlage</strong><br>
+      Du zeichnest auf der Vorlage mit Koordinatenfeld. Linien, Texte und Symbole bleiben editierbare Vektorobjekte und rasten auf den kleinen Punkten ein.
+    </div>
+
+    <div class="task-card draw-shell">
+      <div class="card-title-row">
+        <h3>&#128247; Vorlage &amp; Werkzeuge</h3>
+        <button type="button" class="info-dot" aria-label="Info zum Schaltplan-Zeichner" data-info="Erst Foto laden, dann mit Linie, Text oder Symbol nachzeichnen. Mit Auswahl kannst du Objekte verschieben, drehen oder l&ouml;schen.">i</button>
+      </div>
+
+      <input id="photoInput" class="compact-input" type="file" accept="image/*" capture="environment">
+
+      <div class="plan-sync-bar" aria-label="Schaltplan speichern und laden">
+        <input id="planTitle" class="compact-input" placeholder="Planname, z. B. Wohnung EG">
+        <select id="planStatus" class="compact-input">
+          <option value="draft">Entwurf</option>
+          <option value="checked">Gepr&uuml;ft</option>
+          <option value="approved">Freigegeben</option>
+          <option value="archived">Archiviert</option>
+        </select>
+        <select id="planCustomer" class="compact-input">
+          <option value="">Kunde zuweisen</option>
+        </select>
+        <select id="planSelect" class="compact-input">
+          <option value="">Gespeicherte Schaltpl&auml;ne</option>
+        </select>
+        <button id="saveCircuitPlan" class="draw-btn" type="button">Plan speichern</button>
+        <button id="newCircuitPlan" class="draw-btn" type="button">Neu</button>
+        <button id="refreshCircuitPlans" class="draw-btn" type="button">Sync</button>
+      </div>
+      <p id="syncNote" class="sync-note">Synchronisation wird vorbereitet...</p>
+
+      <div class="page-toolbar" aria-label="Seiten verwalten">
+        <select id="pageSelect" class="compact-input">
+          <option value="0">Blatt 1</option>
+        </select>
+        <button id="addCircuitPage" class="draw-btn" type="button">+ Blatt</button>
+        <button id="deleteCircuitPage" class="draw-btn danger" type="button">Blatt l&ouml;schen</button>
+      </div>
+
+      <div class="version-toolbar" aria-label="Versionen verwalten">
+        <select id="versionSelect" class="compact-input">
+          <option value="">Versionen</option>
+        </select>
+        <button id="restoreCircuitVersion" class="draw-btn" type="button">Version laden</button>
+      </div>
+
+      <div class="draw-toolbar" aria-label="Werkzeugleiste">
+        <button class="draw-btn active" type="button" data-tool="select">Auswahl</button>
+        <button class="draw-btn" type="button" data-tool="line">Linie</button>
+        <button class="draw-btn" type="button" data-tool="text">Text</button>
+        <button class="draw-btn" type="button" data-tool="symbol">Symbol</button>
+        <button class="draw-btn" type="button" data-tool="comment">Kommentar</button>
+        <button class="draw-btn" type="button" data-action="duplicate">Duplizieren</button>
+        <button class="draw-btn" type="button" data-action="validate-plan">Plan pr&uuml;fen</button>
+        <button class="draw-btn" type="button" data-action="delete">L&ouml;schen</button>
+        <button class="draw-btn" type="button" data-action="undo">R&uuml;ckg&auml;ngig</button>
+        <button class="draw-btn" type="button" data-action="redo">Wiederholen</button>
+        <button class="draw-btn active" type="button" data-toggle="grid">Vorlage</button>
+        <button class="draw-btn active" type="button" data-toggle="background">Hintergrund</button>
+        <button class="draw-btn" type="button" data-action="export-png">PNG</button>
+        <button class="draw-btn" type="button" data-action="export-pdf">PDF</button>
+      </div>
+
+      <div class="draw-settings">
+        <label class="draw-chip">Deckkraft <input id="bgOpacity" type="range" min="0" max="100" value="42"></label>
+        <label class="draw-chip">Punktraster <input id="gridSize" type="range" min="11.4" max="11.4" step="0.1" value="11.4" disabled></label>
+        <button class="draw-btn active" type="button" data-toggle="snap">Punkt-Sperre</button>
+        <label class="draw-chip">Farbe <input id="strokeColor" type="color" value="#111111"></label>
+        <label class="draw-chip">St&auml;rke <input id="strokeWidth" type="range" min="2" max="12" value="4"></label>
+        <select id="symbolType" class="compact-input" style="width:auto;min-width:150px;">
+          <option value="switch">Schalter</option>
+          <option value="socket">Steckdose</option>
+          <option value="lamp">Lampe</option>
+          <option value="fuse">Sicherung</option>
+          <option value="panel">Verteiler</option>
+          <option value="wire">Leitung</option>
+          <option value="junction">Abzweigung</option>
+        </select>
+        <button class="draw-btn" type="button" data-action="rotate-left">-15&deg;</button>
+        <button class="draw-btn" type="button" data-action="rotate-right">+15&deg;</button>
+        <button class="draw-btn" type="button" data-action="zoom-out">Zoom -</button>
+        <button class="draw-btn" type="button" data-action="zoom-in">Zoom +</button>
+        <button class="draw-btn" type="button" data-action="zoom-reset">100%</button>
+      </div>
+
+      <div class="layer-toolbar" aria-label="Ebenen ein- und ausblenden">
+        <label class="draw-chip"><input id="layerPhoto" type="checkbox" checked> Foto</label>
+        <label class="draw-chip"><input id="layerTemplate" type="checkbox" checked> Vorlage &amp; Punkte</label>
+        <label class="draw-chip"><input id="layerLines" type="checkbox" checked> Leitungen</label>
+        <label class="draw-chip"><input id="layerSymbols" type="checkbox" checked> Symbole</label>
+        <label class="draw-chip"><input id="layerTexts" type="checkbox" checked> Texte</label>
+        <label class="draw-chip"><input id="layerComments" type="checkbox" checked> Kommentare</label>
+      </div>
+
+      <div class="draw-layout">
+        <aside class="symbol-library" aria-label="Symbolbibliothek">
+          <p class="panel-title">&#128230; Symbole</p>
+          <p class="panel-copy">Symbol antippen und dann auf die Zeichnung setzen.</p>
+          <button id="openSymbolBuilder" class="draw-btn symbol-add-btn" type="button">+ Symbol hinzuf&uuml;gen</button>
+          <div class="symbol-filter-bar" aria-label="Symbolsuche">
+            <input id="symbolSearch" class="compact-input" placeholder="Symbol suchen">
+            <select id="symbolGroup" class="compact-input">
+              <option value="">Alle Gruppen</option>
+            </select>
+          </div>
+          <p class="symbol-list-title">Bibliothek</p>
+          <div id="symbolList" class="symbol-list">
+            <button class="symbol-palette-btn active" type="button" data-symbol="switch"><span>S</span><span>Schalter<small>Kontakt</small></span></button>
+            <button class="symbol-palette-btn" type="button" data-symbol="socket"><span>&#128268;</span><span>Steckdose<small>Anschluss</small></span></button>
+            <button class="symbol-palette-btn" type="button" data-symbol="lamp"><span>&#128161;</span><span>Lampe<small>Leuchte</small></span></button>
+            <button class="symbol-palette-btn" type="button" data-symbol="fuse"><span>&#9889;</span><span>Sicherung<small>Schutz</small></span></button>
+            <button class="symbol-palette-btn" type="button" data-symbol="panel"><span>&#9638;</span><span>Verteiler<small>Feld</small></span></button>
+            <button class="symbol-palette-btn" type="button" data-symbol="wire"><span>&#9473;</span><span>Leitung<small>Kabel</small></span></button>
+            <button class="symbol-palette-btn" type="button" data-symbol="junction"><span>&#9532;</span><span>Abzweigung<small>Knoten</small></span></button>
+          </div>
+        </aside>
+
+        <div class="draw-stage" id="drawStage">
+          <svg id="planSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1359 945" role="img" aria-label="Zeichenfl&auml;che f&uuml;r Schaltplan">
+            <defs>
+              <pattern id="snapDotPattern" x="29" y="38" width="11.4" height="11.4" patternUnits="userSpaceOnUse">
+                <circle cx="0" cy="0" r="0.72" fill="#ff6b3d"/>
+              </pattern>
+            </defs>
+            <rect id="paperLayer" x="0" y="0" width="1359" height="945" fill="#f7f7f7"/>
+            <image id="backgroundImage" x="0" y="0" width="1359" height="945" preserveAspectRatio="none" style="display:none;"/>
+            <image id="templateImage" x="0" y="0" width="1359" height="945" href="assets/schaltplan-vorlage.png" preserveAspectRatio="none" style="pointer-events:none;"/>
+            <g id="gridLayer" pointer-events="none">
+              <rect x="29" y="38" width="1302" height="752" fill="url(#snapDotPattern)" opacity="0.32"/>
+            </g>
+            <g id="objectLayer"></g>
+            <g id="connectionLayer" pointer-events="none"></g>
+            <g id="endpointLayer"></g>
+            <g id="legendLayer" pointer-events="none"></g>
+            <g id="templateFieldLayer" pointer-events="none"></g>
+          </svg>
+        </div>
+
+        <aside class="property-panel" aria-label="Eigenschaften">
+          <p class="panel-title">&#9881; Eigenschaften</p>
+          <p id="propertyEmpty" class="property-empty">Objekt ausw&auml;hlen, dann kannst du Name, Raum, Stromkreis, Sicherung, Notiz, Farbe und Drehung bearbeiten.</p>
+
+          <form id="propertyForm" hidden>
+            <label>Name
+              <input id="propName" type="text" placeholder="z. B. Licht Flur">
+            </label>
+
+            <label id="propCommentWrap">Kommentar
+              <textarea id="propComment" placeholder="z. B. hier mit Kunden kl&auml;ren"></textarea>
+            </label>
+
+            <label id="propTextWrap">Text / Beschriftung
+              <input id="propText" type="text" placeholder="Beschriftung">
+            </label>
+
+            <label id="propCableWrap">Leitung / Ader
+              <input id="propCable" type="text" placeholder="z. B. NYM-J 3x1,5 / L1 N PE">
+            </label>
+
+            <div class="property-grid">
+              <label>Stromkreis
+                <input id="propCircuit" type="text" placeholder="z. B. EG-Licht">
+              </label>
+              <label>Sicherung
+                <input id="propBreaker" type="text" placeholder="z. B. F12">
+              </label>
+            </div>
+
+            <label>Raum
+              <input id="propRoom" type="text" placeholder="z. B. K&uuml;che">
+            </label>
+
+            <label>Notiz
+              <textarea id="propNote" placeholder="Hinweis zum Objekt"></textarea>
+            </label>
+
+            <div class="property-grid">
+              <label>Farbe
+                <input id="propColor" type="color" value="#111111">
+              </label>
+              <label id="propWidthWrap">St&auml;rke
+                <input id="propWidth" type="range" min="1" max="14" value="4">
+              </label>
+            </div>
+
+            <div class="property-grid">
+              <label id="propSizeWrap">Gr&ouml;&szlig;e
+                <input id="propSize" type="range" min="11.4" max="72" step="0.1" value="11.4">
+              </label>
+              <label id="propRotationWrap">Drehung
+                <input id="propRotation" type="number" min="-360" max="360" step="1" value="0">
+              </label>
+            </div>
+
+              <label id="propSymbolWrap">Symbol
+              <select id="propSymbol">
+                <option value="switch">Schalter</option>
+                <option value="socket">Steckdose</option>
+                <option value="lamp">Lampe</option>
+                <option value="fuse">Sicherung</option>
+                <option value="panel">Verteiler</option>
+                <option value="wire">Leitung</option>
+                <option value="junction">Abzweigung</option>
+              </select>
+            </label>
+
+            <div class="property-actions">
+              <button class="draw-btn" type="button" data-action="rotate-left">-15&deg;</button>
+              <button class="draw-btn" type="button" data-action="rotate-right">+15&deg;</button>
+            </div>
+            <button class="draw-btn danger" type="button" data-action="delete">Objekt l&ouml;schen</button>
+          </form>
+          <div id="validationPanel" class="validation-panel" hidden></div>
+        </aside>
+      </div>
+
+      <p id="drawStatus" class="draw-status">Auswahl aktiv. Linien, Texte und Symbole rasten auf den Punkten der Vorlage ein.</p>
+    </div>
+
+    <div id="symbolBuilderModal" class="symbol-builder-modal" hidden role="dialog" aria-modal="true" aria-label="Eigenes Symbol zeichnen">
+      <div class="symbol-builder-sheet">
+        <div class="symbol-builder-head">
+          <h3>Eigenes Symbol zeichnen</h3>
+          <button id="closeSymbolBuilder" class="draw-btn" type="button">Schlie&szlig;en</button>
+        </div>
+
+        <div class="symbol-builder-fields">
+          <label>Name
+            <input id="customSymbolName" class="compact-input" placeholder="z. B. Bewegungsmelder">
+          </label>
+          <label>K&uuml;rzel
+            <input id="customSymbolCode" class="compact-input" maxlength="6" placeholder="z. B. BM">
+          </label>
+        </div>
+
+        <div class="symbol-builder-toolbar" aria-label="Symbol-Editor Werkzeuge">
+          <button class="draw-btn active" type="button" data-symbol-builder-tool="select">Auswahl</button>
+          <button class="draw-btn" type="button" data-symbol-builder-tool="line">Linie</button>
+          <button class="draw-btn" type="button" data-symbol-builder-tool="text">Text</button>
+          <button id="deleteSymbolBuilderItem" class="draw-btn danger" type="button">L&ouml;schen</button>
+          <button id="clearSymbolBuilder" class="draw-btn" type="button">Neu zeichnen</button>
+        </div>
+
+        <div class="symbol-builder-workspace">
+          <div class="symbol-builder-canvas">
+            <svg id="symbolBuilderSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Zeichenfl&auml;che f&uuml;r eigenes Symbol">
+              <defs>
+                <pattern id="symbolBuilderGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <circle cx="0" cy="0" r="1.4" fill="#9a9a9a"/>
+                </pattern>
+              </defs>
+              <rect x="0" y="0" width="200" height="200" fill="#f7f7f7"/>
+              <rect x="0" y="0" width="200" height="200" fill="url(#symbolBuilderGrid)"/>
+              <g id="symbolBuilderLayer"></g>
+            </svg>
+          </div>
+
+          <aside class="symbol-builder-props">
+            <p id="symbolBuilderEmpty">Text oder Linie ausw&auml;hlen. Bei Text kannst du die Beschriftung einzeln &auml;ndern.</p>
+            <label id="symbolBuilderTextWrap" hidden>Beschriftung
+              <input id="symbolBuilderText" type="text" placeholder="Text">
+            </label>
+            <label id="symbolBuilderSizeWrap" hidden>Textgr&ouml;&szlig;e
+              <input id="symbolBuilderSize" type="range" min="10" max="36" value="18">
+            </label>
+          </aside>
+        </div>
+
+        <div class="symbol-builder-footer">
+          <button id="saveCustomSymbol" class="draw-btn" type="button">Symbol speichern</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html"><span>&#127968;</span><small>&Uuml;bersicht</small></a>
+    <a href="kunden.html"><span>&#128101;</span><small>Kunden</small></a>
+    <a href="zeiten.html"><span>&#9201;&#65039;</span><small>Zeiten</small></a>
+    <a href="profil.html"><span>&#9881;&#65039;</span><small>Einstellungen</small></a>
+  </nav>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="auth-context.js"></script>
+<script src="role-nav.js"></script>
+  <script src="schaltplan-zeichner.js?v=20260526a"></script>
+<script src="info-help.js?v=20260523c"></script>
+<script src="pwa.js"></script>
+</body>
+</html>
